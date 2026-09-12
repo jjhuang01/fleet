@@ -26,6 +26,7 @@ import { useCommandFrecencyStore } from '../store/command-frecency-store';
 import { useNotificationStore } from '../store/notification-store';
 import { useWorkspaceStore, collectPaneIds } from '../store/workspace-store';
 import { useSettingsStore } from '../store/settings-store';
+import { useTranslation, type Translator } from '../lib/i18n';
 
 type CommandPaletteProps = {
   isOpen: boolean;
@@ -39,10 +40,10 @@ const paletteShortcut = (() => {
 })();
 
 /** Map a static Command into a PaletteItem in the 'command' section. */
-function toCommandItem(cmd: CommandDef): PaletteItem {
+function toCommandItem(cmd: CommandDef, t: Translator): PaletteItem {
   return {
     id: cmd.id,
-    label: cmd.label,
+    label: t(cmd.labelKey, cmd.labelParams),
     section: 'command',
     keywords: [cmd.category, ...(cmd.keywords ?? [])],
     shortcutLabel: formatCommandShortcut(cmd),
@@ -91,6 +92,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
   const announcerRef = useRef<HTMLDivElement>(null);
   const dismissByPointerRef = useRef(false);
   const record = useCommandFrecencyStore((s) => s.record);
+  const { t } = useTranslation();
 
   // Reactive subscriptions - every dep below is used inside the memo body.
   const tabs = useWorkspaceStore((s) => s.workspace.tabs);
@@ -100,8 +102,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
   const remoteHosts = useSettingsStore((s) => s.settings?.remoteSsh.hosts);
 
   const staticCommands = useMemo(
-    () => [...createCommandRegistry(), ...createRemoteHostCommands(remoteHosts ?? [])],
-    [remoteHosts]
+    () => [...createCommandRegistry(t), ...createRemoteHostCommands(remoteHosts ?? [])],
+    [remoteHosts, t]
   );
 
   const { needsYou, recent, commands, destinations } = useMemo(() => {
@@ -113,7 +115,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
           id: `pane:${paneId}`,
           label: paneLabel(loc),
           section: 'needs-you',
-          badge: 'needs you',
+          badge: t('palette.badge.needsYou'),
           keywords: [loc.tab.label, 'agent', 'needs input'],
           run: () => {
             const ws = useWorkspaceStore.getState();
@@ -152,7 +154,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
         .filter((x): x is PaletteItem => x !== null)
     );
 
-    const commandItems = staticCommands.map(toCommandItem);
+    const commandItems = staticCommands.map((cmd) => toCommandItem(cmd, t));
 
     const byId = new Map(commandItems.map((c) => [c.id, c]));
     const recentItems = rankIds(frecencyMap, Date.now())
@@ -166,7 +168,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
       commands: commandItems,
       destinations: destinationItems
     };
-  }, [tabs, activities, frecencyMap, staticCommands]);
+  }, [tabs, activities, frecencyMap, staticCommands, t]);
 
   useEffect(() => {
     if (isOpen) {
@@ -179,15 +181,15 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
   // Announce result mode/counts to screen readers (cmdk ships no live region).
   useEffect(() => {
     if (!isOpen || !announcerRef.current) return;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       if (announcerRef.current) {
         announcerRef.current.textContent = search
-          ? 'Filtering commands'
-          : `${needsYou.length} agents need input`;
+          ? t('palette.aria.filtering')
+          : t('palette.aria.needsInput', { count: needsYou.length });
       }
     }, 250);
-    return () => clearTimeout(t);
-  }, [isOpen, search, needsYou.length]);
+    return () => clearTimeout(timer);
+  }, [isOpen, search, needsYou.length, t]);
 
   // Detect backdrop (outside) clicks via capture-phase pointerdown so we can
   // distinguish them from Escape in onOpenChange. Capture phase runs before
@@ -208,11 +210,11 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
   const scopedActions = (paneId: string): PaletteItem[] => {
     const ws = useWorkspaceStore.getState();
     const loc = findPaneLocation(ws.workspace.tabs, paneId);
-    const label = loc ? paneLabel(loc) : 'pane';
+    const label = loc ? paneLabel(loc) : t('palette.paneFallback');
     return [
       {
         id: 'focus',
-        label: `Focus ${label}`,
+        label: t('palette.action.focus', { label }),
         section: 'command',
         run: () => {
           if (loc) {
@@ -223,19 +225,19 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
       },
       {
         id: 'split-right',
-        label: 'Split Right',
+        label: t('palette.action.splitRight'),
         section: 'command',
         run: () => ws.splitPane(paneId, 'horizontal')
       },
       {
         id: 'split-down',
-        label: 'Split Down',
+        label: t('palette.action.splitDown'),
         section: 'command',
         run: () => ws.splitPane(paneId, 'vertical')
       },
       {
         id: 'balance',
-        label: 'Balance Panes',
+        label: t('palette.action.balance'),
         section: 'command',
         run: () => {
           if (loc) ws.setActiveTab(loc.tabId);
@@ -244,7 +246,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
       },
       {
         id: 'rename',
-        label: 'Rename Pane',
+        label: t('palette.action.rename'),
         section: 'command',
         run: () => {
           // Focus the pane first so PaneHeader is mounted and can receive the event.
@@ -259,7 +261,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
       },
       {
         id: 'close',
-        label: 'Close Pane',
+        label: t('palette.action.close'),
         section: 'command',
         run: () => ws.closePane(paneId)
       }
@@ -280,7 +282,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
   const scopeLabel = scopePaneId
     ? (() => {
         const loc = findPaneLocation(tabs, scopePaneId);
-        return loc ? paneLabel(loc) : 'pane';
+        return loc ? paneLabel(loc) : t('palette.paneFallback');
       })()
     : '';
 
@@ -338,7 +340,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
           <Command.Input
             value={search}
             onValueChange={setSearch}
-            placeholder="Search actions..."
+            placeholder={t('palette.actionsPlaceholder')}
             autoFocus
             className="h-12 w-full bg-transparent text-[15px] text-white outline-none placeholder:text-neutral-500 focus-ring"
           />
@@ -347,15 +349,15 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
         <CommandInput
           value={search}
           onValueChange={setSearch}
-          placeholder="Search agents, panes, and commands..."
+          placeholder={t('palette.placeholder')}
           autoFocus
         />
       )}
       <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandEmpty>{t('palette.empty')}</CommandEmpty>
 
         {scopePaneId !== null ? (
-          <CommandGroup heading="Actions">
+          <CommandGroup heading={t('palette.section.actions')}>
             {scopedActions(scopePaneId).map((item) => (
               <ItemRow key={`scope-${item.id}`} item={item} onRun={runItem} />
             ))}
@@ -363,7 +365,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
         ) : (
           <>
             {needsYou.length > 0 && (
-              <CommandGroup heading="Needs you">
+              <CommandGroup heading={t('palette.section.needsYou')}>
                 {needsYou.map((item) => (
                   <ItemRow key={item.id} item={item} onRun={runItem} />
                 ))}
@@ -371,7 +373,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
             )}
 
             {showRecent && recent.length > 0 && (
-              <CommandGroup heading="Recent">
+              <CommandGroup heading={t('palette.section.recent')}>
                 {recent.map((item) => (
                   <ItemRow
                     key={`recent-${item.id}`}
@@ -382,14 +384,14 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
               </CommandGroup>
             )}
 
-            <CommandGroup heading="Commands">
+            <CommandGroup heading={t('palette.section.commands')}>
               {commands.map((item) => (
                 <ItemRow key={item.id} item={item} onRun={runItem} />
               ))}
             </CommandGroup>
 
             {destinations.length > 0 && (
-              <CommandGroup heading="Destinations">
+              <CommandGroup heading={t('palette.section.destinations')}>
                 {destinations.map((item) => (
                   <ItemRow key={item.id} item={item} onRun={runItem} />
                 ))}
@@ -400,15 +402,15 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
       </CommandList>
 
       <div className="flex items-center justify-between border-t border-neutral-800 px-4 py-2 text-xs text-neutral-500">
-        <span>Command palette</span>
+        <span>{t('palette.footer.title')}</span>
         <span className="flex gap-3">
-          <span>↵ Run</span>
+          <span>{t('palette.footer.run')}</span>
           {scopePaneId !== null ? (
-            <span>esc Back</span>
+            <span>{t('palette.footer.back')}</span>
           ) : (
             <>
-              <span>{paletteShortcut} Actions</span>
-              <span>esc Close</span>
+              <span>{t('palette.footer.actions', { shortcut: paletteShortcut })}</span>
+              <span>{t('palette.footer.close')}</span>
             </>
           )}
         </span>

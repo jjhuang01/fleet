@@ -8,6 +8,7 @@ import { BackgroundPreview } from './BackgroundPreview';
 import { backgroundLegibilityHint } from '../../lib/contrast';
 import { adoptImages, nextSlideshowFiles } from '../../lib/background-actions';
 import { TERMINAL_THEMES } from '../../../../shared/theme-presets';
+import { useTranslation } from '../../lib/i18n';
 import {
   DEFAULT_TERMINAL_BACKGROUND,
   type TerminalBackground,
@@ -42,6 +43,7 @@ function GroupHeader({ children }: { children: React.ReactNode }): React.JSX.Ele
 }
 
 export function TerminalBackgroundSettings(): React.JSX.Element | null {
+  const { t } = useTranslation();
   const { settings, updateSettings } = useSettingsStore();
   const bg = settings?.general.terminalBackground;
 
@@ -233,21 +235,23 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
   return (
     <div className="space-y-3 pt-3 border-t border-fleet-border">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-fleet-text">Terminal Background</span>
+        <span className="text-sm font-medium text-fleet-text">
+          {t('settings.background.title')}
+        </span>
         <button type="button" onClick={resetToDefault} className={SUBTLE_BUTTON_CLASS}>
-          Reset
+          {t('common.reset')}
         </button>
       </div>
 
-      <SettingRow label="Mode">
+      <SettingRow label={t('settings.background.mode')}>
         <SegmentedControl
-          ariaLabel="Background mode"
+          ariaLabel={t('settings.background.modeAria')}
           value={mode}
           onChange={changeMode}
           options={[
-            { value: 'none', label: 'None' },
-            { value: 'image', label: 'Image' },
-            { value: 'slideshow', label: 'Slideshow' }
+            { value: 'none', label: t('settings.background.none') },
+            { value: 'image', label: t('settings.background.image') },
+            { value: 'slideshow', label: t('settings.background.slideshow') }
           ]}
         />
       </SettingRow>
@@ -270,7 +274,7 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
       )}
 
       {mode === 'image' && (
-        <SettingRow label="Image">
+        <SettingRow label={t('settings.background.image')}>
           <div className="flex items-center gap-2">
             {bg.imagePath && (
               <span
@@ -285,7 +289,7 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
               onClick={() => void pickBackgroundImage()}
               className={BUTTON_CLASS}
             >
-              {bg.imagePath ? 'Change…' : 'Browse…'}
+              {bg.imagePath ? t('settings.background.change') : t('settings.background.browse')}
             </button>
           </div>
         </SettingRow>
@@ -293,20 +297,20 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
 
       {mode === 'slideshow' && (
         <>
-          <GroupHeader>Slideshow</GroupHeader>
-          <SettingRow label="Source">
+          <GroupHeader>{t('settings.background.slideshow')}</GroupHeader>
+          <SettingRow label={t('settings.background.source')}>
             <SegmentedControl
-              ariaLabel="Slideshow source"
+              ariaLabel={t('settings.background.sourceAria')}
               value={ss.source}
               onChange={(v) => saveSlideshow({ source: v })}
               options={[
-                { value: 'folder', label: 'Folder' },
-                { value: 'files', label: 'Files' }
+                { value: 'folder', label: t('settings.background.folder') },
+                { value: 'files', label: t('settings.background.files') }
               ]}
             />
           </SettingRow>
           {ss.source === 'folder' ? (
-            <SettingRow label="Image Folder">
+            <SettingRow label={t('settings.background.imageFolder')}>
               <div className="flex items-center gap-2">
                 {ss.folderPath && (
                   <span
@@ -321,22 +325,31 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
                   onClick={() => void pickSlideshowFolder()}
                   className={BUTTON_CLASS}
                 >
-                  {ss.folderPath ? 'Change…' : 'Choose Folder…'}
+                  {ss.folderPath
+                    ? t('settings.background.change')
+                    : t('settings.background.chooseFolder')}
                 </button>
               </div>
             </SettingRow>
           ) : (
-            <SettingRow label="Images">
+            <SettingRow label={t('settings.background.images')}>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-fleet-text-subtle">
-                  {ss.filePaths.length} file{ss.filePaths.length === 1 ? '' : 's'}
+                  {t(
+                    ss.filePaths.length === 1
+                      ? 'settings.background.fileCountOne'
+                      : 'settings.background.fileCountOther',
+                    { count: ss.filePaths.length }
+                  )}
                 </span>
                 <button
                   type="button"
                   onClick={() => void addSlideshowFiles()}
                   className={BUTTON_CLASS}
                 >
-                  {ss.filePaths.length > 0 ? 'Add…' : 'Select Files…'}
+                  {ss.filePaths.length > 0
+                    ? t('settings.background.add')
+                    : t('settings.background.selectFiles')}
                 </button>
                 {ss.filePaths.length > 0 && (
                   <button
@@ -344,7 +357,7 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
                     onClick={clearSlideshowFiles}
                     className={SUBTLE_BUTTON_CLASS}
                   >
-                    Clear All
+                    {t('settings.background.clearAll')}
                   </button>
                 )}
               </div>
@@ -355,23 +368,23 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
             onRemoveFile={ss.source === 'files' ? removeSlideshowFile : undefined}
             onReorderFile={ss.source === 'files' ? reorderSlideshowFile : undefined}
           />
-          <SettingRow label="Order">
+          <SettingRow label={t('settings.background.order')}>
             <SegmentedControl
-              ariaLabel="Slideshow order"
+              ariaLabel={t('settings.background.orderAria')}
               value={ss.shuffle ? 'shuffle' : 'sequential'}
               onChange={(v) => saveSlideshow({ shuffle: v === 'shuffle' })}
               options={[
-                { value: 'shuffle', label: 'Shuffle' },
-                { value: 'sequential', label: 'Sequential' }
+                { value: 'shuffle', label: t('settings.background.shuffle') },
+                { value: 'sequential', label: t('settings.background.sequential') }
               ]}
             />
           </SettingRow>
           {timingVisible && (
             <>
-              <GroupHeader>Timing</GroupHeader>
-              <SettingRow label="Interval">
+              <GroupHeader>{t('settings.background.timing')}</GroupHeader>
+              <SettingRow label={t('settings.background.interval')}>
                 <NumberStepper
-                  ariaLabel="Slideshow interval in seconds"
+                  ariaLabel={t('settings.background.intervalAria')}
                   value={localInterval}
                   min={10}
                   max={1800}
@@ -383,9 +396,9 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
                   }}
                 />
               </SettingRow>
-              <SettingRow label="Transition">
+              <SettingRow label={t('settings.background.transition')}>
                 <NumberStepper
-                  ariaLabel="Crossfade duration in seconds"
+                  ariaLabel={t('settings.background.transitionAria')}
                   value={localTransitionMs}
                   min={200}
                   max={5000}
@@ -406,10 +419,10 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
 
       {appearanceVisible && (
         <>
-          <GroupHeader>Appearance</GroupHeader>
-          <SettingRow label="Opacity">
+          <GroupHeader>{t('settings.background.appearance')}</GroupHeader>
+          <SettingRow label={t('settings.background.opacity')}>
             <SliderInput
-              ariaLabel="Background opacity"
+              ariaLabel={t('settings.background.opacityAria')}
               value={localOpacity}
               min={0}
               max={1}
@@ -423,9 +436,9 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
               }}
             />
           </SettingRow>
-          <SettingRow label="Blur">
+          <SettingRow label={t('settings.background.blur')}>
             <SliderInput
-              ariaLabel="Background blur"
+              ariaLabel={t('settings.background.blurAria')}
               value={localBlur}
               min={0}
               max={20}
@@ -437,9 +450,9 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
               }}
             />
           </SettingRow>
-          <SettingRow label="Fade Left/Right">
+          <SettingRow label={t('settings.background.fadeX')}>
             <SliderInput
-              ariaLabel="Horizontal edge fade"
+              ariaLabel={t('settings.background.fadeXAria')}
               value={localEdgeFadeX}
               min={0}
               max={0.5}
@@ -453,9 +466,9 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
               }}
             />
           </SettingRow>
-          <SettingRow label="Fade Top/Bottom">
+          <SettingRow label={t('settings.background.fadeY')}>
             <SliderInput
-              ariaLabel="Vertical edge fade"
+              ariaLabel={t('settings.background.fadeYAria')}
               value={localEdgeFadeY}
               min={0}
               max={0.5}
@@ -469,7 +482,7 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
               }}
             />
           </SettingRow>
-          <SettingRow label="Fit">
+          <SettingRow label={t('settings.background.fit')}>
             <select
               value={bg.fit}
               onChange={(e) => {
@@ -480,19 +493,19 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
               }}
               className="bg-fleet-surface-2 text-fleet-text text-sm rounded px-2 py-1 border border-fleet-border-strong"
             >
-              <option value="cover">Cover</option>
-              <option value="contain">Contain</option>
-              <option value="center">Center</option>
-              <option value="tile">Tile</option>
+              <option value="cover">{t('settings.background.fitCover')}</option>
+              <option value="contain">{t('settings.background.fitContain')}</option>
+              <option value="center">{t('settings.background.fitCenter')}</option>
+              <option value="tile">{t('settings.background.fitTile')}</option>
             </select>
           </SettingRow>
 
           {/* The picture is set; these three shape the glass the panes are made
               of, which is a separate question from how the picture looks. */}
-          <GroupHeader>Pane Glass</GroupHeader>
-          <SettingRow label="Tint">
+          <GroupHeader>{t('settings.background.paneGlass')}</GroupHeader>
+          <SettingRow label={t('settings.background.tint')}>
             <SliderInput
-              ariaLabel="Pane tint"
+              ariaLabel={t('settings.background.tintAria')}
               value={localPaneTint}
               min={0}
               max={100}
@@ -504,9 +517,9 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
               }}
             />
           </SettingRow>
-          <SettingRow label="Frost">
+          <SettingRow label={t('settings.background.frost')}>
             <SliderInput
-              ariaLabel="Pane frost"
+              ariaLabel={t('settings.background.frostAria')}
               value={localPaneFrost}
               min={0}
               max={30}
@@ -518,9 +531,9 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
               }}
             />
           </SettingRow>
-          <SettingRow label="Saturation">
+          <SettingRow label={t('settings.background.saturation')}>
             <SliderInput
-              ariaLabel="Pane saturation"
+              ariaLabel={t('settings.background.saturationAria')}
               value={localPaneSaturation}
               min={0}
               max={3}

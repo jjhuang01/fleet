@@ -13,6 +13,8 @@ import {
   isTerminalThemeId
 } from '../../../../shared/theme-presets';
 import { normalizeAppTheme } from '../../lib/theme';
+import { useTranslation } from '../../lib/i18n';
+import { isLocalePreference } from '../../../../shared/i18n';
 
 const BUNDLED_FONTS: Array<{ label: string; selection: FontSelection }> = [
   { label: 'JetBrains Mono Nerd', selection: { type: 'bundled', name: 'JetBrains Mono Nerd Font' } }
@@ -53,6 +55,7 @@ function FontFamilyPicker({
   fontFamily: string;
   onChange: (v: string) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const parsed = parseFontSelection(fontFamily);
   const [customValue, setCustomValue] = useState(parsed.customValue);
 
@@ -62,7 +65,7 @@ function FontFamilyPicker({
 
   return (
     <div className="space-y-2">
-      <span className="text-sm text-fleet-text-secondary">Font Family</span>
+      <span className="text-sm text-fleet-text-secondary">{t('settings.general.fontFamily')}</span>
       <div className="space-y-1.5">
         {BUNDLED_FONTS.map((font, i) => {
           const isSelected = parsed.mode === 'bundled' && parsed.bundledIndex === i;
@@ -88,7 +91,9 @@ function FontFamilyPicker({
               >
                 {font.label}
               </span>
-              <span className="text-xs text-fleet-text-subtle ml-auto">bundled</span>
+              <span className="text-xs text-fleet-text-subtle ml-auto">
+                {t('settings.general.bundled')}
+              </span>
             </label>
           );
         })}
@@ -109,11 +114,11 @@ function FontFamilyPicker({
             }}
             className="fleet-accent-input"
           />
-          <span className="text-sm text-fleet-text-secondary">Custom</span>
+          <span className="text-sm text-fleet-text-secondary">{t('settings.general.custom')}</span>
           <input
             type="text"
             value={parsed.mode === 'custom' ? customValue : ''}
-            placeholder="System font name…"
+            placeholder={t('settings.general.customFontPlaceholder')}
             onFocus={() => {
               if (parsed.mode !== 'custom') {
                 const val = customValue || 'monospace';
@@ -142,6 +147,7 @@ function FontFamilyPicker({
 }
 
 export function GeneralSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const { settings, updateSettings } = useSettingsStore();
   const shellProfiles = useShellProfilesStore((s) => s.profiles);
 
@@ -188,7 +194,23 @@ export function GeneralSection(): React.JSX.Element {
 
   return (
     <div className="space-y-4">
-      <SettingRow label="Default Shell">
+      <SettingRow label={t('settings.language.title')} title={t('settings.language.hint')}>
+        <select
+          value={settings.general.language}
+          onChange={(e) => {
+            const { value } = e.target;
+            if (isLocalePreference(value)) {
+              void updateSettings({ general: { language: value } });
+            }
+          }}
+          className="bg-fleet-surface-2 text-fleet-text text-sm rounded px-2 py-1 border border-fleet-border-strong focus-ring"
+        >
+          <option value="system">{t('settings.language.system')}</option>
+          <option value="en">{t('settings.language.en')}</option>
+          <option value="zh-CN">{t('settings.language.zhCN')}</option>
+        </select>
+      </SettingRow>
+      <SettingRow label={t('settings.general.defaultShell')}>
         <input
           type="text"
           value={localShell}
@@ -196,12 +218,12 @@ export function GeneralSection(): React.JSX.Element {
             setLocalShell(e.target.value);
             debouncedSaveShell(e.target.value);
           }}
-          placeholder="Auto-detect"
+          placeholder={t('settings.general.autoDetect')}
           className="bg-fleet-surface-2 text-fleet-text text-sm rounded px-2 py-1 w-48 border border-fleet-border-strong focus-ring"
         />
       </SettingRow>
       {shellProfiles.length > 0 && (
-        <SettingRow label="Default Profile">
+        <SettingRow label={t('settings.general.defaultProfile')}>
           <select
             value={settings.general.defaultShellProfileId}
             onChange={(e) => {
@@ -209,7 +231,7 @@ export function GeneralSection(): React.JSX.Element {
             }}
             className="bg-fleet-surface-2 text-fleet-text text-sm rounded px-2 py-1 border border-fleet-border-strong focus-ring"
           >
-            <option value="">Auto-detect</option>
+            <option value="">{t('settings.general.autoDetect')}</option>
             {shellProfiles.map((profile) => (
               <option key={profile.id} value={profile.id}>
                 {profile.label}
@@ -218,7 +240,7 @@ export function GeneralSection(): React.JSX.Element {
           </select>
         </SettingRow>
       )}
-      <SettingRow label="Font Size">
+      <SettingRow label={t('settings.general.fontSize')}>
         <input
           type="number"
           value={localFontSize}
@@ -235,7 +257,7 @@ export function GeneralSection(): React.JSX.Element {
           void updateSettings({ general: { fontFamily } });
         }}
       />
-      <SettingRow label="Scrollback Lines">
+      <SettingRow label={t('settings.general.scrollback')}>
         <input
           type="number"
           min={MIN_SCROLLBACK}
@@ -248,7 +270,7 @@ export function GeneralSection(): React.JSX.Element {
           className="bg-fleet-surface-2 text-fleet-text text-sm rounded px-2 py-1 w-24 border border-fleet-border-strong focus-ring"
         />
       </SettingRow>
-      <SettingRow label="App Theme">
+      <SettingRow label={t('settings.general.appTheme')}>
         <select
           value={normalizeAppTheme(settings.general.theme)}
           onChange={(e) => {
@@ -259,18 +281,18 @@ export function GeneralSection(): React.JSX.Element {
           }}
           className="bg-fleet-surface-2 text-fleet-text text-sm rounded px-2 py-1 border border-fleet-border-strong focus-ring"
         >
-          <optgroup label="Mode">
-            <option value="system">System (follow OS)</option>
-            <option value="match-terminal">Match Terminal Theme</option>
+          <optgroup label={t('settings.general.themeMode')}>
+            <option value="system">{t('settings.general.themeSystem')}</option>
+            <option value="match-terminal">{t('settings.general.themeMatchTerminal')}</option>
           </optgroup>
-          <optgroup label="Dark">
+          <optgroup label={t('settings.general.themeDark')}>
             {DARK_THEME_OPTIONS.map((theme) => (
               <option key={theme.id} value={theme.id}>
                 {theme.label}
               </option>
             ))}
           </optgroup>
-          <optgroup label="Light">
+          <optgroup label={t('settings.general.themeLight')}>
             {LIGHT_THEME_OPTIONS.map((theme) => (
               <option key={theme.id} value={theme.id}>
                 {theme.label}
@@ -279,7 +301,7 @@ export function GeneralSection(): React.JSX.Element {
           </optgroup>
         </select>
       </SettingRow>
-      <SettingRow label="Terminal Theme">
+      <SettingRow label={t('settings.general.terminalTheme')}>
         <select
           value={settings.general.terminalTheme}
           onChange={(e) => {
@@ -290,14 +312,14 @@ export function GeneralSection(): React.JSX.Element {
           }}
           className="bg-fleet-surface-2 text-fleet-text text-sm rounded px-2 py-1 border border-fleet-border-strong focus-ring"
         >
-          <optgroup label="Dark">
+          <optgroup label={t('settings.general.themeDark')}>
             {DARK_THEME_OPTIONS.map((theme) => (
               <option key={theme.id} value={theme.id}>
                 {theme.label}
               </option>
             ))}
           </optgroup>
-          <optgroup label="Light">
+          <optgroup label={t('settings.general.themeLight')}>
             {LIGHT_THEME_OPTIONS.map((theme) => (
               <option key={theme.id} value={theme.id}>
                 {theme.label}
@@ -306,7 +328,7 @@ export function GeneralSection(): React.JSX.Element {
           </optgroup>
         </select>
       </SettingRow>
-      <SettingRow label="Accent Color">
+      <SettingRow label={t('settings.general.accentColor')}>
         <div className="flex gap-2">
           {ACCENT_COLOR_OPTIONS.map((accent) => {
             const selected = settings.general.accentColor === accent.id;

@@ -18,6 +18,7 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import * as Popover from '@radix-ui/react-popover';
 import { formatShortcut, getShortcut } from '../lib/shortcuts';
 import { tooltipAnim, popperAnim } from '../lib/motion';
+import { useTranslation } from '../lib/i18n';
 
 function shortcutLabel(id: string): string {
   const def = getShortcut(id);
@@ -116,6 +117,7 @@ export function PaneToolbar({
   onEnvSync,
   onEnvEditor
 }: PaneToolbarProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const pick =
     (run: () => void): (() => void) =>
@@ -130,36 +132,40 @@ export function PaneToolbar({
   const menuActions = [
     isGitRepo && {
       icon: <GitBranch size={14} />,
-      label: 'Git Changes',
+      label: t('pane.gitChanges'),
       shortcut: shortcutLabel('git-changes'),
       onSelect: onGitChanges
     },
     onFileSearch && {
       icon: <FileSearch size={14} />,
-      label: 'Search Files',
+      label: t('pane.fileSearch'),
       shortcut: shortcutLabel('file-search'),
       onSelect: onFileSearch
     },
     onClipboardHistory && {
       icon: <Clipboard size={14} />,
-      label: 'Clipboard History',
+      label: t('pane.clipboardHistory'),
       shortcut: shortcutLabel('clipboard-history'),
       onSelect: onClipboardHistory
     },
     onTelescope && {
       icon: <Telescope size={14} />,
-      label: 'Telescope',
+      label: t('pane.telescope'),
       shortcut: shortcutLabel('telescope'),
       onSelect: onTelescope
     },
     onAnnotate && {
       icon: <Crosshair size={14} />,
-      label: 'Annotate webpage',
+      label: t('pane.annotate'),
       onSelect: onAnnotate
     },
-    onNotes && { icon: <NotebookPen size={14} />, label: 'Project Notes', onSelect: onNotes },
-    onEnvSync && { icon: <FolderSync size={14} />, label: 'Env Sync', onSelect: onEnvSync },
-    onEnvEditor && { icon: <FilePenLine size={14} />, label: 'Edit .env', onSelect: onEnvEditor }
+    onNotes && { icon: <NotebookPen size={14} />, label: t('pane.notes'), onSelect: onNotes },
+    onEnvSync && { icon: <FolderSync size={14} />, label: t('pane.envSync'), onSelect: onEnvSync },
+    onEnvEditor && {
+      icon: <FilePenLine size={14} />,
+      label: t('pane.envEditor'),
+      onSelect: onEnvEditor
+    }
   ].filter((a) => a !== false && a !== undefined);
 
   return (
@@ -173,53 +179,57 @@ export function PaneToolbar({
         style={{ WebkitAppRegion: 'no-drag' }}
       >
         {onSplitHorizontal && (
-          <ToolbarTooltip label={`Split Right (${shortcutLabel('split-right')})`}>
+          <ToolbarTooltip
+            label={t('pane.splitRightHint', { shortcut: shortcutLabel('split-right') })}
+          >
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onSplitHorizontal();
               }}
               className={BUTTON_CLASS}
-              aria-label="Split right"
+              aria-label={t('pane.splitRight')}
             >
               <Columns2 size={14} />
             </button>
           </ToolbarTooltip>
         )}
         {onSplitVertical && (
-          <ToolbarTooltip label={`Split Down (${shortcutLabel('split-down')})`}>
+          <ToolbarTooltip
+            label={t('pane.splitDownHint', { shortcut: shortcutLabel('split-down') })}
+          >
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onSplitVertical();
               }}
               className={BUTTON_CLASS}
-              aria-label="Split down"
+              aria-label={t('pane.splitDown')}
             >
               <Rows2 size={14} />
             </button>
           </ToolbarTooltip>
         )}
-        <ToolbarTooltip label={`Search in Pane (${shortcutLabel('search')})`}>
+        <ToolbarTooltip label={t('pane.searchHint', { shortcut: shortcutLabel('search') })}>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onSearch();
             }}
             className={BUTTON_CLASS}
-            aria-label="Search in pane"
+            aria-label={t('pane.searchInPane')}
           >
             <Search size={14} />
           </button>
         </ToolbarTooltip>
         {menuActions.length > 0 && (
           <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
-            <ToolbarTooltip label="More actions">
+            <ToolbarTooltip label={t('pane.moreActions')}>
               <Popover.Trigger asChild>
                 <button
                   onClick={(e) => e.stopPropagation()}
                   className={BUTTON_CLASS}
-                  aria-label="More pane actions"
+                  aria-label={t('pane.moreActionsAria')}
                 >
                   <MoreHorizontal size={14} />
                 </button>
@@ -248,14 +258,14 @@ export function PaneToolbar({
         {/* Separate the destructive Close from Search so a slightly-off click
             can't kill a running pane. */}
         <div className="mx-0.5 h-4 w-px bg-fleet-border/70" aria-hidden />
-        <ToolbarTooltip label={`Close Pane (${shortcutLabel('close-pane')})`}>
+        <ToolbarTooltip label={t('pane.closeHint', { shortcut: shortcutLabel('close-pane') })}>
           <button
             onClick={(e) => {
               e.stopPropagation();
               onClose();
             }}
             className={CLOSE_BUTTON_CLASS}
-            aria-label="Close pane"
+            aria-label={t('pane.closePane')}
           >
             <X size={14} />
           </button>

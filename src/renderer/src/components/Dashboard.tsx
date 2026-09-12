@@ -1,5 +1,6 @@
 import { Terminal, Folder, FileText } from 'lucide-react';
 import { shortenPath } from '../lib/shorten-path';
+import { useTranslation } from '../lib/i18n';
 
 const ASCII_LINES = [
   '███████╗██╗     ███████╗███████╗████████╗',
@@ -34,6 +35,7 @@ export function Dashboard({
   onOpenFile,
   onOpenFolder
 }: DashboardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const displayFiles = recentFiles.slice(0, 10);
   const displayFolders = recentFolders.slice(0, 10);
 
@@ -58,7 +60,7 @@ export function Dashboard({
           className="flex items-center gap-3 text-neutral-400 hover:text-cyan-400 transition-colors cursor-pointer group active:scale-[0.97]"
         >
           <Terminal size={16} />
-          <span className="text-sm">New Terminal</span>
+          <span className="text-sm">{t('dashboard.newTerminal')}</span>
           <kbd className="text-xs text-neutral-600 group-hover:text-neutral-500 ml-2">⌘T</kbd>
         </button>
 
@@ -67,7 +69,7 @@ export function Dashboard({
           <div className="w-full">
             <h3 className="text-neutral-600 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
               <Folder size={12} />
-              Recent Folders
+              {t('dashboard.recentFolders')}
             </h3>
             <ul className="space-y-1">
               {displayFolders.map((folder) => (
@@ -89,7 +91,7 @@ export function Dashboard({
           <div className="w-full">
             <h3 className="text-neutral-600 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
               <FileText size={12} />
-              Recent Files
+              {t('dashboard.recentFiles')}
             </h3>
             <ul className="space-y-1">
               {displayFiles.map((file) => (

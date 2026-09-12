@@ -16,6 +16,7 @@ import { popperAnim } from '../lib/motion';
 import { TabStatusIndicator } from './TabStatusIndicator';
 import { COLOR_MAP } from './sidebar-constants';
 import { hasPanePayload } from '../lib/pane-drag';
+import { useTranslation, type Translator } from '../lib/i18n';
 
 type TabItemProps = {
   id: string;
@@ -72,18 +73,20 @@ type TabItemProps = {
   onRemoveFromGroup?: () => void;
 };
 
-function formatFreshness(lastOutputAt: number, state: string): string | null {
+function formatFreshness(lastOutputAt: number, state: string, t: Translator): string | null {
   if (state === 'working' || !lastOutputAt) return null;
   const elapsed = Date.now() - lastOutputAt;
   if (elapsed < 10_000) return null; // Don't show for <10s
   const minutes = Math.floor(elapsed / 60_000);
   const seconds = Math.floor((elapsed % 60_000) / 1000);
   if (minutes > 0) {
-    const timeStr = `${minutes}m ago`;
-    return state === 'needs_me' ? `${minutes}m waiting` : timeStr;
+    return state === 'needs_me'
+      ? t('tabStatus.minutesWaiting', { minutes })
+      : t('tabStatus.minutesAgo', { minutes });
   }
-  const timeStr = `${seconds}s ago`;
-  return state === 'needs_me' ? `${seconds}s waiting` : timeStr;
+  return state === 'needs_me'
+    ? t('tabStatus.secondsWaiting', { seconds })
+    : t('tabStatus.secondsAgo', { seconds });
 }
 
 export function TabItem({
@@ -124,6 +127,7 @@ export function TabItem({
   onAddToGroup,
   onRemoveFromGroup
 }: TabItemProps): React.JSX.Element {
+  const { t } = useTranslation();
   // Granular CWD subscription — only re-renders when THIS pane's CWD changes
   const liveCwd = useCwdStore((s) => (drivingPaneId ? s.cwds.get(drivingPaneId) : undefined));
   const cwd = liveCwd ?? fallbackCwd;
@@ -138,11 +142,12 @@ export function TabItem({
       return;
     }
     // Update freshness every 10s
-    const update = (): void => setFreshness(formatFreshness(activity.lastOutputAt, activity.state));
+    const update = (): void =>
+      setFreshness(formatFreshness(activity.lastOutputAt, activity.state, t));
     update();
     const interval = setInterval(update, 10_000);
     return () => clearInterval(interval);
-  }, [activity]);
+  }, [activity, t]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(label);
@@ -318,7 +323,7 @@ export function TabItem({
               {isRemote && (
                 <span
                   className="flex-shrink-0 rounded bg-purple-500/20 px-1 py-px text-[9px] font-medium uppercase leading-none tracking-wide text-purple-300"
-                  aria-label="remote session"
+                  aria-label={t('tabItem.remoteSession')}
                 >
                   remote
                 </span>
@@ -366,7 +371,7 @@ export function TabItem({
               className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-fleet-surface-3 hover:bg-fleet-surface-3"
               onSelect={onDuplicate}
             >
-              Duplicate Tab
+              {t('tabItem.duplicate')}
             </ContextMenu.Item>
           )}
           <ContextMenu.Item
@@ -377,14 +382,14 @@ export function TabItem({
               setTimeout(() => setIsEditing(true), 0);
             }}
           >
-            Rename
+            {t('common.rename')}
           </ContextMenu.Item>
           {!disableReset && labelIsCustom && (
             <ContextMenu.Item
               className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-fleet-surface-3 hover:bg-fleet-surface-3"
               onSelect={() => onResetLabel(cwd)}
             >
-              Reset to directory name
+              {t('tabItem.resetLabel')}
             </ContextMenu.Item>
           )}
           {worktreeDisabledReason !== undefined && (
@@ -403,7 +408,7 @@ export function TabItem({
               >
                 <div className="flex items-center gap-2">
                   <GitBranch size={14} />
-                  <span>Create Worktree</span>
+                  <span>{t('tabItem.createWorktree')}</span>
                 </div>
                 {worktreeDisabledReason && (
                   <div className="text-xs text-fleet-text-subtle mt-0.5 ml-6">
@@ -423,13 +428,13 @@ export function TabItem({
               className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-fleet-surface-3 hover:bg-fleet-surface-3"
               onSelect={onCreateGroup}
             >
-              New Group
+              {t('tabItem.newGroup')}
             </ContextMenu.Item>
           )}
           {onAddToGroup && userGroups && userGroups.length > 0 && (
             <ContextMenu.Sub>
               <ContextMenu.SubTrigger className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-fleet-surface-3 hover:bg-fleet-surface-3 data-[state=open]:bg-fleet-surface-3 flex items-center justify-between">
-                Add to Group
+                {t('tabItem.addToGroup')}
                 <svg
                   className="ml-2"
                   width="12"
@@ -463,7 +468,7 @@ export function TabItem({
               className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-fleet-surface-3 hover:bg-fleet-surface-3"
               onSelect={onRemoveFromGroup}
             >
-              Remove from Group
+              {t('tabItem.removeFromGroup')}
             </ContextMenu.Item>
           )}
           <ContextMenu.Separator className="my-1 h-px bg-fleet-surface-3" />
@@ -471,7 +476,7 @@ export function TabItem({
             className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-red-900/50 hover:bg-red-900/50 text-red-400"
             onSelect={onClose}
           >
-            Close Tab
+            {t('tabItem.close')}
           </ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Portal>

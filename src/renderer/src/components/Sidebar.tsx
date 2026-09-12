@@ -53,13 +53,17 @@ import { EnvSyncConflictDialog } from './env-sync/EnvSyncConflictDialog';
 import { SessionsTabCard } from './sessions/SessionsTabCard';
 import { isScratchTab } from '../lib/scratch';
 import { useSettingsStore } from '../store/settings-store';
+import { useTranslation } from '../lib/i18n';
+import type { MessageKey } from '../../../shared/i18n';
 import { TOGGLEABLE_TOOLS } from '../../../shared/tools';
 
+function shortcutLabel(id: string): string {
+  const def = getShortcut(id);
+  return def ? formatShortcut(def) : id;
+}
+
 // Platform constant, so resolve it once at module load (same pattern as CommandPalette).
-const NEW_TAB_HINT = (() => {
-  const def = getShortcut('new-tab');
-  return def ? ` (${formatShortcut(def)})` : '';
-})();
+const NEW_TAB_SHORTCUT = shortcutLabel('new-tab');
 
 function getFirstDirtyPaneId(tab: Tab): string | null {
   function check(node: Tab['splitRoot']): string | null {
@@ -113,6 +117,7 @@ function UserGroupHeader({
     }
   }, [isEditing]);
 
+  const { t } = useTranslation();
   const commitRename = useCallback(() => {
     const trimmed = editValue.trim();
     if (trimmed && trimmed !== group.name) {
@@ -181,7 +186,7 @@ function UserGroupHeader({
             </span>
           )}
           <span className="ml-auto text-[10px] text-fleet-text-subtle">
-            {group.collapsed ? `${tabCount} tabs` : ''}
+            {group.collapsed ? t('sidebar.tabCount', { count: tabCount }) : ''}
           </span>
         </div>
       </ContextMenu.Trigger>
@@ -196,11 +201,11 @@ function UserGroupHeader({
               setTimeout(() => setIsEditing(true), 0);
             }}
           >
-            Rename
+            {t('common.rename')}
           </ContextMenu.Item>
           <ContextMenu.Sub>
             <ContextMenu.SubTrigger className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-fleet-surface-3 hover:bg-fleet-surface-3 data-[state=open]:bg-fleet-surface-3 flex items-center justify-between">
-              Recolor
+              {t('sidebar.group.recolor')}
             </ContextMenu.SubTrigger>
             <ContextMenu.Portal>
               <ContextMenu.SubContent className="min-w-[180px] bg-fleet-surface-2 border border-fleet-border-strong rounded-md shadow-lg p-1 z-50">
@@ -213,7 +218,7 @@ function UserGroupHeader({
             className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-red-900/50 hover:bg-red-900/50 text-red-400"
             onSelect={onUngroupAll}
           >
-            Ungroup All
+            {t('sidebar.group.ungroupAll')}
           </ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Portal>
@@ -255,6 +260,7 @@ function GroupHeader({
     }
   }, [isEditing]);
 
+  const { t } = useTranslation();
   const commitRename = useCallback(() => {
     const trimmed = editValue.trim();
     if (trimmed && trimmed !== label) {
@@ -323,7 +329,9 @@ function GroupHeader({
           )}
           <span className="ml-auto flex items-center gap-1">
             {isCollapsed && (
-              <span className="text-[10px] text-fleet-text-subtle">{tabCount} tabs</span>
+              <span className="text-[10px] text-fleet-text-subtle">
+                {t('sidebar.tabCount', { count: tabCount })}
+              </span>
             )}
             <button
               className="opacity-60 group-hover/header:opacity-100 text-fleet-text-muted hover:text-fleet-text w-5 h-5 flex items-center justify-center text-sm rounded border border-fleet-border-strong hover:border-fleet-border-strong hover:bg-fleet-surface-3 transition active:scale-90 cursor-pointer"
@@ -331,7 +339,7 @@ function GroupHeader({
                 e.stopPropagation();
                 onAddWorktree();
               }}
-              title="Add worktree"
+              title={t('sidebar.addWorktree')}
             >
               +
             </button>
@@ -349,7 +357,7 @@ function GroupHeader({
               setTimeout(() => setIsEditing(true), 0);
             }}
           >
-            Rename
+            {t('common.rename')}
           </ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Portal>
@@ -364,6 +372,7 @@ function AnnotateTabCard({
   isActive: boolean;
   onClick: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <div
       onClick={onClick}
@@ -397,7 +406,7 @@ function AnnotateTabCard({
               isActive ? 'text-fleet-text' : 'text-fleet-text-secondary'
             }`}
           >
-            Annotate
+            {t('settings.nav.annotate')}
           </div>
         </div>
       </div>
@@ -412,13 +421,15 @@ function OffScreenBadgeSummary({
 }: {
   direction: 'above' | 'below';
   count: number;
-  label: string;
+  /** A key, not text: the caller does not know the active locale. */
+  label: MessageKey;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   if (count === 0) return null;
   const arrow = direction === 'above' ? '\u2191' : '\u2193';
   return (
     <div className="px-3 py-0.5 text-[10px] text-fleet-text-subtle text-center">
-      {arrow} {count} {label}
+      {arrow} {count} {t(label)}
     </div>
   );
 }
@@ -438,11 +449,12 @@ function SectionHeader({
   onToggle,
   children
 }: {
-  label: string;
+  label: MessageKey;
   collapsed: boolean;
   onToggle: () => void;
   children: React.ReactNode;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between px-2 py-1">
       <button
@@ -455,7 +467,7 @@ function SectionHeader({
           size={12}
           className={`shrink-0 transition-transform ${collapsed ? '' : 'rotate-90'}`}
         />
-        {label}
+        {t(label)}
       </button>
       <div className="flex items-center gap-1.5">{children}</div>
     </div>
@@ -471,6 +483,7 @@ export function Sidebar({
   onCollapse: () => void;
   onOpenToolsConfig: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const {
     workspace,
     activeTabId,
@@ -1345,7 +1358,7 @@ export function Sidebar({
                       setTimeout(() => setIsEditingWsLabel(true), 0);
                     }}
                   >
-                    Rename
+                    {t('common.rename')}
                   </ContextMenu.Item>
                 </ContextMenu.Content>
               </ContextMenu.Portal>
@@ -1357,20 +1370,23 @@ export function Sidebar({
           <EnvSyncBadge cwd={activeCwd} pathContext={getPaneContextById(activeTabFirstPaneId)} />
           {/* Dirty state indicator */}
           {isDirty && (
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="Unsaved changes" />
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-blue-400"
+              title={t('sidebar.unsavedChanges')}
+            />
           )}
           {/* Add tab button */}
           <button
             className="text-fleet-text-subtle hover:text-fleet-text text-lg leading-none px-1 rounded hover:bg-fleet-surface-2 transition active:scale-90"
             onClick={() => addTab(undefined, window.fleet.homeDir)}
-            title={`New Tab${NEW_TAB_HINT}`}
+            title={t('sidebar.newTabHint', { shortcut: NEW_TAB_SHORTCUT })}
           >
             +
           </button>
           <button
             className="text-fleet-text-subtle hover:text-fleet-text px-1 rounded hover:bg-fleet-surface-2 transition active:scale-90"
             onClick={onCollapse}
-            title="Collapse sidebar"
+            title={t('sidebar.collapse')}
           >
             <svg
               width="14"
@@ -1393,7 +1409,7 @@ export function Sidebar({
         <OffScreenBadgeSummary
           direction="above"
           count={offScreenCounts.above}
-          label="need attention"
+          label="sidebar.needAttention"
         />
         <div
           ref={tabListRef}
@@ -1702,12 +1718,12 @@ export function Sidebar({
               <input
                 autoFocus
                 className="w-full bg-fleet-surface-3 text-fleet-text text-sm rounded px-2 py-1 outline-none border border-fleet-border-strong mb-2"
-                placeholder="Group name..."
+                placeholder={t('sidebar.group.namePlaceholder')}
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
-                    const name = newGroupName.trim() || 'Group';
+                    const name = newGroupName.trim() || t('sidebar.group.defaultName');
                     createUserGroup(name, newGroupColor, newGroupState.tabId);
                     setNewGroupState(null);
                   }
@@ -1720,7 +1736,7 @@ export function Sidebar({
                   className="px-2 py-0.5 text-xs text-fleet-text-muted hover:text-fleet-text rounded transition"
                   onClick={() => setNewGroupState(null)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   className="px-2 py-0.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded transition"
@@ -1730,7 +1746,7 @@ export function Sidebar({
                     setNewGroupState(null);
                   }}
                 >
-                  Create
+                  {t('common.create')}
                 </button>
               </div>
             </div>
@@ -1738,7 +1754,7 @@ export function Sidebar({
         </div>
         {isPaneDetachOver && (
           <div className="pointer-events-none absolute inset-x-2 bottom-2 z-20 rounded-md border-2 border-dashed fleet-accent-border fleet-accent-bg-soft px-2 py-1.5 text-center text-xs fleet-accent-text">
-            Move pane to a new tab
+            {t('sidebar.movePaneToNewTab')}
           </div>
         )}
         {/* Scroll overflow shadow indicator */}
@@ -1748,14 +1764,14 @@ export function Sidebar({
         <OffScreenBadgeSummary
           direction="below"
           count={offScreenCounts.below}
-          label="need attention"
+          label="sidebar.needAttention"
         />
       </div>
 
       {/* Pinned agents section */}
       <div className="border-t border-fleet-border px-2 py-2 space-y-0.5">
         <SectionHeader
-          label="Agents"
+          label="sidebar.section.agents"
           collapsed={agentsCollapsed}
           onToggle={() => toggleSection('agents')}
         >
@@ -1771,8 +1787,8 @@ export function Sidebar({
               expandSection('agents');
               useWorkspaceStore.getState().openScratch();
             }}
-            title="New scratch chat"
-            aria-label="New scratch chat"
+            title={t('sidebar.newScratch')}
+            aria-label={t('sidebar.newScratch')}
           >
             <MessageCirclePlus size={14} />
           </button>
@@ -1784,7 +1800,7 @@ export function Sidebar({
               expandSection('agents');
               document.dispatchEvent(new CustomEvent('fleet:new-agent'));
             }}
-            title="New Agent Pane"
+            title={t('sidebar.newAgentPane')}
           >
             +
           </button>
@@ -1794,7 +1810,7 @@ export function Sidebar({
             <OffScreenBadgeSummary
               direction="above"
               count={agentOffScreenCounts.above}
-              label="need attention"
+              label="sidebar.needAttention"
             />
             <div ref={agentListRef} className="max-h-[30vh] overflow-y-auto space-y-0.5">
               {agentRows.map(({ tab, paneIds, badge, activity }) => (
@@ -1844,7 +1860,7 @@ export function Sidebar({
             <OffScreenBadgeSummary
               direction="below"
               count={agentOffScreenCounts.below}
-              label="need attention"
+              label="sidebar.needAttention"
             />
           </>
         )}
@@ -1853,20 +1869,23 @@ export function Sidebar({
       {/* Pinned tools section */}
       <div className="border-t border-fleet-border px-2 py-2 space-y-0.5">
         <SectionHeader
-          label="Tools"
+          label="sidebar.section.tools"
           collapsed={toolsCollapsed}
           onToggle={() => toggleSection('tools')}
         >
           <span
             className="text-[10px] font-medium tabular-nums text-fleet-text-subtle"
-            title={`${enabledToolCount} of ${TOGGLEABLE_TOOLS.length} tools enabled`}
+            title={t('sidebar.toolsEnabled', {
+              enabled: enabledToolCount,
+              total: TOGGLEABLE_TOOLS.length
+            })}
           >
             {enabledToolCount}/{TOGGLEABLE_TOOLS.length}
           </span>
           <button
             className="text-fleet-text-subtle hover:text-fleet-text rounded p-0.5 hover:bg-fleet-surface-2 transition active:scale-90"
             onClick={onOpenToolsConfig}
-            title="Configure tools"
+            title={t('sidebar.configureTools')}
           >
             <SlidersHorizontal size={13} />
           </button>
@@ -1900,7 +1919,7 @@ export function Sidebar({
       {/* Bottom section: workspaces */}
       <div className="border-t border-fleet-border px-2 py-2 space-y-0.5">
         <SectionHeader
-          label="Workspaces"
+          label="sidebar.section.workspaces"
           collapsed={workspacesCollapsed}
           onToggle={() => toggleSection('workspaces')}
         >
@@ -1910,7 +1929,7 @@ export function Sidebar({
               expandSection('workspaces');
               setShowNewWsDialog(true);
             }}
-            title="New Workspace"
+            title={t('sidebar.workspace.new')}
           >
             +
           </button>
@@ -1930,7 +1949,7 @@ export function Sidebar({
               <div key={ws.id} className="relative">
                 {deleteConfirmId === ws.id ? (
                   <div className="flex flex-col gap-1 px-2 py-2 bg-fleet-surface-2 rounded-md text-xs">
-                    <span className="text-red-400">Delete this workspace?</span>
+                    <span className="text-red-400">{t('sidebar.workspace.deleteConfirm')}</span>
                     <div className="flex gap-2">
                       <button
                         className="px-2 py-0.5 bg-red-600 hover:bg-red-500 text-white rounded transition active:scale-[0.97]"
@@ -1938,13 +1957,13 @@ export function Sidebar({
                           void handleDeleteWorkspace(ws.id);
                         }}
                       >
-                        Delete
+                        {t('common.delete')}
                       </button>
                       <button
                         className="px-2 py-0.5 bg-fleet-surface-3 hover:bg-fleet-surface-3 text-fleet-text-secondary rounded transition active:scale-[0.97]"
                         onClick={() => setDeleteConfirmId(null)}
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </button>
                     </div>
                   </div>
@@ -1971,11 +1990,11 @@ export function Sidebar({
                       <button
                         className="w-full flex items-center justify-between px-2 py-1.5 text-sm text-fleet-text-muted hover:text-fleet-text hover:bg-fleet-surface-2 rounded-md transition active:scale-[0.97]"
                         onClick={() => handleSwitchWorkspace(ws.id)}
-                        title={`Switch to ${ws.label}`}
+                        title={t('sidebar.workspace.switchTo', { label: ws.label })}
                       >
                         <span className="truncate">{ws.label}</span>
                         <span className="text-xs text-fleet-text-subtle hover:text-blue-400 ml-1 flex-shrink-0">
-                          Open
+                          {t('sidebar.workspace.open')}
                         </span>
                       </button>
                     </ContextMenu.Trigger>
@@ -1990,14 +2009,14 @@ export function Sidebar({
                             setTimeout(() => setRenamingWsId(ws.id), 0);
                           }}
                         >
-                          Rename
+                          {t('common.rename')}
                         </ContextMenu.Item>
                         <ContextMenu.Separator className="my-1 h-px bg-fleet-surface-3" />
                         <ContextMenu.Item
                           className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-red-900/50 hover:bg-red-900/50 text-red-400"
                           onSelect={() => setDeleteConfirmId(ws.id)}
                         >
-                          Delete
+                          {t('common.delete')}
                         </ContextMenu.Item>
                       </ContextMenu.Content>
                     </ContextMenu.Portal>
@@ -2021,10 +2040,10 @@ export function Sidebar({
                   : 'text-fleet-text-muted hover:text-fleet-text hover:bg-fleet-surface-2'
               }`}
               onClick={() => document.dispatchEvent(new CustomEvent('fleet:toggle-settings'))}
-              title="Settings (⌘,)"
+              title={t('sidebar.settingsHint', { shortcut: shortcutLabel('settings') })}
             >
               <Settings size={14} />
-              Settings
+              {t('common.settings')}
               {updateReady && (
                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
               )}
@@ -2046,10 +2065,10 @@ export function Sidebar({
             className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-fleet-surface border border-fleet-border-strong rounded-lg shadow-xl p-5 w-80 text-sm ${dialogFadeAnim}`}
           >
             <Dialog.Title className="text-base font-semibold text-fleet-text mb-1">
-              Save changes to &ldquo;{fileCloseConfirm?.label}&rdquo;?
+              {t('sidebar.fileClose.title', { label: fileCloseConfirm?.label ?? '' })}
             </Dialog.Title>
             <Dialog.Description className="text-fleet-text-muted mb-5 text-xs">
-              Your changes will be lost if you don&apos;t save.
+              {t('sidebar.fileClose.body')}
             </Dialog.Description>
             <div className="flex justify-end gap-2">
               <button
@@ -2059,13 +2078,13 @@ export function Sidebar({
                   setFileCloseConfirm(null);
                 }}
               >
-                Don&apos;t Save
+                {t('common.dontSave')}
               </button>
               <button
                 className="px-3 py-1.5 text-xs text-fleet-text-muted hover:text-fleet-text hover:bg-fleet-surface-2 rounded transition active:scale-[0.97]"
                 onClick={() => setFileCloseConfirm(null)}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 disabled={fileSaving}
@@ -2087,7 +2106,7 @@ export function Sidebar({
                   }
                 }}
               >
-                {fileSaving ? 'Saving…' : 'Save'}
+                {fileSaving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </Dialog.Content>
@@ -2107,24 +2126,23 @@ export function Sidebar({
             className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-fleet-surface border border-fleet-border-strong rounded-lg shadow-xl p-5 w-80 text-sm ${dialogFadeAnim}`}
           >
             <Dialog.Title className="text-base font-semibold text-fleet-text mb-1">
-              Remove worktree &ldquo;{worktreeCloseConfirm?.label}&rdquo;?
+              {t('sidebar.worktree.removeTitle', { label: worktreeCloseConfirm?.label ?? '' })}
             </Dialog.Title>
             <Dialog.Description className="text-fleet-text-muted mb-5 text-xs">
-              This will destroy the worktree and its directory. Any work not committed and pushed
-              will be lost.
+              {t('sidebar.worktree.removeBody')}
             </Dialog.Description>
             <div className="flex justify-end gap-2">
               <button
                 className="px-3 py-1.5 text-xs text-fleet-text-muted hover:text-fleet-text hover:bg-fleet-surface-2 rounded transition active:scale-[0.97]"
                 onClick={() => setWorktreeCloseConfirm(null)}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-500 text-white rounded transition active:scale-[0.97] font-medium"
                 onClick={confirmWorktreeClose}
               >
-                Remove
+                {t('common.remove')}
               </button>
             </div>
           </Dialog.Content>

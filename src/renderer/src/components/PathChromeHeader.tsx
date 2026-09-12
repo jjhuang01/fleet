@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
+import { useTranslation } from '../lib/i18n';
 
 type Props = {
   filePath: string;
 };
 
 export function PathChromeHeader({ filePath }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -40,8 +42,8 @@ export function PathChromeHeader({ filePath }: Props): React.JSX.Element {
           type="button"
           onClick={handleCopy}
           className="shrink-0 p-0.5 rounded hover:bg-fleet-surface-3 text-fleet-text-subtle hover:text-fleet-text transition-colors active:scale-90"
-          title={copied ? 'Copied!' : 'Copy path'}
-          aria-label="Copy path"
+          title={copied ? t('pane.copied') : t('pane.copyPath')}
+          aria-label={t('pane.copyPath')}
         >
           {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
         </button>

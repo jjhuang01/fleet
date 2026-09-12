@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **The interface speaks Simplified Chinese** - `Settings > General > Language` switches the whole app between English and Simplified Chinese, and the default (`Follow system`) reads the OS locale, so a Chinese Mac opens in Chinese without configuring anything.
+Coverage is the shell: sidebar, pane titles and toolbars, the command palette, the shortcuts overlay, the settings navigation and the General page. Pages that are not translated yet stay in English, which the setting's own hint says out loud.
 - **A fork that stands on its own** - the update feed, the diagnostics "report an issue" links, the OpenRouter referer header, the Linux package maintainer and the pricing feed now point at this fork rather than upstream. Upstream is still credited in [Credits](README.md#credits) and still reachable with `git remote add upstream`.
 
 ## v2.119.0

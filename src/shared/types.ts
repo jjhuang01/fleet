@@ -4,6 +4,7 @@ import type { ToolVisibility } from './tools';
 import type { UserGroupColor } from './group-colors';
 import type { AiSettings } from './agent-types';
 import type { RemoteHost } from './remote-ssh-types';
+import type { LocalePreference } from './i18n';
 
 export type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends Array<infer U>
@@ -259,6 +260,8 @@ export type FleetSettings = {
     defaultShell: string;
     /** Preferred shell profile id for new tabs (e.g. 'wsl.Ubuntu-22.04'). Empty = auto-detect. */
     defaultShellProfileId: string;
+    /** UI language: a shipped locale, or 'system' to follow the OS. */
+    language: LocalePreference;
     scrollbackSize: number;
     fontFamily: string;
     fontSize: number;

@@ -6,6 +6,7 @@ import { useNotificationStore } from '../store/notification-store';
 import { PaneStatusGlyph } from './PaneStatusGlyph';
 import { shortenPath } from '../lib/shorten-path';
 import { PANE_DRAG_MIME } from '../lib/pane-drag';
+import { useTranslation } from '../lib/i18n';
 
 type PaneHeaderProps = {
   paneId: string;
@@ -25,6 +26,7 @@ export function PaneHeader({
   labelIsCustom,
   actions
 }: PaneHeaderProps): React.JSX.Element {
+  const { t } = useTranslation();
   const liveCwd = useCwdStore((s) => s.cwds.get(paneId));
   const renamePane = useWorkspaceStore((s) => s.renamePane);
   const resetPaneLabel = useWorkspaceStore((s) => s.resetPaneLabel);
@@ -135,7 +137,7 @@ export function PaneHeader({
       onDragStart={handleDragStart}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
-      title={isEditing ? undefined : `${liveCwd ?? ''}\nDouble-click to rename`}
+      title={isEditing ? undefined : `${liveCwd ?? ''}\n${t('pane.renameHint')}`}
     >
       {/* The ground rides on the pill, not on the row. The row still spans the
           pane - it is the click and double-click target, and a full-width
@@ -178,8 +180,8 @@ export function PaneHeader({
           <button
             className="shrink-0 rounded p-0.5 text-fleet-text-subtle hover:text-fleet-text hover:bg-fleet-surface-3 transition-colors active:scale-90 focus-ring"
             onClick={() => resetPaneLabel(paneId)}
-            title="Clear custom title and show path"
-            aria-label="Clear pane title"
+            title={t('pane.clearTitle')}
+            aria-label={t('pane.clearTitleAria')}
           >
             <RotateCcw size={12} />
           </button>

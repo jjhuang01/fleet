@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { TerminalBackgroundSlideshow } from '../../../../shared/types';
 import { toFleetImageUrl } from '../../../../shared/path-platform';
+import { useTranslation } from '../../lib/i18n';
 
 export function BackgroundThumbnails(props: {
   slideshow: TerminalBackgroundSlideshow;
@@ -12,6 +13,7 @@ export function BackgroundThumbnails(props: {
 
   const [folderImages, setFolderImages] = useState<string[]>([]);
   const [scanning, setScanning] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (slideshow.source !== 'folder') return;
@@ -35,11 +37,11 @@ export function BackgroundThumbnails(props: {
     if (!slideshow.folderPath) return null;
 
     if (scanning) {
-      return <p className="text-fleet-text-subtle text-xs">Scanning…</p>;
+      return <p className="text-fleet-text-subtle text-xs">{t('settings.background.scanning')}</p>;
     }
 
     if (folderImages.length === 0) {
-      return <p className="text-fleet-text-subtle text-xs">No images found in folder.</p>;
+      return <p className="text-fleet-text-subtle text-xs">{t('settings.background.noImages')}</p>;
     }
 
     return <ThumbnailGrid paths={folderImages} maxVisible={maxVisible} />;

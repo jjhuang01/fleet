@@ -1,11 +1,20 @@
 import { ALL_SHORTCUTS, formatShortcut, type ShortcutDef } from './shortcuts';
+import type { Translator } from './i18n';
+import type { MessageKey, TranslateParams } from '../../../shared/i18n';
 import { useWorkspaceStore } from '../store/workspace-store';
 import { useToastStore } from '../store/toast-store';
 import type { RemoteHost } from '../../../shared/remote-ssh-types';
 
 export type Command = {
   id: string;
-  label: string;
+  /**
+   * Rendered via the catalogue so the palette speaks the user's language.
+   * `keywords` stays English on purpose: it is the search index, and an English
+   * alias (`split`, `ssh`) should keep matching whatever the UI displays.
+   */
+  labelKey: MessageKey;
+  /** Values for `{placeholders}` in `labelKey`. */
+  labelParams?: TranslateParams;
   shortcut?: ShortcutDef;
   category: string;
   keywords?: string[];
@@ -23,7 +32,7 @@ function sc(id: string): ShortcutDef | undefined {
  * persisted - saving hosts is an explicit act in Settings, so a one-off `ssh`
  * in a terminal never quietly accumulates entries in the user's host list.
  */
-async function browseDetectedHost(): Promise<void> {
+async function browseDetectedHost(t: Translator): Promise<void> {
   const { activePaneId, openSshBrowser } = useWorkspaceStore.getState();
   const show = useToastStore.getState().show;
   if (!activePaneId) return;
@@ -34,7 +43,7 @@ async function browseDetectedHost(): Promise<void> {
     return;
   }
   if (result.data === null) {
-    show('This pane is not connected to a remote host over SSH');
+    show(t('command.notRemotePane'));
     return;
   }
   const detected = result.data;
@@ -55,18 +64,19 @@ async function browseDetectedHost(): Promise<void> {
 export function createRemoteHostCommands(hosts: RemoteHost[]): Command[] {
   return hosts.map((host) => ({
     id: `browse-remote:${host.id}`,
-    label: `Browse ${host.label}`,
+    labelKey: 'command.browse-remote',
+    labelParams: { label: host.label },
     category: 'File',
     keywords: ['ssh', 'remote', 'sftp', 'server', host.host, host.user ?? ''],
     execute: () => useWorkspaceStore.getState().openSshBrowser(host)
   }));
 }
 
-export function createCommandRegistry(): Command[] {
+export function createCommandRegistry(t: Translator): Command[] {
   return [
     {
       id: 'new-tab',
-      label: 'New Tab',
+      labelKey: 'shortcut.new-tab',
       shortcut: sc('new-tab'),
       category: 'Tabs',
       keywords: ['dispatch', 'agent', 'new agent'],
@@ -74,7 +84,7 @@ export function createCommandRegistry(): Command[] {
     },
     {
       id: 'close-pane',
-      label: 'Close Pane',
+      labelKey: 'shortcut.close-pane',
       shortcut: sc('close-pane'),
       category: 'Panes',
       execute: () => {
@@ -84,7 +94,7 @@ export function createCommandRegistry(): Command[] {
     },
     {
       id: 'split-right',
-      label: 'Split Right',
+      labelKey: 'shortcut.split-right',
       shortcut: sc('split-right'),
       category: 'Panes',
       execute: () => {
@@ -94,7 +104,7 @@ export function createCommandRegistry(): Command[] {
     },
     {
       id: 'split-down',
-      label: 'Split Down',
+      labelKey: 'shortcut.split-down',
       shortcut: sc('split-down'),
       category: 'Panes',
       execute: () => {
@@ -104,7 +114,7 @@ export function createCommandRegistry(): Command[] {
     },
     {
       id: 'balance-panes',
-      label: 'Balance Panes',
+      labelKey: 'shortcut.balance-panes',
       shortcut: sc('balance-panes'),
       category: 'Panes',
       keywords: ['even', 'equal', 'reset', 'grid', 'tile'],
@@ -112,7 +122,7 @@ export function createCommandRegistry(): Command[] {
     },
     {
       id: 'search',
-      label: 'Search in Pane',
+      labelKey: 'shortcut.search',
       shortcut: sc('search'),
       category: 'Panes',
       execute: () => {
@@ -124,35 +134,35 @@ export function createCommandRegistry(): Command[] {
     },
     {
       id: 'settings',
-      label: 'Open Settings',
+      labelKey: 'common.settings',
       shortcut: sc('settings'),
       category: 'App',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:toggle-settings'))
     },
     {
       id: 'shortcuts',
-      label: 'Show Shortcuts',
+      labelKey: 'shortcut.shortcuts',
       shortcut: sc('shortcuts'),
       category: 'App',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:toggle-shortcuts'))
     },
     {
       id: 'shell-env',
-      label: 'Shell Environment',
+      labelKey: 'command.shell-env',
       category: 'View',
       keywords: ['env', 'environment', 'variables', 'shell', 'export'],
       execute: () => document.dispatchEvent(new CustomEvent('fleet:toggle-shell-env'))
     },
     {
       id: 'rename-tab',
-      label: 'Rename Tab',
+      labelKey: 'shortcut.rename-tab',
       shortcut: sc('rename-tab'),
       category: 'Tabs',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:rename-active-tab'))
     },
     {
       id: 'rename-pane',
-      label: 'Rename Pane',
+      labelKey: 'shortcut.rename-pane',
       shortcut: sc('rename-pane'),
       category: 'Panes',
       execute: () => {
@@ -169,69 +179,69 @@ export function createCommandRegistry(): Command[] {
     },
     {
       id: 'git-changes',
-      label: 'Git Changes',
+      labelKey: 'shortcut.git-changes',
       shortcut: sc('git-changes'),
       category: 'View',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:toggle-git-changes'))
     },
     {
       id: 'browse-remote-here',
-      label: 'Browse Files on This Remote Host',
+      labelKey: 'command.browse-remote-here',
       category: 'File',
       keywords: ['ssh', 'remote', 'sftp', 'server'],
-      execute: () => void browseDetectedHost()
+      execute: () => void browseDetectedHost(t)
     },
     {
       id: 'open-file',
-      label: 'Open File...',
+      labelKey: 'command.open-file',
       shortcut: sc('open-file'),
       category: 'File',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:open-file-dialog'))
     },
     {
       id: 'quick-open',
-      label: 'Quick Open',
+      labelKey: 'shortcut.quick-open',
       shortcut: sc('quick-open'),
       category: 'File',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:toggle-quick-open'))
     },
     {
       id: 'file-search',
-      label: 'Search Files on Disk',
+      labelKey: 'shortcut.file-search',
       shortcut: sc('file-search'),
       category: 'File',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:toggle-file-search'))
     },
     {
       id: 'clipboard-history',
-      label: 'Clipboard History',
+      labelKey: 'shortcut.clipboard-history',
       shortcut: sc('clipboard-history'),
       category: 'Edit',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:toggle-clipboard-history'))
     },
     {
       id: 'jump-needy-agent',
-      label: 'Jump to Agent That Needs Input',
+      labelKey: 'command.jump-needy-agent',
       category: 'Agent',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:jump-needy-agent'))
     },
     {
       id: 'peek-needy-agent',
-      label: 'Peek at Agent That Needs Input',
+      labelKey: 'shortcut.peek-needy-agent',
       shortcut: sc('peek-needy-agent'),
       category: 'Agent',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:peek-needy-agent'))
     },
     {
       id: 'agent-overview',
-      label: 'Agent Overview',
+      labelKey: 'shortcut.agent-overview',
       shortcut: sc('agent-overview'),
       category: 'Agent',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:toggle-agent-overview'))
     },
     {
       id: 'open-agent',
-      label: 'New Agent Pane',
+      labelKey: 'sidebar.newAgentPane',
       category: 'Agent',
       keywords: ['agent', 'ai', 'assistant', 'code'],
       // The pane needs a folder to work in, so the dialog runs first and opens
@@ -240,7 +250,7 @@ export function createCommandRegistry(): Command[] {
     },
     {
       id: 'open-scratch',
-      label: 'New Scratch Chat',
+      labelKey: 'sidebar.newScratch',
       category: 'Agent',
       keywords: ['scratch', 'chat', 'quick', 'image', 'generate', 'ask'],
       // No folder picker: every invocation starts a separate scratch chat.
@@ -248,7 +258,7 @@ export function createCommandRegistry(): Command[] {
     },
     {
       id: 'open-sessions',
-      label: 'Open Sessions',
+      labelKey: 'command.open-sessions',
       category: 'Tabs',
       execute: () => {
         const ws = useWorkspaceStore.getState();
