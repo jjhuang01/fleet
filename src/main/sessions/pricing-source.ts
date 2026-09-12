@@ -5,8 +5,12 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { BUNDLED_PRICES, priceTableSchema, type PriceTable } from '../../shared/claude-pricing';
 
+// Served from this fork's own branch: a fork that quietly read its price table
+// off the upstream repo would break the moment upstream renamed a file, and the
+// fetch is best-effort anyway (see the fallback chain above). Syncing upstream
+// refreshes `resources/claude-pricing.json`, which is what lands here.
 const REMOTE_URL =
-  'https://raw.githubusercontent.com/khang859/fleet/main/resources/claude-pricing.json';
+  'https://raw.githubusercontent.com/jjhuang01/fleet/main/resources/claude-pricing.json';
 const TTL_MS = 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 3000;
 

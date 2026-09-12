@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { DiagnosticsInfo } from '../../../../shared/ipc-api';
 
-const REPO = 'khang859/fleet';
+const REPO = 'jjhuang01/fleet';
 // Keep the prefilled issue URL comfortably under browser/GitHub limits.
 const MAX_URL_LENGTH = 7000;
 

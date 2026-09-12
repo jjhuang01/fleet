@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **A fork that stands on its own** - the update feed, the diagnostics "report an issue" links, the OpenRouter referer header, the Linux package maintainer and the pricing feed now point at this fork rather than upstream. Upstream is still credited in [Credits](README.md#credits) and still reachable with `git remote add upstream`.
+
 ## v2.119.0
 
 - **Claude Code's settings, in Fleet** - Settings > Claude Config edits `.claude/settings.json` and `CLAUDE.md` without leaving Fleet, so a permission rule or an env var no longer means hunting for a dotfile.

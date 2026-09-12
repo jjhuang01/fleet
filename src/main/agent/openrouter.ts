@@ -17,7 +17,7 @@ export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 /** Who is asking, on every OpenRouter request Fleet makes. */
 export const APP_HEADERS = {
-  'HTTP-Referer': 'https://github.com/khang859/fleet',
+  'HTTP-Referer': 'https://github.com/jjhuang01/fleet',
   'X-Title': 'Fleet'
 };
 
