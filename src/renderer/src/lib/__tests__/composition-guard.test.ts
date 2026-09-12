@@ -44,6 +44,30 @@ describe('CompositionGuard', () => {
     expect(guard.shouldForward('ls\r', 1_001)).toBe(true);
   });
 
+  it('forwards the same text again once the user presses a key', () => {
+    // Committing `a` and then pressing `a` again produces two identical chunks.
+    // Only the first belongs to the composition, and the second is the user's.
+    const guard = new CompositionGuard();
+    guard.compositionUpdate('a');
+    guard.compositionEnd('a', 1_000);
+    expect(guard.shouldForward('a', 1_001)).toBe(true);
+
+    guard.userKeystroke();
+    expect(guard.shouldForward('a', 1_050)).toBe(true);
+  });
+
+  it('still drops the repeat made by the key that flushed the composition', () => {
+    // Enter arrives before the copy it flushes, so that keystroke must not be
+    // mistaken for the user typing the commit again.
+    const guard = new CompositionGuard();
+    guard.compositionUpdate(COMPOSITION);
+    guard.userKeystroke();
+    expect(guard.shouldForward(COMPOSITION, 1_000)).toBe(true);
+
+    guard.compositionEnd(COMPOSITION, 1_001);
+    expect(guard.shouldForward(COMPOSITION, 1_002)).toBe(false);
+  });
+
   it('stops suppressing once the composition episode is over', () => {
     const guard = new CompositionGuard();
     guard.compositionUpdate(COMPOSITION);

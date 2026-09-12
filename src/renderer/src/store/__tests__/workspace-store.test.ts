@@ -891,6 +891,36 @@ describe('mergeTabs', () => {
     expect(useWorkspaceStore.getState().workspace).toBe(before);
   });
 
+  it('merges a session tab that carries an explicit terminal type', () => {
+    // Persisted workspaces can spell a session tab as `type: 'terminal'`, which
+    // every other tab rule treats as a plain terminal. The sidebar offered the
+    // merge for these and the store refused it, so the drop reordered instead.
+    useWorkspaceStore.setState({
+      workspace: {
+        id: 'ws-merge-typed',
+        label: 'Typed',
+        tabs: [{ ...tabA, type: 'terminal' }, tabB]
+      }
+    });
+
+    expect(useWorkspaceStore.getState().mergeTabs(tabA.id, tabB.id, 'right')).toBe(true);
+    expect(useWorkspaceStore.getState().workspace.tabs).toHaveLength(1);
+  });
+
+  it('refuses a tool tab that is not a session', () => {
+    useWorkspaceStore.setState({
+      workspace: {
+        id: 'ws-merge-tool',
+        label: 'Tool',
+        tabs: [tabA, { ...tabB, type: 'annotate' }]
+      }
+    });
+    const before = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().mergeTabs(tabA.id, tabB.id, 'right')).toBe(false);
+    expect(useWorkspaceStore.getState().workspace).toBe(before);
+  });
+
   it('refuses merging a tab into itself', () => {
     const before = useWorkspaceStore.getState().workspace;
 

@@ -391,8 +391,16 @@ function createTerminal(
   const onCompositionEnd = (event: CompositionEvent): void => {
     compositionGuard.compositionEnd(event.data, performance.now());
   };
+  // Document capture, not the textarea: xterm's own keydown listener sits on the
+  // textarea, and where the two run relative to each other has to be certain, not
+  // left to registration order. The guard only counts keys, so seeing every key
+  // in the window costs nothing.
+  const onKeyDown = (): void => {
+    compositionGuard.userKeystroke();
+  };
   compositionTextarea?.addEventListener('compositionupdate', onCompositionUpdate);
   compositionTextarea?.addEventListener('compositionend', onCompositionEnd);
+  document.addEventListener('keydown', onKeyDown, true);
 
   term.onData((data) => {
     if (!compositionGuard.shouldForward(data, performance.now())) return;
@@ -774,6 +782,7 @@ function createTerminal(
   const compositionCleanup = (): void => {
     compositionTextarea?.removeEventListener('compositionupdate', onCompositionUpdate);
     compositionTextarea?.removeEventListener('compositionend', onCompositionEnd);
+    document.removeEventListener('keydown', onKeyDown, true);
   };
 
   return {

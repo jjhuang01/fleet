@@ -206,7 +206,6 @@ export function TabItem({
           onDragStart={(e) => {
             if (!onDragStart) return;
             e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('application/x-fleet-tab-id', id);
             e.dataTransfer.setData('text/plain', String(index));
             logDnd.debug('tabItem dragStart', { tabId: id, index, label });
             onDragStart(index);

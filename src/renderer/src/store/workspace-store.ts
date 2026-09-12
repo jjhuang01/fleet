@@ -9,6 +9,7 @@ import { useSettingsStore } from './settings-store';
 import { injectLiveCwd, getFirstPaneLiveCwd } from '../lib/workspace-utils';
 import {
   insertNestedTab,
+  isSessionTab,
   nestedBlockLength,
   nestInsertIndex,
   resolveFileParentId
@@ -784,8 +785,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const state = get();
     const sourceTab = state.workspace.tabs.find((tab) => tab.id === sourceTabId);
     const targetTab = state.workspace.tabs.find((tab) => tab.id === targetTabId);
+    // Two tab layouts become one, so both sides have to be plain sessions: a
+    // grouped or nested tab carries a sidebar relation, and a tool tab is not a
+    // terminal at all. A session that other tabs hang under stays put too.
     const canMerge = (tab: Tab): boolean =>
-      !tab.type &&
+      isSessionTab(tab) &&
       !tab.groupId &&
       !tab.parentTabId &&
       !state.workspace.tabs.some((candidate) => candidate.parentTabId === tab.id);

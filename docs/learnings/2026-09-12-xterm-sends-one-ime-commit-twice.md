@@ -34,6 +34,20 @@ and drops an identical repeat that arrives before the episode closes (250 ms aft
 `compositionend`). A new composition resets the guard, so committing the same text twice on purpose
 still works, and Enter keeps its existing meaning: the flush still happens and still submits.
 
+Text alone cannot tell a repeat from the user typing the same thing again. Committing `a` and then
+pressing `a` produced two identical chunks within the window, and the second - the user's - was
+dropped. The missing signal is the key press: a key pressed _after_ the first copy cannot be xterm
+echoing the composition, so the guard counts keystrokes and only suppresses a repeat while none has
+arrived since it forwarded that copy. The key that _flushes_ a composition lands before the copy it
+produces, so it must not end the episode - which is why the guard compares a counter instead of
+reacting to the key itself. `use-terminal.ts` listens on `document` in the capture phase, not on the
+textarea: xterm's own keydown listener sits on the textarea, and the order between them has to be
+certain rather than left to registration order.
+
+Without that key signal the guard is lossy. Pressing `a` twice inside the 250 ms window gave the
+shell one `a`, and only the composition path was affected because the guard stays empty until the
+first `compositionend`.
+
 ## How it was verified
 
 `Input.imeSetComposition` over CDP reproduces the exact ordering (`compose -> Enter -> insertText`).

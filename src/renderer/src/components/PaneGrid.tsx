@@ -257,15 +257,26 @@ function PaneFrame({
   const activityState = useNotificationStore((s) => s.activities.get(paneId)?.state);
   const ringClass = activityRingClass(activityState);
   const [dropSide, setDropSide] = useState<PaneDropSide | null>(null);
+  // A drag carries no readable payload while it is in flight - `getData` only
+  // answers on drop, so during dragover every pane looks like a valid target,
+  // including the one being dragged. Tracking the source locally is what keeps
+  // a pane from offering to drop onto itself.
+  const [isDragSource, setIsDragSource] = useState(false);
 
   const acceptsPane = useCallback(
     (event: React.DragEvent<HTMLDivElement>): boolean =>
-      event.dataTransfer.types.includes('application/x-fleet-pane-id') &&
-      event.dataTransfer.getData('application/x-fleet-pane-id') !== paneId,
-    [paneId]
+      !isDragSource && event.dataTransfer.types.includes('application/x-fleet-pane-id'),
+    [isDragSource]
   );
 
   const clearDropSide = useCallback(() => setDropSide(null), []);
+
+  const handleDragStart = useCallback(() => setIsDragSource(true), []);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragSource(false);
+    clearDropSide();
+  }, [clearDropSide]);
 
   const handleDragLeave = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
@@ -322,6 +333,8 @@ function PaneFrame({
       className={`h-full rounded-lg transition-shadow duration-150 ${
         isActive ? 'shadow-lg shadow-black/30' : ''
       }`}
+      onDragStartCapture={handleDragStart}
+      onDragEndCapture={handleDragEnd}
       onDragEnterCapture={handleDragEnter}
       onDragOverCapture={handleDragOver}
       onDragLeaveCapture={handleDragLeave}

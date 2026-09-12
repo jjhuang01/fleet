@@ -46,7 +46,7 @@ import {
 } from './sidebar-constants';
 import { ColorPalettePicker } from './ColorPalettePicker';
 import { COLOR_MAP } from './sidebar-constants';
-import { buildTabNesting } from '../lib/tab-nesting';
+import { buildTabNesting, isSessionTab } from '../lib/tab-nesting';
 import { EnvSyncBadge } from './env-sync/EnvSyncBadge';
 import { EnvSyncConflictDialog } from './env-sync/EnvSyncConflictDialog';
 import { SessionsTabCard } from './sessions/SessionsTabCard';
@@ -606,9 +606,11 @@ export function Sidebar({
     [workspace.tabs]
   );
 
+  // Mirrors the store's `mergeTabs` predicate: the preview must only promise a
+  // merge that the drop can actually perform.
   const canMergeTab = useCallback(
     (tab: Tab): boolean =>
-      (tab.type === undefined || tab.type === 'terminal') &&
+      isSessionTab(tab) &&
       !tab.groupId &&
       !tab.parentTabId &&
       !workspace.tabs.some((candidate) => candidate.parentTabId === tab.id),
@@ -661,6 +663,7 @@ export function Sidebar({
       const edgeHeight = Math.min(7, rect.height / 3);
       const position =
         dragType === 'tab' &&
+        index !== dragIndex &&
         !isGroupHeader &&
         canMergeTab(draggedTab) &&
         canMergeTab(targetTab) &&
