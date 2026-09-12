@@ -6,7 +6,7 @@ Fleet gives you a single window to manage all your terminal sessions with vertic
 
 > **This is a community fork** of [khang859/fleet](https://github.com/khang859/fleet). Everything that existed before the fork is Khang Nguyen's work, MIT licensed; see [Credits](#credits).
 >
-> It also speaks more than one language: Settings > General > Language switches the interface between English and Simplified Chinese, and the default follows the OS locale. Untranslated screens fall back to English.
+> It also speaks more than one language: **Settings > General > Language** (or `Cmd+K` and type "language") switches between English and Simplified Chinese, and the default follows the OS locale. The document language, date formats and font stack follow that choice rather than the machine's. Untranslated screens stay in English; [docs/i18n.md](docs/i18n.md) says which ones and why.
 >
 > On top of upstream, this fork adds the pane layout Otty users keep asking for: drag a pane onto another pane's edge to re-dock it, drop a pane on a sidebar tab to merge the two into one tab (and drop it back out to un-merge), drag a grid intersection to move a whole row and column at once, per-pane custom titles, `Cmd+Shift+B` to balance a tab, and `Cmd+Alt+Arrow` to move a pane without the mouse. [docs/pane-layout-review.md](docs/pane-layout-review.md) records what upstream has, what this fork added, and what neither has; [docs/blocks-plan.md](docs/blocks-plan.md) is the next planned project.
 

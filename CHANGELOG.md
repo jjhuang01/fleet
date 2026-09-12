@@ -3,7 +3,10 @@
 ## Unreleased
 
 - **The interface speaks Simplified Chinese** - `Settings > General > Language` switches the whole app between English and Simplified Chinese, and the default (`Follow system`) reads the OS locale, so a Chinese Mac opens in Chinese without configuring anything.
-Coverage is the shell: sidebar, pane titles and toolbars, the command palette, the shortcuts overlay, the settings navigation and the General page. Pages that are not translated yet stay in English, which the setting's own hint says out loud.
+Coverage is the shell and its lists: sidebar, pane titles and toolbars, the command palette, the shortcuts overlay, the settings rail, the whole General page, and the file search, clipboard history, sessions, learnings and annotate surfaces. Pages that are not translated yet stay in English, which the setting's own hint says out loud and [docs/i18n.md](docs/i18n.md) lists in priority order.
+- **The interface follows the language, not the OS** - dates, elapsed times and document language now track the setting rather than the machine: `<html lang>` drives Han glyph selection and screen-reader phonetics, the UI font stack names the Chinese system faces ahead of the generic fallback, and absolute dates go through `Intl` with the locale passed in. Relatives stay compact templates on purpose. [docs/i18n.md](docs/i18n.md) records each decision with the Apple, Google, W3C and Unicode guidance behind it.
+- **A language switch you can find** - the palette (`Cmd+K`) now carries `Language: English / 简体中文 / Follow System` next to the settings row, because a preference you set once is only findable if you can search for it. The locale id is `zh-Hans` (BCP 47 script subtag, not a region).
+- **More surfaces speak Chinese** - file search, clipboard history, sessions, learnings and annotate are now translated, and their timestamps no longer say "5m ago" to a Chinese reader.
 - **A fork that stands on its own** - the update feed, the diagnostics "report an issue" links, the OpenRouter referer header, the Linux package maintainer and the pricing feed now point at this fork rather than upstream. Upstream is still credited in [Credits](README.md#credits) and still reachable with `git remote add upstream`.
 
 ## v2.119.0

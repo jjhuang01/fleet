@@ -11,23 +11,15 @@ import { useAnnotationStore } from '../store/annotation-store';
 import { openAnnotateModal } from '../lib/annotate-modal-bridge';
 import { useToastStore } from '../store/toast-store';
 import { toFleetImageUrl } from '../../../shared/path-platform';
-
-function timeAgo(timestamp: number): string {
-  const diff = Date.now() - timestamp;
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+import { useTranslation } from '../lib/i18n';
+import { formatElapsed } from '../lib/relative-time';
 
 type AnnotationDetail = Awaited<
   ReturnType<ReturnType<typeof useAnnotationStore.getState>['getDetail']>
 >;
 
 export function AnnotateTab(): React.JSX.Element {
+  const { t } = useTranslation();
   const { annotations, isLoaded, loadAnnotations, getDetail, deleteAnnotation } =
     useAnnotationStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -55,7 +47,7 @@ export function AnnotateTab(): React.JSX.Element {
     const meta = annotations.find((a) => a.id === id);
     if (!meta) return;
     void navigator.clipboard.writeText(meta.dirPath);
-    showToast('Path copied to clipboard');
+    showToast(t('annotate.pathCopied'));
   };
 
   const toggleElement = (index: number): void => {
@@ -80,7 +72,9 @@ export function AnnotateTab(): React.JSX.Element {
             <ArrowLeft size={16} />
           </button>
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium truncate">{detail.url ?? 'Unknown URL'}</div>
+            <div className="text-sm font-medium truncate">
+              {detail.url ?? t('annotate.unknownUrl')}
+            </div>
             <div className="text-xs text-fleet-text-subtle">
               {detail.elements?.length ?? 0} elements
               {detail.viewport && ` \u00b7 ${detail.viewport.width}\u00d7${detail.viewport.height}`}
@@ -89,7 +83,7 @@ export function AnnotateTab(): React.JSX.Element {
           <button
             onClick={() => handleCopyPath(selectedId)}
             className="p-1 text-fleet-text-muted hover:text-fleet-text rounded hover:bg-fleet-surface-2 transition active:scale-90"
-            title="Copy path"
+            title={t('pane.copyPath')}
           >
             <ClipboardCopy size={14} />
           </button>
@@ -108,7 +102,7 @@ export function AnnotateTab(): React.JSX.Element {
         {/* Context */}
         {detail.context && (
           <div className="px-3 py-2 border-b border-fleet-border">
-            <div className="text-xs text-fleet-text-subtle mb-1">Context</div>
+            <div className="text-xs text-fleet-text-subtle mb-1">{t('annotate.context')}</div>
             <div className="text-sm text-fleet-text-secondary">{detail.context}</div>
           </div>
         )}
@@ -116,10 +110,10 @@ export function AnnotateTab(): React.JSX.Element {
         {/* Drawing overlay screenshot */}
         {detail.drawingOverlayPath && (
           <div className="px-3 py-2 border-b border-fleet-border">
-            <div className="text-xs text-fleet-text-subtle mb-1">Drawing</div>
+            <div className="text-xs text-fleet-text-subtle mb-1">{t('annotate.drawing')}</div>
             <img
               src={toFleetImageUrl(detail.drawingOverlayPath)}
-              alt="Drawing overlay"
+              alt={t('annotate.drawingAlt')}
               className="rounded border border-fleet-border-strong max-w-full max-h-60 object-contain"
             />
           </div>
@@ -176,7 +170,7 @@ export function AnnotateTab(): React.JSX.Element {
                   )}
                   {el.keyStyles && Object.keys(el.keyStyles).length > 0 && (
                     <div className="text-xs text-fleet-text-muted">
-                      Styles:{' '}
+                      {t('annotate.styles')}:{' '}
                       {Object.entries(el.keyStyles)
                         .map(([k, v]) => `${k}: ${v}`)
                         .join(', ')}
@@ -185,7 +179,7 @@ export function AnnotateTab(): React.JSX.Element {
                   {el.screenshotPath && (
                     <img
                       src={toFleetImageUrl(el.screenshotPath)}
-                      alt={`Element ${i + 1}`}
+                      alt={t('annotate.elementAlt', { index: i + 1 })}
                       className="mt-1 rounded border border-fleet-border-strong max-w-full max-h-40 object-contain"
                     />
                   )}
@@ -205,7 +199,7 @@ export function AnnotateTab(): React.JSX.Element {
       <div className="flex items-center justify-between px-3 py-2 border-b border-fleet-border">
         <div className="flex items-center gap-2">
           <Crosshair size={16} className="fleet-accent-text" />
-          <span className="text-sm font-medium">Annotations</span>
+          <span className="text-sm font-medium">{t('annotate.title')}</span>
         </div>
         <button
           onClick={() => openAnnotateModal()}
@@ -218,17 +212,17 @@ export function AnnotateTab(): React.JSX.Element {
       {/* List or empty state */}
       {!isLoaded ? (
         <div className="flex-1 flex items-center justify-center text-fleet-text-subtle text-sm">
-          Loading...
+          {t('common.loading')}
         </div>
       ) : annotations.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-fleet-text-subtle">
           <Crosshair size={32} className="text-fleet-text-subtle" />
-          <p className="text-sm">No annotations yet</p>
+          <p className="text-sm">{t('annotate.empty')}</p>
           <button
             onClick={() => openAnnotateModal()}
             className="px-3 py-1.5 text-xs fleet-accent-bg fleet-accent-bg-hover text-white rounded-md transition active:scale-[0.97]"
           >
-            New Annotation
+            {t('annotate.new')}
           </button>
         </div>
       ) : (
@@ -250,8 +244,10 @@ export function AnnotateTab(): React.JSX.Element {
               <div className="flex-1 min-w-0 text-left">
                 <div className="text-sm text-fleet-text truncate">{ann.url}</div>
                 <div className="text-xs text-fleet-text-subtle">
-                  {timeAgo(ann.timestamp)} &middot; {ann.elementCount} element
-                  {ann.elementCount !== 1 ? 's' : ''}
+                  {formatElapsed(ann.timestamp, t)} &middot;{' '}
+                  {t(ann.elementCount === 1 ? 'annotate.elementCount' : 'annotate.elements', {
+                    count: ann.elementCount
+                  })}
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">

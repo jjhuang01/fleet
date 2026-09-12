@@ -2,6 +2,8 @@
 import { useMemo, useState } from 'react';
 import type { SessionGroup, SessionSummary } from '../../../../shared/sessions';
 import { useSessionsStore } from '../../store/sessions-store';
+import { useTranslation } from '../../lib/i18n';
+import { formatElapsed } from '../../lib/relative-time';
 
 function groupByProject(sessions: SessionSummary[]): SessionGroup[] {
   const groups = new Map<string, SessionGroup>();
@@ -16,22 +18,13 @@ function groupByProject(sessions: SessionSummary[]): SessionGroup[] {
   return result;
 }
 
-function relativeTime(ms: number): string {
-  const diff = Date.now() - ms;
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return 'just now';
-  if (min < 60) return `${min}m`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h`;
-  return `${Math.floor(hr / 24)}d`;
-}
-
 function formatCost(usd: number): string {
   if (usd > 0 && usd < 0.01) return '<$0.01';
   return `$${usd.toFixed(2)}`;
 }
 
 export function SessionList(): React.JSX.Element {
+  const { t } = useTranslation();
   const { sessions, selected, select } = useSessionsStore();
   const [query, setQuery] = useState('');
 
@@ -53,13 +46,15 @@ export function SessionList(): React.JSX.Element {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search sessions…"
+          placeholder={t('sessions.searchPlaceholder')}
           className="flex-1 rounded-md bg-fleet-surface px-2.5 py-1.5 text-sm text-fleet-text border border-fleet-border-strong placeholder:text-fleet-text-subtle focus-ring"
         />
       </div>
       <div className="flex-1 overflow-y-auto">
         {groups.length === 0 ? (
-          <div className="px-3 py-6 text-center text-sm text-fleet-text-subtle">No sessions.</div>
+          <div className="px-3 py-6 text-center text-sm text-fleet-text-subtle">
+            {t('sessions.empty')}
+          </div>
         ) : (
           groups.map((g) => (
             <div key={g.cwd}>
@@ -88,7 +83,7 @@ export function SessionList(): React.JSX.Element {
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate text-sm text-fleet-text">{s.title}</span>
                       <span className="flex-shrink-0 text-[10px] text-fleet-text-subtle">
-                        {relativeTime(s.updatedAt)}
+                        {formatElapsed(s.updatedAt, t)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-[10px] text-fleet-text-subtle">
@@ -98,7 +93,9 @@ export function SessionList(): React.JSX.Element {
                           <span className="flex-shrink-0">·</span>
                         </>
                       )}
-                      <span className="flex-shrink-0">{s.messageCount} msgs</span>
+                      <span className="flex-shrink-0">
+                        {t('sessions.messageCount', { count: s.messageCount })}
+                      </span>
                       <span
                         className={`ml-auto flex-shrink-0 font-mono fleet-tnum ${
                           // A dash means "no price for this model". Rendering it
@@ -108,8 +105,8 @@ export function SessionList(): React.JSX.Element {
                         }`}
                         title={
                           s.costUsd === undefined
-                            ? 'Cost unavailable — a model in this session is not in the pricing table'
-                            : 'Estimated session cost'
+                            ? t('sessions.costUnavailable')
+                            : t('sessions.costEstimated')
                         }
                       >
                         {s.costUsd === undefined ? '—' : formatCost(s.costUsd)}

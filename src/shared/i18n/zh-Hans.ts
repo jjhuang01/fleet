@@ -24,6 +24,11 @@ export const zhCN: Record<MessageKey, string> = {
   'common.saving': '正在保存…',
   'common.settings': '设置',
 
+  'common.navigate': '↑↓ 选择',
+  'common.dismiss': 'esc 关闭',
+  'common.noActiveTerminal': '没有活动终端',
+  'common.searching': '搜索中…',
+
   // 侧边栏
   'sidebar.newTab': '新建标签页',
   'sidebar.newTabHint': '新建标签页（{shortcut}）',
@@ -70,6 +75,78 @@ export const zhCN: Record<MessageKey, string> = {
   'tabStatus.minutesAgo': '{minutes} 分钟前',
   'tabStatus.secondsWaiting': '已等待 {seconds} 秒',
   'tabStatus.minutesWaiting': '已等待 {minutes} 分钟',
+
+  'common.loading': '加载中…',
+  'annotate.title': '标注',
+  'annotate.empty': '还没有标注',
+  'annotate.new': '新建标注',
+  'annotate.unknownUrl': '未知网址',
+  'annotate.context': '上下文',
+  'annotate.drawing': '手绘',
+  'annotate.drawingAlt': '手绘标注',
+  'annotate.styles': '样式',
+  'annotate.elementAlt': '元素 {index}',
+  'annotate.elementCount': '{count} 个元素',
+  'annotate.elements': '{count} 个元素',
+  'annotate.pathCopied': '路径已复制到剪贴板',
+
+  // 经验记录浏览器
+  'learnings.modeKeyword': '仅关键词',
+  'learnings.modeKeywordTitle': '语义搜索不可用；结果改用关键词匹配。',
+  'learnings.modeSemantic': '语义',
+  'learnings.modeSemanticTitle': '搜索按语义（向量）与关键词综合排序。',
+  'learnings.modePreparing': '正在准备语义搜索…',
+  'learnings.modePreparingTitle': '正在下载/加载嵌入模型，期间关键词搜索仍然可用。',
+  'learnings.searchPlaceholder': '搜索经验记录…',
+  'learnings.noMatch': '没有匹配的经验记录。',
+  'learnings.empty': '还没有经验记录。可以从一次会话里提炼一条。',
+  'learnings.selectPrompt': '选择一条经验记录来查看。',
+  'learnings.copied': '已复制 ✓',
+  'learnings.copy': '复制',
+  'learnings.export': '导出…',
+  'learnings.source': '来源 ▸',
+  'learnings.edit': '编辑',
+  'learnings.noProject': '没有项目',
+  'learnings.titlePlaceholder': '标题',
+  'learnings.tagsPlaceholder': '标签（用逗号分隔）',
+
+  // 会话列表
+  'sessions.searchPlaceholder': '搜索会话…',
+  'sessions.empty': '还没有会话。',
+  'sessions.messageCount': '{count} 条消息',
+  'sessions.costUnavailable': '没有费用数据 —— 该会话用到的某个模型不在价格表里',
+  'sessions.costEstimated': '会话费用（估算）',
+
+  'fileSearch.scopeAll': '全部',
+  'fileSearch.scopeFiles': '文件',
+  'fileSearch.sort': '排序：',
+  'fileSearch.sortDate': '日期',
+  'fileSearch.sortName': '名称',
+  'fileSearch.sortSize': '大小',
+  'fileSearch.placeholderFiles': '在磁盘中搜索文件…',
+  'fileSearch.placeholderAll': '搜索文件和图片…',
+  'fileSearch.noMatch': '没有匹配“{query}”的文件',
+  'fileSearch.searchAll': '改为搜索全部',
+  'fileSearch.noRecent': '没有最近打开的文件',
+  'fileSearch.recent': '最近',
+  'fileSearch.recentImages': '最近图片',
+  'fileSearch.footerPaste': '↵ 粘贴',
+
+  // 剪贴板历史面板
+  'clipboard.filterPlaceholder': '筛选剪贴板历史…',
+  'clipboard.itemCount': '{count} 项',
+  'clipboard.empty': '剪贴板历史是空的',
+  'clipboard.noMatches': '没有匹配的记录',
+  'clipboard.preview': '预览',
+  'clipboard.chars': '{count} 字符',
+  'clipboard.lines': '{count} 行',
+  'clipboard.paste': '↵ 粘贴到终端',
+
+  // 列表中的“多久以前”。刻意保持简短，见 lib/relative-time.ts。
+  'time.justNow': '刚刚',
+  'time.minutesAgo': '{minutes} 分钟前',
+  'time.hoursAgo': '{hours} 小时前',
+  'time.daysAgo': '{days} 天前',
 
   // 窗格标题栏与工具栏
   'pane.splitRight': '向右分屏',
@@ -161,6 +238,12 @@ export const zhCN: Record<MessageKey, string> = {
   'command.browse-remote-here': '浏览此远程主机上的文件',
   'command.browse-remote': '浏览 {label}',
   'command.notRemotePane': '此窗格未通过 SSH 连接到远程主机',
+
+  // 语言切换。两个语言名各自用自己的语言书写：万一用户切到了看不懂的语言，
+  // 他得能读着路标走回来，其他带语言选择的应用也是这么做的。
+  'command.language.system': '语言：跟随系统',
+  'command.language.en': '语言：English',
+  'command.language.zhCN': '语言：简体中文',
 
   // 设置
   'settings.nav.group.application': '应用',

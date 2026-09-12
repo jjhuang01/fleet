@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { en } from '../i18n/en';
-import { zhCN } from '../i18n/zh-CN';
+import { zhCN } from '../i18n/zh-Hans';
 import { LOCALES, isLocalePreference, resolveLocale, translate } from '../i18n';
 
 describe('catalogue parity', () => {
@@ -20,7 +20,7 @@ describe('catalogue parity', () => {
   it('defines a non-empty string for every key', () => {
     for (const key of Object.keys(en) as Array<keyof typeof en>) {
       expect(en[key].length, `en.${key}`).toBeGreaterThan(0);
-      expect(zhCN[key].length, `zh-CN.${key}`).toBeGreaterThan(0);
+      expect(zhCN[key].length, `zh-Hans.${key}`).toBeGreaterThan(0);
     }
   });
 });
@@ -28,12 +28,12 @@ describe('catalogue parity', () => {
 describe('resolveLocale', () => {
   it('honours an explicit choice over the OS locale', () => {
     expect(resolveLocale('en', 'zh-Hans-CN')).toBe('en');
-    expect(resolveLocale('zh-CN', 'en-US')).toBe('zh-CN');
+    expect(resolveLocale('zh-Hans', 'en-US')).toBe('zh-Hans');
   });
 
   it('follows the OS when the preference is "system" or unset', () => {
-    expect(resolveLocale('system', 'zh-Hans-CN')).toBe('zh-CN');
-    expect(resolveLocale('system', 'zh-TW')).toBe('zh-CN');
+    expect(resolveLocale('system', 'zh-Hans-CN')).toBe('zh-Hans');
+    expect(resolveLocale('system', 'zh-TW')).toBe('zh-Hans');
     expect(resolveLocale(undefined, 'en-US')).toBe('en');
     expect(resolveLocale('system', undefined)).toBe('en');
   });
@@ -56,12 +56,12 @@ describe('isLocalePreference', () => {
 describe('translate', () => {
   it('renders the locale it is asked for', () => {
     expect(translate('en', 'common.save')).toBe('Save');
-    expect(translate('zh-CN', 'common.save')).toBe('保存');
+    expect(translate('zh-Hans', 'common.save')).toBe('保存');
   });
 
   it('fills placeholders and repeats them when used twice', () => {
     expect(translate('en', 'sidebar.tabCount', { count: 3 })).toBe('3 tabs');
-    expect(translate('zh-CN', 'sidebar.tabCount', { count: 3 })).toBe('3 个标签页');
+    expect(translate('zh-Hans', 'sidebar.tabCount', { count: 3 })).toBe('3 个标签页');
     expect(translate('en', 'tabStatus.minutesAgo', { minutes: 5 })).toBe('5m ago');
   });
 

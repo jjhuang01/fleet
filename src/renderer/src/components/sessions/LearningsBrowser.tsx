@@ -7,41 +7,34 @@ import {
   type Learning,
   type LearningsStatus
 } from '../../../../shared/learnings';
+import { useTranslation } from '../../lib/i18n';
+import { formatElapsed } from '../../lib/relative-time';
+import type { MessageKey } from '../../../../shared/i18n';
 
 /** The search-mode badge: copy + tone derived from semantic-search availability. */
 function searchModeBadge(
   status: LearningsStatus | null
-): { label: string; title: string; tone: string } | null {
+): { labelKey: MessageKey; titleKey: MessageKey; tone: string } | null {
   if (!status) return null;
   if (!status.vectorSupport || status.embedder === 'failed') {
     return {
-      label: 'Keyword only',
-      title: 'Semantic search is unavailable; results use keyword matching.',
+      labelKey: 'learnings.modeKeyword',
+      titleKey: 'learnings.modeKeywordTitle',
       tone: 'text-fleet-text-subtle'
     };
   }
   if (status.embedder === 'ready') {
     return {
-      label: 'Semantic',
-      title: 'Searches rank by meaning (vector) + keywords.',
+      labelKey: 'learnings.modeSemantic',
+      titleKey: 'learnings.modeSemanticTitle',
       tone: 'fleet-accent-text'
     };
   }
   return {
-    label: 'Preparing semantic search…',
-    title: 'Downloading/loading the embedding model. Keyword search works meanwhile.',
+    labelKey: 'learnings.modePreparing',
+    titleKey: 'learnings.modePreparingTitle',
     tone: 'text-fleet-text-subtle'
   };
-}
-
-function relativeTime(ms: number): string {
-  const diff = Date.now() - ms;
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return 'just now';
-  if (min < 60) return `${min}m`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr}h`;
-  return `${Math.floor(hr / 24)}d`;
 }
 
 export function LearningsBrowser({
@@ -52,6 +45,7 @@ export function LearningsBrowser({
   /** Bump to force a refetch (e.g. after a new learning is distilled elsewhere). */
   refreshKey?: number;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Learning[]>([]);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Learning | null>(null);
@@ -166,7 +160,7 @@ export function LearningsBrowser({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search learnings…"
+            placeholder={t('learnings.searchPlaceholder')}
             className="w-full rounded border border-fleet-border-strong bg-fleet-surface px-2 py-1 text-sm text-fleet-text"
           />
           {(() => {
@@ -174,11 +168,11 @@ export function LearningsBrowser({
             if (!badge) return null;
             return (
               <div
-                title={badge.title}
+                title={t(badge.titleKey)}
                 className={`mt-1 inline-flex items-center gap-1 text-[10px] ${badge.tone}`}
               >
                 <span aria-hidden>⌁</span>
-                {badge.label}
+                {t(badge.labelKey)}
               </div>
             );
           })()}
@@ -186,9 +180,7 @@ export function LearningsBrowser({
         <div className="flex-1 overflow-y-auto">
           {items.length === 0 ? (
             <div className="px-3 py-6 text-center text-sm text-fleet-text-subtle">
-              {query.trim()
-                ? 'No matching learnings.'
-                : 'No learnings yet. Distill one from a session.'}
+              {query.trim() ? t('learnings.noMatch') : t('learnings.empty')}
             </div>
           ) : (
             items.map((l) => {
@@ -202,7 +194,7 @@ export function LearningsBrowser({
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-sm text-fleet-text">{l.title}</span>
                     <span className="flex-shrink-0 text-[10px] text-fleet-text-subtle">
-                      {relativeTime(l.createdAt)}
+                      {formatElapsed(l.createdAt, t)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-[10px] text-fleet-text-subtle">
@@ -223,7 +215,7 @@ export function LearningsBrowser({
       {/* Detail */}
       {!selected ? (
         <div className="flex h-full items-center justify-center text-sm text-fleet-text-subtle">
-          Select a learning to view it.
+          {t('learnings.selectPrompt')}
         </div>
       ) : (
         <div className="flex h-full min-w-0 flex-col">
@@ -231,8 +223,9 @@ export function LearningsBrowser({
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold text-fleet-text">{selected.title}</div>
               <div className="text-xs text-fleet-text-subtle">
-                {selected.sourceProject ?? 'no project'}
-                {selected.model ? ` · ${selected.model}` : ''} · {relativeTime(selected.createdAt)}
+                {selected.sourceProject ?? t('learnings.noProject')}
+                {selected.model ? ` · ${selected.model}` : ''} ·{' '}
+                {formatElapsed(selected.createdAt, t)}
               </div>
             </div>
             <div className="flex flex-shrink-0 items-center gap-2">
@@ -242,33 +235,33 @@ export function LearningsBrowser({
                     onClick={() => void copy()}
                     className="rounded border border-fleet-border-strong px-2 py-1.5 text-xs text-fleet-text-subtle hover:bg-fleet-surface-2/50"
                   >
-                    {copied ? 'Copied ✓' : 'Copy'}
+                    {copied ? t('learnings.copied') : t('learnings.copy')}
                   </button>
                   <button
                     onClick={() => void window.fleet.learnings.export(selected.id)}
                     className="rounded border border-fleet-border-strong px-2 py-1.5 text-xs text-fleet-text-subtle hover:bg-fleet-surface-2/50"
                   >
-                    Export…
+                    {t('learnings.export')}
                   </button>
                   {selected.sourceSessionId && onOpenSource && (
                     <button
                       onClick={() => onOpenSource(selected)}
                       className="rounded border border-fleet-border-strong px-2 py-1.5 text-xs text-fleet-text-subtle hover:bg-fleet-surface-2/50"
                     >
-                      Source ▸
+                      {t('learnings.source')}
                     </button>
                   )}
                   <button
                     onClick={startEdit}
                     className="rounded border border-fleet-border-strong px-2 py-1.5 text-xs text-fleet-text-subtle hover:bg-fleet-surface-2/50"
                   >
-                    Edit
+                    {t('learnings.edit')}
                   </button>
                   <button
                     onClick={() => void remove()}
                     className="rounded px-2 py-1.5 text-xs text-red-400 hover:bg-red-900/30"
                   >
-                    Delete
+                    {t('common.delete')}
                   </button>
                 </>
               )}
@@ -278,14 +271,14 @@ export function LearningsBrowser({
                     onClick={() => setEditing(false)}
                     className="rounded px-2 py-1.5 text-xs text-fleet-text-subtle hover:bg-fleet-surface-2/50"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={() => void saveEdit()}
                     disabled={draft.title.trim() === ''}
                     className="rounded fleet-accent-bg fleet-accent-bg-hover px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
                   >
-                    Save
+                    {t('common.save')}
                   </button>
                 </>
               )}
@@ -297,7 +290,7 @@ export function LearningsBrowser({
               <input
                 value={draft.title}
                 onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-                placeholder="Title"
+                placeholder={t('learnings.titlePlaceholder')}
                 className="w-full rounded border border-fleet-border-strong bg-fleet-surface px-2 py-1 text-sm text-fleet-text"
               />
               <textarea
@@ -308,7 +301,7 @@ export function LearningsBrowser({
               <input
                 value={draft.tags}
                 onChange={(e) => setDraft((d) => ({ ...d, tags: e.target.value }))}
-                placeholder="Tags (comma-separated)"
+                placeholder={t('learnings.tagsPlaceholder')}
                 className="w-full rounded border border-fleet-border-strong bg-fleet-surface px-2 py-1 text-xs text-fleet-text"
               />
             </div>

@@ -41,6 +41,7 @@ import { isWslContext } from '../../shared/shell-profiles';
 import { useHomesStore } from './store/homes-store';
 import { injectLiveCwd } from './lib/workspace-utils';
 import { ShortcutsHint } from './components/ShortcutsHint';
+import { useDocumentLanguage } from './lib/i18n';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { CommandPalette } from './components/CommandPalette';
 import { GitChangesModal } from './components/GitChangesModal';
@@ -216,6 +217,7 @@ function killClosedTabPtys(paneIds: string[]): void {
 }
 
 export function App(): React.JSX.Element {
+  useDocumentLanguage();
   usePaneNavigation();
   useNotifications();
   const { loadSettings } = useSettingsStore();

@@ -207,7 +207,7 @@ export function GeneralSection(): React.JSX.Element {
         >
           <option value="system">{t('settings.language.system')}</option>
           <option value="en">{t('settings.language.en')}</option>
-          <option value="zh-CN">{t('settings.language.zhCN')}</option>
+          <option value="zh-Hans">{t('settings.language.zhCN')}</option>
         </select>
       </SettingRow>
       <SettingRow label={t('settings.general.defaultShell')}>

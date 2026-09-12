@@ -1,10 +1,10 @@
 import { en, type MessageKey } from './en';
-import { zhCN } from './zh-CN';
+import { zhCN } from './zh-Hans';
 
 export type { MessageKey };
 
 /** Locales the app ships. Adding one means adding a catalogue and this union. */
-export const LOCALES = ['en', 'zh-CN'] as const;
+export const LOCALES = ['en', 'zh-Hans'] as const;
 export type Locale = (typeof LOCALES)[number];
 
 /** What the user picked: a locale, or "whatever the OS is set to". */
@@ -19,22 +19,28 @@ export type TranslateParams = Record<string, string | number | undefined>;
 
 const CATALOGUES: Record<Locale, Record<MessageKey, string>> = {
   en,
-  'zh-CN': zhCN
+  'zh-Hans': zhCN
 };
 
 /**
  * Map a stored preference plus the OS locale onto a locale we actually ship.
  *
- * Anything Chinese (zh, zh-CN, zh-Hans-CN, zh-TW) lands on Simplified Chinese
+ * Locale ids are BCP 47 tags, and the Chinese one names a *script*: `zh-Hans`
+ * says Simplified outright, rather than letting a region imply it. That is the
+ * subtag W3C's guidance for declaring content language keys font selection and
+ * line breaking off, so it is also what `<html lang>` gets.
+ * https://www.w3.org/International/questions/qa-html-language-declarations
+ *
+ * Anything Chinese (zh, zh-Hans-CN, zh-TW, …) lands on Simplified Chinese
  * rather than on English: a Traditional reader is better served by Simplified
- * than by nothing, and shipping a second Chinese catalogue is its own decision.
+ * than by nothing, and a second Chinese catalogue is its own decision.
  */
 export function resolveLocale(
   preference: LocalePreference | undefined,
   systemLocale: string | undefined
 ): Locale {
   if (preference && preference !== 'system') return preference;
-  return (systemLocale ?? '').toLowerCase().startsWith('zh') ? 'zh-CN' : 'en';
+  return (systemLocale ?? '').toLowerCase().startsWith('zh') ? 'zh-Hans' : 'en';
 }
 
 /** Narrowing guard for values arriving from settings files and `<select>`s. */

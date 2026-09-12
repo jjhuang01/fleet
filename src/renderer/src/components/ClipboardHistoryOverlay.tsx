@@ -4,21 +4,13 @@ import { useWorkspaceStore } from '../store/workspace-store';
 import { bracketedPaste } from '../lib/shell-utils';
 import type { ClipboardEntry } from '../../../shared/ipc-api';
 import { Overlay } from './Overlay';
+import { useTranslation } from '../lib/i18n';
+import { formatElapsed, formatDateTime } from '../lib/relative-time';
 
 type ClipboardHistoryOverlayProps = {
   isOpen: boolean;
   onClose: () => void;
 };
-
-function formatTimestamp(epochMs: number): string {
-  const diff = Date.now() - epochMs;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return new Date(epochMs).toLocaleTimeString();
-}
 
 function truncateLines(text: string, maxLines: number): string {
   const lines = text.split('\n');
@@ -30,6 +22,7 @@ export function ClipboardHistoryOverlay({
   isOpen,
   onClose
 }: ClipboardHistoryOverlayProps): React.JSX.Element | null {
+  const { t, locale } = useTranslation();
   const [entries, setEntries] = useState<ClipboardEntry[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [filter, setFilter] = useState('');
@@ -125,17 +118,19 @@ export function ClipboardHistoryOverlay({
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Filter clipboard history..."
+          placeholder={t('clipboard.filterPlaceholder')}
           className="flex-1 bg-transparent text-sm text-white outline-none placeholder-neutral-500"
         />
-        <span className="text-[10px] text-neutral-600">{filtered.length} items</span>
+        <span className="text-[10px] text-neutral-600">
+          {t('clipboard.itemCount', { count: filtered.length })}
+        </span>
       </div>
 
       {/* Entries list */}
       <div ref={listRef} className="overflow-y-auto py-1">
         {filtered.length === 0 ? (
           <div className="px-3 py-4 text-sm text-neutral-500 text-center">
-            {entries.length === 0 ? 'Clipboard history is empty' : 'No matching entries'}
+            {entries.length === 0 ? t('clipboard.empty') : t('clipboard.noMatches')}
           </div>
         ) : (
           filtered.map((entry, i) => (
@@ -153,9 +148,17 @@ export function ClipboardHistoryOverlay({
                 {truncateLines(entry.preview, 3)}
               </pre>
               <div className="flex items-center gap-2 text-[10px] text-neutral-600">
-                <span>{formatTimestamp(entry.timestamp)}</span>
-                <span>{entry.charCount} chars</span>
-                {entry.lineCount > 1 && <span>{entry.lineCount} lines</span>}
+                <span>
+                  {formatElapsed(entry.timestamp, t, { maxDays: 1 }) ??
+                    formatDateTime(entry.timestamp, locale, {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                </span>
+                <span>{t('clipboard.chars', { count: entry.charCount })}</span>
+                {entry.lineCount > 1 && (
+                  <span>{t('clipboard.lines', { count: entry.lineCount })}</span>
+                )}
               </div>
             </button>
           ))
@@ -165,7 +168,9 @@ export function ClipboardHistoryOverlay({
       {/* Preview pane for selected entry */}
       {filtered[selectedIndex] && filtered[selectedIndex].text.length > 200 && (
         <div className="border-t border-neutral-800 px-3 py-2 max-h-[20vh] overflow-y-auto">
-          <div className="text-[10px] text-neutral-600 uppercase tracking-wider mb-1">Preview</div>
+          <div className="text-[10px] text-neutral-600 uppercase tracking-wider mb-1">
+            {t('clipboard.preview')}
+          </div>
           <pre className="text-xs font-mono text-neutral-400 whitespace-pre-wrap break-all">
             {filtered[selectedIndex].text}
           </pre>
@@ -175,12 +180,12 @@ export function ClipboardHistoryOverlay({
       {/* Footer */}
       <div className="px-3 py-1.5 border-t border-neutral-800 flex items-center gap-3 text-xs text-neutral-600">
         {!targetPaneId ? (
-          <span className="text-amber-500/80">No active terminal</span>
+          <span className="text-amber-500/80">{t('common.noActiveTerminal')}</span>
         ) : (
           <>
-            <span>↑↓ navigate</span>
-            <span>↵ paste to terminal</span>
-            <span>esc dismiss</span>
+            <span>{t('common.navigate')}</span>
+            <span>{t('clipboard.paste')}</span>
+            <span>{t('common.dismiss')}</span>
           </>
         )}
       </div>

@@ -3,6 +3,7 @@ import type { Translator } from './i18n';
 import type { MessageKey, TranslateParams } from '../../../shared/i18n';
 import { useWorkspaceStore } from '../store/workspace-store';
 import { useToastStore } from '../store/toast-store';
+import { useSettingsStore } from '../store/settings-store';
 import type { RemoteHost } from '../../../shared/remote-ssh-types';
 
 export type Command = {
@@ -145,6 +146,36 @@ export function createCommandRegistry(t: Translator): Command[] {
       shortcut: sc('shortcuts'),
       category: 'App',
       execute: () => document.dispatchEvent(new CustomEvent('fleet:toggle-shortcuts'))
+    },
+    // The picker lives in Settings > General, which is a fine home for a
+    // preference you set once and rarely again - but only if you can find it.
+    // These make Cmd+K an answer to "where do I change the language?".
+    {
+      id: 'language-system',
+      labelKey: 'command.language.system',
+      category: 'App',
+      keywords: ['language', 'locale', 'translation', 'i18n', '语言', '跟随系统'],
+      execute: () => {
+        void useSettingsStore.getState().updateSettings({ general: { language: 'system' } });
+      }
+    },
+    {
+      id: 'language-en',
+      labelKey: 'command.language.en',
+      category: 'App',
+      keywords: ['language', 'locale', 'english', 'i18n', '语言', '英文'],
+      execute: () => {
+        void useSettingsStore.getState().updateSettings({ general: { language: 'en' } });
+      }
+    },
+    {
+      id: 'language-zh-Hans',
+      labelKey: 'command.language.zhCN',
+      category: 'App',
+      keywords: ['language', 'locale', 'chinese', 'simplified', 'i18n', '语言', '中文', '简体'],
+      execute: () => {
+        void useSettingsStore.getState().updateSettings({ general: { language: 'zh-Hans' } });
+      }
     },
     {
       id: 'shell-env',

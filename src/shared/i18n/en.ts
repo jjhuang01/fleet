@@ -27,6 +27,11 @@ export const en = {
   'common.saving': 'Saving\u2026',
   'common.settings': 'Settings',
 
+  'common.navigate': '↑↓ navigate',
+  'common.dismiss': 'esc dismiss',
+  'common.noActiveTerminal': 'No active terminal',
+  'common.searching': 'Searching…',
+
   // Sidebar chrome.
   'sidebar.newTab': 'New Tab',
   'sidebar.newTabHint': 'New Tab ({shortcut})',
@@ -74,6 +79,80 @@ export const en = {
   'tabStatus.minutesAgo': '{minutes}m ago',
   'tabStatus.secondsWaiting': '{seconds}s waiting',
   'tabStatus.minutesWaiting': '{minutes}m waiting',
+
+  'common.loading': 'Loading…',
+  'annotate.title': 'Annotations',
+  'annotate.empty': 'No annotations yet',
+  'annotate.new': 'New Annotation',
+  'annotate.unknownUrl': 'Unknown URL',
+  'annotate.context': 'Context',
+  'annotate.drawing': 'Drawing',
+  'annotate.drawingAlt': 'Drawing overlay',
+  'annotate.styles': 'Styles',
+  'annotate.elementAlt': 'Element {index}',
+  'annotate.elementCount': '{count} element',
+  'annotate.elements': '{count} elements',
+  'annotate.pathCopied': 'Path copied to clipboard',
+
+  // Learnings browser.
+  'learnings.modeKeyword': 'Keyword only',
+  'learnings.modeKeywordTitle': 'Semantic search is unavailable; results use keyword matching.',
+  'learnings.modeSemantic': 'Semantic',
+  'learnings.modeSemanticTitle': 'Searches rank by meaning (vector) + keywords.',
+  'learnings.modePreparing': 'Preparing semantic search…',
+  'learnings.modePreparingTitle':
+    'Downloading/loading the embedding model. Keyword search works meanwhile.',
+  'learnings.searchPlaceholder': 'Search learnings…',
+  'learnings.noMatch': 'No matching learnings.',
+  'learnings.empty': 'No learnings yet. Distill one from a session.',
+  'learnings.selectPrompt': 'Select a learning to view it.',
+  'learnings.copied': 'Copied ✓',
+  'learnings.copy': 'Copy',
+  'learnings.export': 'Export…',
+  'learnings.source': 'Source ▸',
+  'learnings.edit': 'Edit',
+  'learnings.noProject': 'no project',
+  'learnings.titlePlaceholder': 'Title',
+  'learnings.tagsPlaceholder': 'Tags (comma-separated)',
+
+  // Sessions list.
+  'sessions.searchPlaceholder': 'Search sessions…',
+  'sessions.empty': 'No sessions.',
+  'sessions.messageCount': '{count} msgs',
+  'sessions.costUnavailable':
+    'Cost unavailable — a model in this session is not in the pricing table',
+  'sessions.costEstimated': 'Estimated session cost',
+
+  'fileSearch.scopeAll': 'All',
+  'fileSearch.scopeFiles': 'Files',
+  'fileSearch.sort': 'Sort:',
+  'fileSearch.sortDate': 'Date',
+  'fileSearch.sortName': 'Name',
+  'fileSearch.sortSize': 'Size',
+  'fileSearch.placeholderFiles': 'Search files on disk...',
+  'fileSearch.placeholderAll': 'Search files and images...',
+  'fileSearch.noMatch': 'No files match “{query}”',
+  'fileSearch.searchAll': 'Search All instead',
+  'fileSearch.noRecent': 'No recent files',
+  'fileSearch.recent': 'Recent',
+  'fileSearch.recentImages': 'Recent Images',
+  'fileSearch.footerPaste': '↵ paste',
+
+  // Clipboard history overlay.
+  'clipboard.filterPlaceholder': 'Filter clipboard history...',
+  'clipboard.itemCount': '{count} items',
+  'clipboard.empty': 'Clipboard history is empty',
+  'clipboard.noMatches': 'No matching entries',
+  'clipboard.preview': 'Preview',
+  'clipboard.chars': '{count} chars',
+  'clipboard.lines': '{count} lines',
+  'clipboard.paste': '↵ paste to terminal',
+
+  // Elapsed time in list rows. Compact on purpose - see lib/relative-time.ts.
+  'time.justNow': 'just now',
+  'time.minutesAgo': '{minutes}m ago',
+  'time.hoursAgo': '{hours}h ago',
+  'time.daysAgo': '{days}d ago',
 
   // Pane chrome: the title pill and the toolbar beside it.
   'pane.splitRight': 'Split right',
@@ -165,6 +244,13 @@ export const en = {
   'command.browse-remote-here': 'Browse Files on This Remote Host',
   'command.browse-remote': 'Browse {label}',
   'command.notRemotePane': 'This pane is not connected to a remote host over SSH',
+
+  // Language switches. The two names are written in their own language on
+  // purpose: someone who landed in the wrong one has to be able to read the way
+  // out, which is what every other app with a language picker does too.
+  'command.language.system': 'Language: Follow System',
+  'command.language.en': 'Language: English',
+  'command.language.zhCN': 'Language: 简体中文',
 
   // Settings shell.
   'settings.nav.group.application': 'Application',

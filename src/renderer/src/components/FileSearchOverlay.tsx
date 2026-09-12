@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Search, ArrowDownAZ, Clock, HardDrive, FolderOpen, Layers } from 'lucide-react';
 import { Overlay } from './Overlay';
+import { useTranslation } from '../lib/i18n';
+import { formatElapsed, formatDateTime } from '../lib/relative-time';
+import type { MessageKey } from '../../../shared/i18n';
 import { createLogger } from '../logger';
 const log = createLogger('overlay:file-search');
 import {
@@ -31,9 +34,9 @@ const fileSearchResultSchema = z.array(
 
 type ScopeId = 'all' | 'files';
 
-const SCOPE_OPTIONS: Array<{ id: ScopeId; label: string; icon: typeof Clock }> = [
-  { id: 'all', label: 'All', icon: Layers },
-  { id: 'files', label: 'Files', icon: FolderOpen }
+const SCOPE_OPTIONS: Array<{ id: ScopeId; labelKey: MessageKey; icon: typeof Clock }> = [
+  { id: 'all', labelKey: 'fileSearch.scopeAll', icon: Layers },
+  { id: 'files', labelKey: 'fileSearch.scopeFiles', icon: FolderOpen }
 ];
 
 // --- Recent files LRU ---
@@ -54,20 +57,6 @@ function addRecentFile(file: FileSearchResult): void {
   recent.unshift(file);
   if (recent.length > MAX_RECENT) recent.length = MAX_RECENT;
   localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(recent));
-}
-
-// --- Relative time formatting ---
-
-function relativeTime(epochMs: number): string {
-  const diff = Date.now() - epochMs;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return new Date(epochMs).toLocaleDateString();
 }
 
 // --- Highlight matched characters ---
@@ -97,10 +86,10 @@ function HighlightedText({ text, query }: { text: string; query: string }): Reac
 
 type SortOption = 'date' | 'name' | 'size';
 
-const SORT_OPTIONS: Array<{ id: SortOption; label: string; icon: typeof Clock }> = [
-  { id: 'date', label: 'Date', icon: Clock },
-  { id: 'name', label: 'Name', icon: ArrowDownAZ },
-  { id: 'size', label: 'Size', icon: HardDrive }
+const SORT_OPTIONS: Array<{ id: SortOption; labelKey: MessageKey; icon: typeof Clock }> = [
+  { id: 'date', labelKey: 'fileSearch.sortDate', icon: Clock },
+  { id: 'name', labelKey: 'fileSearch.sortName', icon: ArrowDownAZ },
+  { id: 'size', labelKey: 'fileSearch.sortSize', icon: HardDrive }
 ];
 
 function sortResults(results: FileSearchResult[], sort: SortOption): FileSearchResult[] {
@@ -134,6 +123,7 @@ export function FileSearchOverlay({
   isOpen,
   onClose
 }: FileSearchOverlayProps): React.JSX.Element | null {
+  const { t, locale } = useTranslation();
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<ScopeId>('all');
   const [results, setResults] = useState<FileSearchResult[]>([]);
@@ -260,7 +250,8 @@ export function FileSearchOverlay({
     }
   };
 
-  const placeholder = scope === 'files' ? 'Search files on disk...' : 'Search files and images...';
+  const placeholder =
+    scope === 'files' ? t('fileSearch.placeholderFiles') : t('fileSearch.placeholderAll');
 
   // --- Render helpers ---
 
@@ -273,20 +264,22 @@ export function FileSearchOverlay({
       if (query) {
         return (
           <div className="px-3 py-8 text-center">
-            <p className="text-sm text-fleet-text-muted">No files match &ldquo;{query}&rdquo;</p>
+            <p className="text-sm text-fleet-text-muted">{t('fileSearch.noMatch', { query })}</p>
             {scope === 'files' && (
               <button
                 onClick={() => setScope('all')}
                 className="mt-2 text-xs text-blue-400 hover:text-blue-300"
               >
-                Search All instead
+                {t('fileSearch.searchAll')}
               </button>
             )}
           </div>
         );
       }
       return (
-        <div className="px-3 py-4 text-sm text-fleet-text-subtle text-center">No recent files</div>
+        <div className="px-3 py-4 text-sm text-fleet-text-subtle text-center">
+          {t('fileSearch.noRecent')}
+        </div>
       );
     }
 
@@ -294,7 +287,7 @@ export function FileSearchOverlay({
       <>
         {!query && sortedResults.length > 0 && (
           <div className="px-3 py-1 text-[10px] text-fleet-text-subtle uppercase tracking-wider">
-            Recent
+            {t('fileSearch.recent')}
           </div>
         )}
         {sortedResults.slice(0, 10).map((file, i) => (
@@ -319,7 +312,10 @@ export function FileSearchOverlay({
               </span>
             </div>
             <span className="text-[10px] text-fleet-text-subtle shrink-0">
-              {sort === 'size' ? formatSize(file.size) : relativeTime(file.modifiedAt)}
+              {sort === 'size'
+                ? formatSize(file.size)
+                : (formatElapsed(file.modifiedAt, t, { maxDays: 7 }) ??
+                  formatDateTime(file.modifiedAt, locale))}
             </span>
           </button>
         ))}
@@ -334,7 +330,7 @@ export function FileSearchOverlay({
         {!query && recentImages.length > 0 && (
           <>
             <div className="px-3 py-1 text-[10px] text-fleet-text-subtle uppercase tracking-wider">
-              Recent Images
+              {t('fileSearch.recentImages')}
             </div>
             <div className="no-scrollbar relative flex gap-2 px-3 py-2 border-b border-fleet-border overflow-x-auto">
               {recentImages.map((img) => (
@@ -359,7 +355,8 @@ export function FileSearchOverlay({
                     {img.name}
                   </span>
                   <span className="text-[9px] text-fleet-text-subtle">
-                    {relativeTime(img.modifiedAt)}
+                    {formatElapsed(img.modifiedAt, t, { maxDays: 7 }) ??
+                      formatDateTime(img.modifiedAt, locale)}
                   </span>
                 </button>
               ))}
@@ -392,12 +389,14 @@ export function FileSearchOverlay({
           placeholder={placeholder}
           className="flex-1 bg-transparent text-sm text-fleet-text outline-none placeholder-fleet-text-subtle"
         />
-        {isLoading && <span className="text-xs text-fleet-text-subtle">Searching...</span>}
+        {isLoading && (
+          <span className="text-xs text-fleet-text-subtle">{t('common.searching')}</span>
+        )}
       </div>
 
       {/* Scope tabs */}
       <div className="px-3 py-1.5 border-b border-fleet-border flex items-center gap-1">
-        {SCOPE_OPTIONS.map(({ id, label, icon: Icon }) => {
+        {SCOPE_OPTIONS.map(({ id, labelKey, icon: Icon }) => {
           return (
             <button
               key={id}
@@ -409,15 +408,15 @@ export function FileSearchOverlay({
               }`}
             >
               <Icon size={11} />
-              {label}
+              {t(labelKey)}
             </button>
           );
         })}
         {/* Sort controls (only for file-based scopes) */}
         {results.length > 0 && (
           <div className="ml-auto flex items-center gap-1">
-            <span className="text-[10px] text-fleet-text-subtle mr-1">Sort:</span>
-            {SORT_OPTIONS.map(({ id, label, icon: Icon }) => (
+            <span className="text-[10px] text-fleet-text-subtle mr-1">{t('fileSearch.sort')}</span>
+            {SORT_OPTIONS.map(({ id, labelKey, icon: Icon }) => (
               <button
                 key={id}
                 onClick={() => setSort(id)}
@@ -428,7 +427,7 @@ export function FileSearchOverlay({
                 }`}
               >
                 <Icon size={10} />
-                {label}
+                {t(labelKey)}
               </button>
             ))}
           </div>
@@ -444,12 +443,12 @@ export function FileSearchOverlay({
       {/* Footer */}
       <div className="px-3 py-1.5 border-t border-fleet-border flex items-center gap-3 text-xs text-fleet-text-subtle">
         {!targetPaneId ? (
-          <span className="text-amber-500/80">No active terminal</span>
+          <span className="text-amber-500/80">{t('common.noActiveTerminal')}</span>
         ) : (
           <>
-            <span>↑↓ navigate</span>
-            <span>↵ paste</span>
-            <span>esc dismiss</span>
+            <span>{t('common.navigate')}</span>
+            <span>{t('fileSearch.footerPaste')}</span>
+            <span>{t('common.dismiss')}</span>
           </>
         )}
       </div>

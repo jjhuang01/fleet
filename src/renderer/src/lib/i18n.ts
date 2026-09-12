@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useSettingsStore } from '../store/settings-store';
 import {
   resolveLocale,
@@ -20,6 +20,25 @@ export type Translator = (key: MessageKey, params?: TranslateParams) => string;
 export function useLocale(): Locale {
   const preference = useSettingsStore((s) => s.settings?.general.language);
   return resolveLocale(preference, navigator.language);
+}
+
+/**
+ * Keep `<html lang>` in step with the locale the UI is actually rendered in.
+ *
+ * Not decoration. The attribute is what tells the engine which Han face to
+ * prefer, how to break lines in a language written without spaces, and which
+ * phonetics a screen reader should read Chinese with - an interface that
+ * renders Chinese inside `<html lang="en">` is announced in English.
+ *
+ * Called once, from the app root; the static value in `index.html` is only the
+ * default for the first paint, before settings have loaded.
+ */
+export function useDocumentLanguage(): Locale {
+  const locale = useLocale();
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
+  return locale;
 }
 
 /**
