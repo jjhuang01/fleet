@@ -155,7 +155,6 @@ export type SystemDepResult = {
   name: string;
   found: boolean;
   version?: string;
-  installHint: string;
 };
 
 export type DirEntry = {

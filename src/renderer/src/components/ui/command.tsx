@@ -1,4 +1,5 @@
 import { Command as CommandPrimitive } from 'cmdk';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { dialogFadeAnim } from '../../lib/motion';
 
 /** Root command menu. Forwards all cmdk Command props (shouldFilter, value, onValueChange, filter, loop, onKeyDown). */
@@ -7,7 +8,10 @@ export const Command = CommandPrimitive;
 type CommandDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Accessible name of the dialog. Rendered as a hidden `DialogTitle`. */
   label: string;
+  /** Accessible description, announced once when the dialog opens. */
+  description: string;
   children: React.ReactNode;
   /** Forwarded to the root Command (e.g. onKeyDown, value, onValueChange, shouldFilter). */
   commandProps?: React.ComponentProps<typeof CommandPrimitive>;
@@ -22,6 +26,7 @@ export function CommandDialog({
   open,
   onOpenChange,
   label,
+  description,
   children,
   commandProps
 }: CommandDialogProps): React.JSX.Element {
@@ -36,6 +41,12 @@ export function CommandDialog({
       contentClassName={`fixed left-1/2 top-[18vh] z-50 w-[640px] max-w-[90vw] -translate-x-1/2 overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl ${dialogFadeAnim} motion-reduce:transition-none`}
       {...commandProps}
     >
+      {/* cmdk's Dialog points DialogContent's `aria-labelledby` at a
+          DialogTitle it never renders, so the palette had no accessible name
+          at all and Radix said so on every open. Both nodes are hidden: the
+          input is the heading a sighted user reads. */}
+      <DialogPrimitive.Title className="sr-only">{label}</DialogPrimitive.Title>
+      <DialogPrimitive.Description className="sr-only">{description}</DialogPrimitive.Description>
       {children}
     </CommandPrimitive.Dialog>
   );
