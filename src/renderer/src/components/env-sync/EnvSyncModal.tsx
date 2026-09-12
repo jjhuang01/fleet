@@ -31,14 +31,14 @@ const STATUS_LABEL: Record<TargetSyncState, string> = {
 
 // Status text colour by state: green = settled, amber = action available, red = problem.
 const STATE_TEXT: Record<TargetSyncState, string> = {
-  'in-sync': 'text-emerald-400',
-  'remote-ahead': 'text-amber-400',
-  'local-ahead': 'text-amber-400',
-  conflict: 'text-red-400',
-  'local-only': 'text-amber-400',
-  'remote-only': 'text-amber-400',
-  'no-remote-no-local': 'text-neutral-500',
-  error: 'text-red-400'
+  'in-sync': 'text-emerald-600 dark:text-emerald-400',
+  'remote-ahead': 'text-amber-600 dark:text-amber-400',
+  'local-ahead': 'text-amber-600 dark:text-amber-400',
+  conflict: 'text-red-600 dark:text-red-400',
+  'local-only': 'text-amber-600 dark:text-amber-400',
+  'remote-only': 'text-amber-600 dark:text-amber-400',
+  'no-remote-no-local': 'text-fleet-text-subtle',
+  error: 'text-red-600 dark:text-red-400'
 };
 
 /** The single recommended sync action for a state, or null when nothing to do. */
@@ -60,7 +60,7 @@ function primaryAction(state: TargetSyncState): { dir: 'pull' | 'push'; label: s
 }
 
 const inputCls =
-  'w-full bg-neutral-800 text-sm text-neutral-200 rounded-md px-3 py-2 border border-neutral-700 transition-colors focus:border-neutral-500 focus:outline-none';
+  'w-full bg-fleet-surface-2 text-sm text-fleet-text rounded-md px-3 py-2 border border-fleet-border-strong transition-colors focus:border-[color:var(--fleet-accent)] focus:outline-none';
 
 const SPIN = <Loader2 size={14} className="animate-spin" />;
 
@@ -79,7 +79,7 @@ function Field({
 }): React.JSX.Element {
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs font-medium text-neutral-400">{label}</span>
+      <span className="text-xs font-medium text-fleet-text-muted">{label}</span>
       {children}
     </div>
   );
@@ -99,22 +99,22 @@ function Disclosure({
 }): React.JSX.Element {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-lg border border-neutral-800">
+    <div className="rounded-lg border border-fleet-border">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-neutral-800/40 active:scale-[0.97]"
+        className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors hover:bg-fleet-surface-2/40 active:scale-[0.97]"
       >
         <ChevronRight
           size={15}
-          className={`shrink-0 text-neutral-500 transition-transform ${open ? 'rotate-90' : ''}`}
+          className={`shrink-0 text-fleet-text-subtle transition-transform ${open ? 'rotate-90' : ''}`}
         />
-        <span className="text-sm font-medium text-neutral-300">{title}</span>
+        <span className="text-sm font-medium text-fleet-text-secondary">{title}</span>
         {summary && !open && (
-          <span className="ml-auto truncate pl-3 text-xs text-neutral-500">{summary}</span>
+          <span className="ml-auto truncate pl-3 text-xs text-fleet-text-subtle">{summary}</span>
         )}
       </button>
-      {open && <div className="space-y-4 border-t border-neutral-800 px-4 py-4">{children}</div>}
+      {open && <div className="space-y-4 border-t border-fleet-border px-4 py-4">{children}</div>}
     </div>
   );
 }
@@ -160,10 +160,10 @@ function PassphraseControl({
 
   return present ? (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-neutral-400">●●●●●●●● (set)</span>
+      <span className="text-sm text-fleet-text-muted">●●●●●●●● (set)</span>
       <button
         disabled={clearing}
-        className="inline-flex items-center gap-1.5 text-xs text-red-400 transition-colors hover:text-red-300 disabled:text-neutral-500 active:scale-[0.97] disabled:active:scale-100"
+        className="inline-flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400 transition-colors hover:text-red-700 dark:hover:text-red-300 disabled:text-fleet-text-subtle active:scale-[0.97] disabled:active:scale-100"
         onClick={() => void clear()}
       >
         {clearing && SPIN}
@@ -283,7 +283,7 @@ function AuthControl({
       {mode === 'static' && (
         <div className="flex flex-col gap-3">
           {redacted?.mode === 'static' && redacted.hasAccessKeyId ? (
-            <span className="text-sm text-neutral-400">
+            <span className="text-sm text-fleet-text-muted">
               Static keys ●●●● (set) — re-enter below to replace
             </span>
           ) : null}
@@ -322,7 +322,7 @@ function AuthControl({
         {redacted && (
           <button
             disabled={resetting}
-            className="inline-flex items-center gap-1.5 text-xs text-red-400 transition-colors hover:text-red-300 disabled:text-neutral-500 active:scale-[0.97] disabled:active:scale-100"
+            className="inline-flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400 transition-colors hover:text-red-700 dark:hover:text-red-300 disabled:text-fleet-text-subtle active:scale-[0.97] disabled:active:scale-100"
             onClick={() => void reset()}
           >
             {resetting && SPIN}
@@ -363,11 +363,11 @@ function RepoAuthOverride({
   if (!override && !editing) {
     return (
       <div className="flex items-center gap-3">
-        <span className="text-sm text-neutral-400">
+        <span className="text-sm text-fleet-text-muted">
           Inherits global ({authSummary(globalAuth)})
         </span>
         <button
-          className="text-xs text-blue-400 transition-colors hover:text-blue-300 active:scale-[0.97]"
+          className="text-xs text-blue-600 dark:text-blue-400 transition-colors hover:text-blue-700 dark:hover:text-blue-300 active:scale-[0.97]"
           onClick={() => setEditing(true)}
         >
           Override
@@ -426,14 +426,14 @@ function InitForm({
   };
 
   return (
-    <div className="space-y-5 rounded-lg border border-neutral-800 p-5">
+    <div className="space-y-5 rounded-lg border border-fleet-border p-5">
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold text-neutral-200">Set up this repo</h3>
-        <p className="text-xs text-neutral-500">
-          No <code className="text-neutral-400">.fleet/env-sync.json</code> here yet. Create one to
-          start syncing env files.
+        <h3 className="text-sm font-semibold text-fleet-text">Set up this repo</h3>
+        <p className="text-xs text-fleet-text-subtle">
+          No <code className="text-fleet-text-muted">.fleet/env-sync.json</code> here yet. Create
+          one to start syncing env files.
         </p>
-        <p className="break-all pt-1 text-xs text-neutral-600">{repoDir}</p>
+        <p className="break-all pt-1 text-xs text-fleet-text-subtle">{repoDir}</p>
       </div>
       <Field label="Repo id (S3 namespace)">
         <input value={id} onChange={(e) => setId(e.target.value)} className={inputCls} />
@@ -615,36 +615,36 @@ function RepoManager({
   };
 
   return (
-    <div className="rounded-lg border border-neutral-800 p-5">
+    <div className="rounded-lg border border-fleet-border p-5">
       {/* Click-away catcher for the row action menu. */}
       {menuFor && <div className="fixed inset-0 z-10" onClick={() => setMenuFor(null)} />}
 
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold text-neutral-200">{config.id}</span>
+        <span className="text-sm font-semibold text-fleet-text">{config.id}</span>
         {editing ? (
           <div className="flex items-center gap-2">
             <input
               value={bucketDraft}
               onChange={(e) => setBucketDraft(e.target.value)}
               placeholder="Bucket"
-              className="w-36 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200"
+              className="w-36 rounded-md border border-fleet-border-strong bg-fleet-surface-2 px-3 py-1.5 text-sm text-fleet-text"
             />
             <input
               value={regionDraft}
               onChange={(e) => setRegionDraft(e.target.value)}
               placeholder="Region"
-              className="w-28 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200"
+              className="w-28 rounded-md border border-fleet-border-strong bg-fleet-surface-2 px-3 py-1.5 text-sm text-fleet-text"
             />
             <button
               disabled={savingBucket}
-              className="inline-flex items-center gap-1.5 text-xs text-blue-400 transition-colors hover:text-blue-300 disabled:text-neutral-500 active:scale-[0.97] disabled:active:scale-100"
+              className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 transition-colors hover:text-blue-700 dark:hover:text-blue-300 disabled:text-fleet-text-subtle active:scale-[0.97] disabled:active:scale-100"
               onClick={() => void saveBucketRegion()}
             >
               {savingBucket && <Loader2 size={12} className="animate-spin" />}
               Save
             </button>
             <button
-              className="text-xs text-neutral-400 transition-colors hover:text-neutral-200 active:scale-[0.97]"
+              className="text-xs text-fleet-text-muted transition-colors hover:text-fleet-text active:scale-[0.97]"
               onClick={() => setEditing(false)}
             >
               Cancel
@@ -652,28 +652,28 @@ function RepoManager({
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <span className="text-xs text-neutral-500">
+            <span className="text-xs text-fleet-text-subtle">
               {config.bucket} · {config.region}
             </span>
             <button
-              className="text-xs text-blue-400 transition-colors hover:text-blue-300 active:scale-[0.97]"
+              className="text-xs text-blue-600 dark:text-blue-400 transition-colors hover:text-blue-700 dark:hover:text-blue-300 active:scale-[0.97]"
               onClick={startEdit}
             >
               Edit
             </button>
             {confirmBucket ? (
               <span className="flex items-center gap-2 text-xs">
-                <span className="text-neutral-400">Create in {config.region}?</span>
+                <span className="text-fleet-text-muted">Create in {config.region}?</span>
                 <button
                   disabled={creatingBucket}
-                  className="inline-flex items-center gap-1.5 text-blue-400 transition-colors hover:text-blue-300 disabled:text-neutral-500 active:scale-[0.97] disabled:active:scale-100"
+                  className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 transition-colors hover:text-blue-700 dark:hover:text-blue-300 disabled:text-fleet-text-subtle active:scale-[0.97] disabled:active:scale-100"
                   onClick={() => void createBucket()}
                 >
                   {creatingBucket && <Loader2 size={12} className="animate-spin" />}
                   {creatingBucket ? 'Creating…' : 'Create'}
                 </button>
                 <button
-                  className="text-neutral-400 transition-colors hover:text-neutral-200 active:scale-[0.97]"
+                  className="text-fleet-text-muted transition-colors hover:text-fleet-text active:scale-[0.97]"
                   onClick={() => setConfirmBucket(false)}
                 >
                   Cancel
@@ -681,7 +681,7 @@ function RepoManager({
               </span>
             ) : (
               <button
-                className="text-xs text-blue-400 transition-colors hover:text-blue-300 active:scale-[0.97]"
+                className="text-xs text-blue-600 dark:text-blue-400 transition-colors hover:text-blue-700 dark:hover:text-blue-300 active:scale-[0.97]"
                 onClick={() => setConfirmBucket(true)}
               >
                 Create bucket
@@ -692,7 +692,7 @@ function RepoManager({
       </div>
 
       {statuses.length === 0 ? (
-        <p className="mt-5 text-xs text-neutral-500">
+        <p className="mt-5 text-xs text-fleet-text-subtle">
           No env files tracked yet. Scan to add some below.
         </p>
       ) : (
@@ -703,7 +703,7 @@ function RepoManager({
               return (
                 <Fragment key={t.envFile}>
                   <tr>
-                    <td className="py-2 pr-3 text-neutral-200">{t.envFile}</td>
+                    <td className="py-2 pr-3 text-fleet-text">{t.envFile}</td>
                     <td className={`py-2 pr-3 ${STATE_TEXT[t.state]}`} title={t.error}>
                       {STATUS_LABEL[t.state]}
                     </td>
@@ -712,7 +712,7 @@ function RepoManager({
                         {action && (
                           <button
                             disabled={busyRow === t.envFile}
-                            className="inline-flex items-center gap-1.5 rounded-md bg-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-100 transition active:scale-[0.94] hover:bg-neutral-600 disabled:active:scale-100"
+                            className="inline-flex items-center gap-1.5 rounded-md bg-fleet-surface-3 px-3 py-1.5 text-xs font-medium text-fleet-text transition active:scale-[0.94] hover:bg-fleet-surface-3 disabled:active:scale-100"
                             onClick={() => void doSync(t.envFile, action.dir)}
                           >
                             {busyRow === t.envFile && (
@@ -724,37 +724,37 @@ function RepoManager({
                         <button
                           aria-label="More actions"
                           disabled={busyRow === t.envFile}
-                          className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200 disabled:opacity-50 active:scale-90 disabled:active:scale-100"
+                          className="rounded-md p-1.5 text-fleet-text-subtle transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text disabled:opacity-50 active:scale-90 disabled:active:scale-100"
                           onClick={() => setMenuFor(menuFor === t.envFile ? null : t.envFile)}
                         >
                           <MoreHorizontal size={15} />
                         </button>
                         {menuFor === t.envFile && (
-                          <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-md border border-neutral-700 bg-neutral-800 py-1.5 text-left shadow-xl">
+                          <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-md border border-fleet-border-strong bg-fleet-surface-2 py-1.5 text-left shadow-xl">
                             <button
-                              className="block w-full px-3 py-1.5 text-left text-xs text-neutral-200 transition-colors hover:bg-neutral-700 active:scale-[0.97]"
+                              className="block w-full px-3 py-1.5 text-left text-xs text-fleet-text transition-colors hover:bg-fleet-surface-3 active:scale-[0.97]"
                               onClick={() => void doSync(t.envFile, 'pull')}
                             >
                               Pull from remote
                             </button>
                             <button
-                              className="block w-full px-3 py-1.5 text-left text-xs text-neutral-200 transition-colors hover:bg-neutral-700 active:scale-[0.97]"
+                              className="block w-full px-3 py-1.5 text-left text-xs text-fleet-text transition-colors hover:bg-fleet-surface-3 active:scale-[0.97]"
                               onClick={() => void doSync(t.envFile, 'push')}
                             >
                               Push to remote
                             </button>
-                            <div className="my-1.5 border-t border-neutral-700" />
-                            <div className="px-3 py-1 text-[11px] uppercase tracking-wide text-neutral-500">
+                            <div className="my-1.5 border-t border-fleet-border-strong" />
+                            <div className="px-3 py-1 text-[11px] uppercase tracking-wide text-fleet-text-subtle">
                               Delivery
                             </div>
                             <button
-                              className="block w-full px-3 py-1.5 text-left text-xs text-neutral-200 transition-colors hover:bg-neutral-700 active:scale-[0.97]"
+                              className="block w-full px-3 py-1.5 text-left text-xs text-fleet-text transition-colors hover:bg-fleet-surface-3 active:scale-[0.97]"
                               onClick={() => void changeDelivery(t.envFile, 'file')}
                             >
                               {t.delivery === 'file' ? '✓ ' : '  '}Write file
                             </button>
                             <button
-                              className="block w-full px-3 py-1.5 text-left text-xs text-neutral-200 transition-colors hover:bg-neutral-700 active:scale-[0.97]"
+                              className="block w-full px-3 py-1.5 text-left text-xs text-fleet-text transition-colors hover:bg-fleet-surface-3 active:scale-[0.97]"
                               onClick={() => void changeDelivery(t.envFile, 'inject')}
                             >
                               {t.delivery === 'inject' ? '✓ ' : '  '}Inject into env
@@ -766,7 +766,10 @@ function RepoManager({
                   </tr>
                   {t.error && (
                     <tr>
-                      <td colSpan={3} className="pb-2 text-xs leading-relaxed text-red-400">
+                      <td
+                        colSpan={3}
+                        className="pb-2 text-xs leading-relaxed text-red-600 dark:text-red-400"
+                      >
                         {t.error}
                       </td>
                     </tr>
@@ -782,20 +785,23 @@ function RepoManager({
         {candidates === null ? (
           <button
             disabled={scanning}
-            className="inline-flex items-center gap-1.5 text-xs text-blue-400 transition-colors hover:text-blue-300 disabled:text-neutral-500 active:scale-[0.97] disabled:active:scale-100"
+            className="inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 transition-colors hover:text-blue-700 dark:hover:text-blue-300 disabled:text-fleet-text-subtle active:scale-[0.97] disabled:active:scale-100"
             onClick={() => void runScan()}
           >
             {scanning && <Loader2 size={12} className="animate-spin" />}
             {scanning ? 'Scanning…' : '+ Scan for env files'}
           </button>
         ) : (
-          <div className="rounded-lg border border-neutral-800 p-4">
+          <div className="rounded-lg border border-fleet-border p-4">
             {candidates.length === 0 ? (
-              <p className="text-xs text-neutral-500">No new env files found.</p>
+              <p className="text-xs text-fleet-text-subtle">No new env files found.</p>
             ) : (
               <div className="space-y-2">
                 {candidates.map((path) => (
-                  <label key={path} className="flex items-center gap-3 text-sm text-neutral-300">
+                  <label
+                    key={path}
+                    className="flex items-center gap-3 text-sm text-fleet-text-secondary"
+                  >
                     <input
                       type="checkbox"
                       checked={selected.has(path)}
@@ -809,14 +815,14 @@ function RepoManager({
             <div className="mt-4 flex items-center gap-3">
               <button
                 disabled={selected.size === 0 || adding}
-                className="inline-flex items-center gap-1.5 rounded-md bg-neutral-700 px-3 py-1.5 text-xs text-neutral-100 transition active:scale-[0.96] hover:bg-neutral-600 disabled:text-neutral-500 disabled:active:scale-100"
+                className="inline-flex items-center gap-1.5 rounded-md bg-fleet-surface-3 px-3 py-1.5 text-xs text-fleet-text transition active:scale-[0.96] hover:bg-fleet-surface-3 disabled:text-fleet-text-subtle disabled:active:scale-100"
                 onClick={() => void addSelected()}
               >
                 {adding && <Loader2 size={12} className="animate-spin" />}
                 Add selected
               </button>
               <button
-                className="text-xs text-neutral-400 transition-colors hover:text-neutral-200 active:scale-[0.97]"
+                className="text-xs text-fleet-text-muted transition-colors hover:text-fleet-text active:scale-[0.97]"
                 onClick={closeScan}
               >
                 Cancel
@@ -964,30 +970,30 @@ export function EnvSyncModal({
             onClose();
           }
         }}
-        className="flex max-h-[85vh] w-[600px] flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl"
+        className="flex max-h-[85vh] w-[600px] flex-col overflow-hidden rounded-xl border border-fleet-border-strong bg-fleet-surface shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
-          <h2 className="text-base font-semibold text-neutral-100">Env Sync</h2>
+        <div className="flex items-center justify-between border-b border-fleet-border px-6 py-4">
+          <h2 className="text-base font-semibold text-fleet-text">Env Sync</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-white active:scale-90"
+            className="rounded-md p-1.5 text-fleet-text-subtle transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text active:scale-90"
           >
             <X size={16} />
           </button>
         </div>
 
         {!loading && (
-          <div className="flex items-center gap-2 border-b border-neutral-800 bg-neutral-800/40 px-6 py-2.5 text-xs">
-            <KeyRound size={13} className="shrink-0 text-neutral-500" />
-            <span className="text-neutral-400">Active AWS credentials:</span>
-            <span className="truncate font-medium text-neutral-100">
+          <div className="flex items-center gap-2 border-b border-fleet-border bg-fleet-surface-2/40 px-6 py-2.5 text-xs">
+            <KeyRound size={13} className="shrink-0 text-fleet-text-subtle" />
+            <span className="text-fleet-text-muted">Active AWS credentials:</span>
+            <span className="truncate font-medium text-fleet-text">
               {authSummary(effectiveAuth)}
             </span>
             <span
               className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
                 authIsOverride
-                  ? 'bg-amber-500/15 text-amber-300'
-                  : 'bg-neutral-700/50 text-neutral-400'
+                  ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                  : 'bg-fleet-surface-3/50 text-fleet-text-muted'
               }`}
             >
               {authIsOverride ? 'repo override' : 'global'}
@@ -997,13 +1003,13 @@ export function EnvSyncModal({
 
         <div className="space-y-5 overflow-y-auto p-6">
           {!encAvailable && (
-            <div className="rounded-lg border border-red-700 bg-red-950/40 p-4 text-sm text-red-300">
+            <div className="rounded-lg border border-red-500/30 dark:border-red-700 bg-red-500/10 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-300">
               OS keychain encryption is unavailable. Passphrases and static AWS keys cannot be
               stored securely on this machine.
             </div>
           )}
           {encAvailable && encBackend === 'basic_text' && (
-            <div className="rounded-lg border border-amber-700 bg-amber-950/40 p-4 text-sm text-amber-300">
+            <div className="rounded-lg border border-amber-500/30 dark:border-amber-700 bg-amber-500/10 dark:bg-amber-950/40 p-4 text-sm text-amber-700 dark:text-amber-300">
               This Linux session uses the <code>basic_text</code> keychain backend — stored secrets
               are NOT meaningfully encrypted. Configure libsecret (gnome-keyring) or kwallet for
               real protection.
@@ -1011,9 +1017,9 @@ export function EnvSyncModal({
           )}
 
           {loading ? (
-            <p className="text-sm text-neutral-500">Loading…</p>
+            <p className="text-sm text-fleet-text-subtle">Loading…</p>
           ) : !repoDir ? (
-            <p className="text-sm text-neutral-500">
+            <p className="text-sm text-fleet-text-subtle">
               No active terminal directory — focus a pane to manage its env sync.
             </p>
           ) : (

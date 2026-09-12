@@ -54,18 +54,18 @@ export function RemoteDeleteDialog({
 
   return (
     <Overlay open={entry !== null} onClose={onClose} closeOnBackdrop={!busy}>
-      <div className="w-[400px] rounded-lg border border-neutral-700 bg-neutral-900 p-4">
+      <div className="w-[400px] rounded-lg border border-fleet-border-strong bg-fleet-surface p-4">
         <div className="flex items-start gap-2.5">
           <TriangleAlert size={16} className="mt-0.5 shrink-0 text-red-400" />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-neutral-200">
+            <h3 className="text-sm font-semibold text-fleet-text">
               Delete {isDir ? 'folder' : shown?.kind === 'symlink' ? 'link' : 'file'}?
             </h3>
-            <p className="mt-1 text-xs text-neutral-400 break-words">
-              <span className="font-mono text-neutral-300">{shown?.name}</span>
+            <p className="mt-1 text-xs text-fleet-text-muted break-words">
+              <span className="font-mono text-fleet-text-secondary">{shown?.name}</span>
               {isDir && ' and everything inside it'} will be removed from {hostLabel}.
             </p>
-            <p className="mt-1.5 text-xs text-neutral-500">
+            <p className="mt-1.5 text-xs text-fleet-text-subtle">
               There is no trash on the remote host. This cannot be undone.
             </p>
           </div>
@@ -76,7 +76,7 @@ export function RemoteDeleteDialog({
         <div className="mt-4 flex justify-end gap-2">
           <button
             ref={cancelRef}
-            className="text-xs px-3 py-1 rounded bg-neutral-800 transition hover:bg-neutral-700 active:scale-[0.97] outline-none focus:ring-1 focus:ring-neutral-500"
+            className="text-xs px-3 py-1 rounded bg-fleet-surface-2 transition hover:bg-fleet-surface-3 active:scale-[0.97] outline-none focus:ring-1 focus:ring-neutral-500"
             onClick={onClose}
             disabled={busy}
           >

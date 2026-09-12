@@ -77,10 +77,14 @@ function parseDiffToFiles(rawDiff: string, highlighter: DiffHighlighterInstance)
 
 export function DiffContent({
   rawDiff,
-  mode
+  mode,
+  theme: diffTheme
 }: {
   rawDiff: string;
   mode: DiffViewMode;
+  /** Active app-theme kind. Passed in because the root `.dark` class is applied
+   *  after render, so reading it here would show the previous theme. */
+  theme: 'light' | 'dark';
 }): React.JSX.Element {
   const highlighter = useShikiHighlighter();
   const diffFiles = useMemo(() => parseDiffToFiles(rawDiff, highlighter), [rawDiff, highlighter]);
@@ -88,7 +92,7 @@ export function DiffContent({
 
   if (diffFiles.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-neutral-600 text-sm">
+      <div className="flex items-center justify-center h-full text-fleet-text-subtle text-sm">
         No diff content
       </div>
     );
@@ -98,13 +102,13 @@ export function DiffContent({
     <div className="p-2">
       {diffFiles.map((file, i) => (
         <div key={file._newFileName || i} className="mb-4" data-file-path={file._newFileName}>
-          <div className="sticky top-0 z-10 bg-neutral-900 border-b border-neutral-800 px-3 py-1.5 text-xs font-mono text-neutral-300">
+          <div className="sticky top-0 z-10 bg-fleet-surface border-b border-fleet-border px-3 py-1.5 text-xs font-mono text-fleet-text-secondary">
             {file._newFileName}
           </div>
           <DiffView
             diffFile={file}
             diffViewMode={diffMode}
-            diffViewTheme="dark"
+            diffViewTheme={diffTheme}
             diffViewHighlight={!!highlighter}
             registerHighlighter={highlighter}
             diffViewFontSize={13}

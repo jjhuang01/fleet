@@ -99,8 +99,8 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
           onClick={() => onFocus(entry.path)}
           onDoubleClick={() => onOpen(entry)}
         >
-          <span className="scale-[2] py-2 text-neutral-400">{entryIcon(entry)}</span>
-          <span className="text-xs text-neutral-300 truncate w-full" title={entry.name}>
+          <span className="scale-[2] py-2 text-fleet-text-muted">{entryIcon(entry)}</span>
+          <span className="text-xs text-fleet-text-secondary truncate w-full" title={entry.name}>
             {entry.name}
           </span>
         </button>
@@ -113,14 +113,14 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
           onClick={() => onFocus(entry.path)}
           onDoubleClick={() => onOpen(entry)}
         >
-          <span className="shrink-0 text-neutral-400">{entryIcon(entry)}</span>
-          <span className="flex-1 min-w-0 truncate text-xs text-neutral-200" title={entry.path}>
+          <span className="shrink-0 text-fleet-text-muted">{entryIcon(entry)}</span>
+          <span className="flex-1 min-w-0 truncate text-xs text-fleet-text" title={entry.path}>
             {entry.name}
           </span>
-          <span className="w-20 shrink-0 text-right text-xs text-neutral-500 tabular-nums">
+          <span className="w-20 shrink-0 text-right text-xs text-fleet-text-subtle tabular-nums">
             {formatSize(entry)}
           </span>
-          <span className="w-32 shrink-0 text-right text-xs text-neutral-500 tabular-nums">
+          <span className="w-32 shrink-0 text-right text-xs text-fleet-text-subtle tabular-nums">
             {formatMtime(entry.mtimeMs)}
           </span>
         </button>
@@ -186,7 +186,7 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
     <div className="flex-1 min-h-0 flex flex-col">
       {/* Column header - sortable, matching Baymard's guidance that spec-dense
           items belong in a list where the specs line up into scannable columns. */}
-      <div className="flex-shrink-0 flex items-center gap-2 px-3 h-6 border-b border-neutral-800 bg-neutral-950/40 text-[11px] text-neutral-500 select-none">
+      <div className="flex-shrink-0 flex items-center gap-2 px-3 h-6 border-b border-fleet-border bg-fleet-bg/40 text-[11px] text-fleet-text-subtle select-none">
         <span className="w-[13px] shrink-0" />
         <SortHeader
           className="flex-1 min-w-0"
@@ -232,7 +232,7 @@ function SortHeader({
 }): React.JSX.Element {
   return (
     <button
-      className={`flex items-center gap-1 hover:text-neutral-300 transition-colors ${active ? 'text-neutral-300' : ''} ${className}`}
+      className={`flex items-center gap-1 hover:text-fleet-text-secondary transition-colors ${active ? 'text-fleet-text-secondary' : ''} ${className}`}
       onClick={onClick}
       aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
     >

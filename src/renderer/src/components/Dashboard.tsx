@@ -11,12 +11,12 @@ const ASCII_LINES = [
 ];
 
 const LINE_COLORS = [
-  'text-teal-500',
-  'text-teal-500',
-  'text-cyan-500',
-  'text-cyan-500',
-  'text-cyan-400',
-  'text-cyan-400'
+  'text-teal-700 dark:text-teal-500',
+  'text-teal-700 dark:text-teal-500',
+  'text-cyan-700 dark:text-cyan-500',
+  'text-cyan-700 dark:text-cyan-500',
+  'text-cyan-600 dark:text-cyan-400',
+  'text-cyan-600 dark:text-cyan-400'
 ];
 
 type DashboardProps = {
@@ -50,22 +50,26 @@ export function Dashboard({
         </pre>
 
         {/* Tagline */}
-        <p className="text-neutral-600 text-xs tracking-wide">terminal multiplexer for ai agents</p>
+        <p className="text-fleet-text-subtle text-xs tracking-wide">
+          terminal multiplexer for ai agents
+        </p>
 
         {/* New Terminal Action */}
         <button
           onClick={onNewTerminal}
-          className="flex items-center gap-3 text-neutral-400 hover:text-cyan-400 transition-colors cursor-pointer group active:scale-[0.97]"
+          className="flex items-center gap-3 text-fleet-text-muted hover:text-[color:var(--fleet-accent-hover)] transition-colors cursor-pointer group active:scale-[0.97]"
         >
           <Terminal size={16} />
           <span className="text-sm">New Terminal</span>
-          <kbd className="text-xs text-neutral-600 group-hover:text-neutral-500 ml-2">⌘T</kbd>
+          <kbd className="text-xs text-fleet-text-subtle group-hover:text-fleet-text-muted ml-2">
+            ⌘T
+          </kbd>
         </button>
 
         {/* Recent Folders */}
         {displayFolders.length > 0 && (
           <div className="w-full">
-            <h3 className="text-neutral-600 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+            <h3 className="text-fleet-text-subtle text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
               <Folder size={12} />
               Recent Folders
             </h3>
@@ -74,7 +78,7 @@ export function Dashboard({
                 <li key={folder}>
                   <button
                     onClick={() => onOpenFolder(folder)}
-                    className="text-sm text-neutral-400 hover:text-cyan-400 transition-colors cursor-pointer truncate block w-full text-left active:scale-[0.97]"
+                    className="text-sm text-fleet-text-muted hover:text-[color:var(--fleet-accent-hover)] transition-colors cursor-pointer truncate block w-full text-left active:scale-[0.97]"
                   >
                     {shortenPath(folder)}
                   </button>
@@ -87,7 +91,7 @@ export function Dashboard({
         {/* Recent Files */}
         {displayFiles.length > 0 && (
           <div className="w-full">
-            <h3 className="text-neutral-600 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+            <h3 className="text-fleet-text-subtle text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
               <FileText size={12} />
               Recent Files
             </h3>
@@ -96,7 +100,7 @@ export function Dashboard({
                 <li key={file}>
                   <button
                     onClick={() => onOpenFile(file)}
-                    className="text-sm text-neutral-400 hover:text-cyan-400 transition-colors cursor-pointer truncate block w-full text-left active:scale-[0.97]"
+                    className="text-sm text-fleet-text-muted hover:text-[color:var(--fleet-accent-hover)] transition-colors cursor-pointer truncate block w-full text-left active:scale-[0.97]"
                   >
                     {shortenPath(file)}
                   </button>

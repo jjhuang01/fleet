@@ -17,12 +17,12 @@ export function ToastContainer(): React.JSX.Element | null {
         <div
           key={toast.id}
           data-state={toast.closing ? 'closed' : 'open'}
-          className={`pointer-events-auto flex items-center gap-3 px-4 py-2 bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg text-sm ${toastAnim}`}
+          className={`pointer-events-auto flex items-center gap-3 px-4 py-2 bg-fleet-surface-2 border border-fleet-border-strong rounded-lg shadow-lg text-sm ${toastAnim}`}
         >
-          <span className="text-neutral-300">{toast.message}</span>
+          <span className="text-fleet-text-secondary">{toast.message}</span>
           {toast.action && (
             <button
-              className="text-blue-400 hover:text-blue-300 font-medium whitespace-nowrap transition active:scale-95"
+              className="fleet-accent-text font-medium whitespace-nowrap transition active:scale-95"
               onClick={() => {
                 toast.action?.onClick();
                 dismiss(toast.id);
@@ -32,7 +32,8 @@ export function ToastContainer(): React.JSX.Element | null {
             </button>
           )}
           <button
-            className="text-neutral-500 hover:text-neutral-300 transition active:scale-90"
+            aria-label="Dismiss notification"
+            className="text-fleet-text-muted hover:text-fleet-text-secondary transition active:scale-90"
             onClick={() => dismiss(toast.id)}
           >
             ×

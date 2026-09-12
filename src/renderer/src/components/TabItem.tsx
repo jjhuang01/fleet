@@ -50,7 +50,7 @@ type TabItemProps = {
   onPaneDragOver?: (e: React.DragEvent, index: number) => void;
   onPaneDrop?: (e: React.DragEvent, index: number) => void;
   paneDropSide?: 'left' | 'right' | null;
-  /** Tailwind border color class for active state. Defaults to 'border-blue-500'. */
+  /** Border color class for active state. Defaults to the configured accent. */
   activeBorderColor?: string;
   /** Called when user selects "Create Worktree" from context menu */
   onCreateWorktree?: () => void;
@@ -110,7 +110,7 @@ export function TabItem({
   onPaneDragOver,
   onPaneDrop,
   paneDropSide,
-  activeBorderColor = 'border-blue-500',
+  activeBorderColor = 'fleet-accent-border',
   onCreateWorktree,
   worktreeDisabledReason,
   worktreeBranch,
@@ -248,11 +248,11 @@ export function TabItem({
         >
           {/* Drop indicator line above */}
           {isDragOver === 'above' && (
-            <div className="absolute top-0 left-1 right-1 h-0.5 bg-blue-500 rounded-full -translate-y-0.5" />
+            <div className="absolute top-0 left-1 right-1 h-0.5 fleet-accent-bg rounded-full -translate-y-0.5" />
           )}
           {/* Drop indicator line below */}
           {isDragOver === 'below' && (
-            <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-blue-500 rounded-full translate-y-0.5" />
+            <div className="absolute bottom-0 left-1 right-1 h-0.5 fleet-accent-bg rounded-full translate-y-0.5" />
           )}
           {paneDropSide && (
             // Same accent tokens as the pane-on-pane preview: one drag, one
@@ -294,7 +294,7 @@ export function TabItem({
           {isEditing ? (
             <input
               ref={inputRef}
-              className="flex-1 bg-fleet-surface-3 text-fleet-text text-sm rounded px-1 py-0 outline-none border border-blue-500 min-w-0"
+              className="flex-1 bg-fleet-surface-3 text-fleet-text text-sm rounded px-1 py-0 outline-none border fleet-accent-border min-w-0"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -317,7 +317,7 @@ export function TabItem({
               </span>
               {isRemote && (
                 <span
-                  className="flex-shrink-0 rounded bg-purple-500/20 px-1 py-px text-[9px] font-medium uppercase leading-none tracking-wide text-purple-300"
+                  className="flex-shrink-0 rounded bg-purple-100 px-1 py-px text-[9px] font-medium uppercase leading-none tracking-wide text-purple-700 dark:bg-purple-500/20 dark:text-purple-300"
                   aria-label="remote session"
                 >
                   remote
@@ -325,7 +325,7 @@ export function TabItem({
               )}
               <span className="ml-auto min-w-0 truncate text-[11px] leading-tight text-fleet-text-muted">
                 {worktreeBranch ? (
-                  <span className="text-teal-400/60">{worktreeBranch}</span>
+                  <span className="text-teal-700 dark:text-teal-400/60">{worktreeBranch}</span>
                 ) : freshness ? (
                   <span
                     className={`fleet-tnum ${
@@ -347,7 +347,7 @@ export function TabItem({
 
           {/* Always-visible close button (dimmed when not hovered) */}
           <button
-            className="opacity-40 group-hover:opacity-100 px-1 text-fleet-text-muted hover:text-red-400 hover:bg-red-500/10 rounded transition-opacity active:scale-90"
+            className="opacity-40 group-hover:opacity-100 px-1 text-fleet-text-muted hover:text-red-600 hover:bg-red-500/10 dark:hover:text-red-400 rounded transition-opacity active:scale-90"
             onClick={(e) => {
               e.stopPropagation();
               onClose();
@@ -468,7 +468,7 @@ export function TabItem({
           )}
           <ContextMenu.Separator className="my-1 h-px bg-fleet-surface-3" />
           <ContextMenu.Item
-            className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-red-900/50 hover:bg-red-900/50 text-red-400"
+            className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-red-500/10 hover:bg-red-500/10 text-red-600 dark:focus:bg-red-900/50 dark:hover:bg-red-900/50 dark:text-red-400"
             onSelect={onClose}
           >
             Close Tab

@@ -41,7 +41,7 @@ export function Overlay({
   containerClassName = 'items-center justify-center',
   closeOnEscape = true,
   closeOnBackdrop = true,
-  backdropClassName = 'bg-black/60'
+  backdropClassName = 'bg-black/25 dark:bg-black/60'
 }: OverlayProps): React.JSX.Element | null {
   const { mounted, state } = usePresence(open, overlayExitMs);
   // A click closes only when the press that produced it also began on the

@@ -145,10 +145,10 @@ function UserGroupHeader({
           }}
         >
           {isDragOver === 'above' && (
-            <div className="absolute top-0 left-1 right-1 h-0.5 bg-blue-500 rounded-full -translate-y-0.5" />
+            <div className="absolute top-0 left-1 right-1 h-0.5 fleet-accent-bg rounded-full -translate-y-0.5" />
           )}
           {isDragOver === 'below' && (
-            <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-blue-500 rounded-full translate-y-0.5" />
+            <div className="absolute bottom-0 left-1 right-1 h-0.5 fleet-accent-bg rounded-full translate-y-0.5" />
           )}
           <span className={`w-2 h-2 rounded-full ${COLOR_MAP[group.color]} flex-shrink-0`} />
           <ChevronRight
@@ -158,7 +158,7 @@ function UserGroupHeader({
           {isEditing ? (
             <input
               ref={inputRef}
-              className="flex-1 bg-fleet-surface-3 text-fleet-text text-xs rounded px-1 py-0 outline-none border border-blue-500 min-w-0"
+              className="flex-1 bg-fleet-surface-3 text-fleet-text text-xs rounded px-1 py-0 outline-none border fleet-accent-border min-w-0"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onKeyDown={(e) => {
@@ -210,7 +210,7 @@ function UserGroupHeader({
           </ContextMenu.Sub>
           <ContextMenu.Separator className="my-1 h-px bg-fleet-surface-3" />
           <ContextMenu.Item
-            className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-red-900/50 hover:bg-red-900/50 text-red-400"
+            className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-red-500/10 hover:bg-red-500/10 text-red-600 dark:focus:bg-red-900/50 dark:hover:bg-red-900/50 dark:text-red-400"
             onSelect={onUngroupAll}
           >
             Ungroup All
@@ -287,10 +287,10 @@ function GroupHeader({
           }}
         >
           {isDragOver === 'above' && (
-            <div className="absolute top-0 left-1 right-1 h-0.5 bg-blue-500 rounded-full -translate-y-0.5" />
+            <div className="absolute top-0 left-1 right-1 h-0.5 fleet-accent-bg rounded-full -translate-y-0.5" />
           )}
           {isDragOver === 'below' && (
-            <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-blue-500 rounded-full translate-y-0.5" />
+            <div className="absolute bottom-0 left-1 right-1 h-0.5 fleet-accent-bg rounded-full translate-y-0.5" />
           )}
           <ChevronRight
             size={12}
@@ -299,7 +299,7 @@ function GroupHeader({
           {isEditing ? (
             <input
               ref={inputRef}
-              className="flex-1 bg-fleet-surface-3 text-fleet-text text-xs rounded px-1 py-0 outline-none border border-blue-500 min-w-0"
+              className="flex-1 bg-fleet-surface-3 text-fleet-text text-xs rounded px-1 py-0 outline-none border fleet-accent-border min-w-0"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onKeyDown={(e) => {
@@ -380,10 +380,10 @@ function AnnotateTabCard({
         {/* Icon */}
         <div className="flex-shrink-0 w-8 h-8 rounded-md overflow-hidden bg-fleet-surface-2/50 flex items-center justify-center">
           <svg
-            className="w-4 h-4"
+            className="w-4 h-4 text-teal-700 dark:text-teal-300"
             viewBox="0 0 24 24"
             fill="none"
-            stroke={isActive ? 'rgb(94,234,212)' : 'rgba(94,234,212,0.6)'}
+            stroke="currentColor"
             strokeWidth="1.5"
           >
             <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1306,7 +1306,7 @@ export function Sidebar({
       // supplies 8px there, which is the gutter panes have with each other and
       // with the window. The width style is the content box, so these margins
       // sit outside it and the resize maths is unaffected.
-      className="relative flex flex-col my-2 ml-2 rounded-lg bg-fleet-glass-chrome border border-fleet-border shadow-md shadow-black/20 shrink-0"
+      className="relative flex flex-col my-2 ml-2 rounded-lg bg-fleet-glass-chrome border border-fleet-border shadow-md shadow-black/5 dark:shadow-black/20 shrink-0"
       style={{ width: currentSidebarWidth }}
     >
       {/* Drag region + workspace label with add button */}
@@ -1315,7 +1315,7 @@ export function Sidebar({
           {isEditingWsLabel ? (
             <input
               ref={wsLabelInputRef}
-              className="w-full bg-fleet-surface-3 text-fleet-text text-[11px] font-medium rounded px-1 py-0.5 outline-none border border-blue-500"
+              className="w-full bg-fleet-surface-3 text-fleet-text text-[11px] font-medium rounded px-1 py-0.5 outline-none border fleet-accent-border"
               value={wsLabelEdit}
               onChange={(e) => setWsLabelEdit(e.target.value)}
               onKeyDown={(e) => {
@@ -1357,7 +1357,7 @@ export function Sidebar({
           <EnvSyncBadge cwd={activeCwd} pathContext={getPaneContextById(activeTabFirstPaneId)} />
           {/* Dirty state indicator */}
           {isDirty && (
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="Unsaved changes" />
+            <span className="w-1.5 h-1.5 rounded-full fleet-accent-bg" title="Unsaved changes" />
           )}
           {/* Add tab button */}
           <button
@@ -1723,7 +1723,7 @@ export function Sidebar({
                   Cancel
                 </button>
                 <button
-                  className="px-2 py-0.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded transition"
+                  className="px-2 py-0.5 text-xs fleet-accent-bg fleet-accent-bg-hover text-white rounded transition"
                   onClick={() => {
                     const name = newGroupName.trim() || 'Group';
                     createUserGroup(name, newGroupColor, newGroupState.tabId);
@@ -1766,7 +1766,7 @@ export function Sidebar({
           )}
           <button
             type="button"
-            className="text-fleet-text-subtle hover:text-violet-300 rounded p-0.5 hover:bg-fleet-surface-2 transition active:scale-90"
+            className="text-fleet-text-subtle hover:text-violet-700 dark:hover:text-violet-300 rounded p-0.5 hover:bg-fleet-surface-2 transition active:scale-90"
             onClick={() => {
               expandSection('agents');
               useWorkspaceStore.getState().openScratch();
@@ -1814,7 +1814,7 @@ export function Sidebar({
                   activity={activity}
                   icon={
                     isScratchTab(tab) ? (
-                      <MessageCircle size={14} className="text-violet-300" />
+                      <MessageCircle size={14} className="text-violet-700 dark:text-violet-300" />
                     ) : (
                       <Bot size={14} />
                     )
@@ -1930,7 +1930,7 @@ export function Sidebar({
               <div key={ws.id} className="relative">
                 {deleteConfirmId === ws.id ? (
                   <div className="flex flex-col gap-1 px-2 py-2 bg-fleet-surface-2 rounded-md text-xs">
-                    <span className="text-red-400">Delete this workspace?</span>
+                    <span className="text-red-600 dark:text-red-400">Delete this workspace?</span>
                     <div className="flex gap-2">
                       <button
                         className="px-2 py-0.5 bg-red-600 hover:bg-red-500 text-white rounded transition active:scale-[0.97]"
@@ -1962,7 +1962,7 @@ export function Sidebar({
                       onBlur={() => {
                         void commitSavedWsRename();
                       }}
-                      className="w-full px-2 py-1 text-sm bg-fleet-surface-2 text-fleet-text border border-fleet-border-strong rounded focus:border-blue-500 focus:outline-none"
+                      className="w-full px-2 py-1 text-sm bg-fleet-surface-2 text-fleet-text border border-fleet-border-strong rounded focus:border-[color:var(--fleet-accent)] focus:outline-none"
                     />
                   </div>
                 ) : (
@@ -1974,7 +1974,7 @@ export function Sidebar({
                         title={`Switch to ${ws.label}`}
                       >
                         <span className="truncate">{ws.label}</span>
-                        <span className="text-xs text-fleet-text-subtle hover:text-blue-400 ml-1 flex-shrink-0">
+                        <span className="text-xs text-fleet-text-subtle hover:text-[color:var(--fleet-accent-hover)] ml-1 flex-shrink-0">
                           Open
                         </span>
                       </button>
@@ -1994,7 +1994,7 @@ export function Sidebar({
                         </ContextMenu.Item>
                         <ContextMenu.Separator className="my-1 h-px bg-fleet-surface-3" />
                         <ContextMenu.Item
-                          className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-red-900/50 hover:bg-red-900/50 text-red-400"
+                          className="px-2 py-1.5 rounded cursor-pointer outline-none focus:bg-red-500/10 hover:bg-red-500/10 text-red-600 dark:focus:bg-red-900/50 dark:hover:bg-red-900/50 dark:text-red-400"
                           onSelect={() => setDeleteConfirmId(ws.id)}
                         >
                           Delete
@@ -2026,7 +2026,7 @@ export function Sidebar({
               <Settings size={14} />
               Settings
               {updateReady && (
-                <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                <span className="ml-auto w-1.5 h-1.5 rounded-full fleet-accent-bg animate-pulse" />
               )}
             </button>
           );
@@ -2041,7 +2041,9 @@ export function Sidebar({
         }}
       >
         <Dialog.Portal>
-          <Dialog.Overlay className={`fixed inset-0 bg-fleet-bg/60 z-50 ${dialogFadeAnim}`} />
+          <Dialog.Overlay
+            className={`fixed inset-0 bg-black/25 dark:bg-black/60 z-50 ${dialogFadeAnim}`}
+          />
           <Dialog.Content
             className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-fleet-surface border border-fleet-border-strong rounded-lg shadow-xl p-5 w-80 text-sm ${dialogFadeAnim}`}
           >
@@ -2069,7 +2071,7 @@ export function Sidebar({
               </button>
               <button
                 disabled={fileSaving}
-                className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded transition active:scale-[0.97] disabled:active:scale-100 font-medium"
+                className="px-3 py-1.5 text-xs fleet-accent-bg fleet-accent-bg-hover disabled:opacity-50 text-white rounded transition active:scale-[0.97] disabled:active:scale-100 font-medium"
                 onClick={() => {
                   if (!fileCloseConfirm) return;
                   setFileSaving(true);
@@ -2102,7 +2104,9 @@ export function Sidebar({
         }}
       >
         <Dialog.Portal>
-          <Dialog.Overlay className={`fixed inset-0 bg-fleet-bg/60 z-50 ${dialogFadeAnim}`} />
+          <Dialog.Overlay
+            className={`fixed inset-0 bg-black/25 dark:bg-black/60 z-50 ${dialogFadeAnim}`}
+          />
           <Dialog.Content
             className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-fleet-surface border border-fleet-border-strong rounded-lg shadow-xl p-5 w-80 text-sm ${dialogFadeAnim}`}
           >

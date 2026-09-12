@@ -55,19 +55,19 @@ export function InstallRcSnippetDialog({
 
   return (
     <Overlay open={destination !== null} onClose={onDecline} closeOnBackdrop={!busy}>
-      <div className="w-[420px] rounded-lg border border-neutral-700 bg-neutral-900 p-4">
+      <div className="w-[420px] rounded-lg border border-fleet-border-strong bg-fleet-surface p-4">
         <div className="flex items-start gap-2.5">
           <TerminalSquare size={16} className="mt-0.5 shrink-0 text-teal-400" />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-neutral-200">
+            <h3 className="text-sm font-semibold text-fleet-text">
               {shownUpdate ? 'Update' : 'Set up'} file transfer on {shown}?
             </h3>
-            <p className="mt-1 text-xs text-neutral-400">
+            <p className="mt-1 text-xs text-fleet-text-muted">
               Drag a file onto this pane to upload it to the folder you are in, and run{' '}
-              <span className="font-mono text-neutral-300">fleet get &lt;path&gt;</span> to pull one
+              <span className="font-mono text-fleet-text-secondary">fleet get &lt;path&gt;</span> to pull one
               back down.
             </p>
-            <p className="mt-1.5 text-xs text-neutral-500">
+            <p className="mt-1.5 text-xs text-fleet-text-subtle">
               Fleet {shownUpdate ? 'rewrites' : 'writes'}{' '}
               <span className="font-mono">~/.fleetrc.sh</span> on the host and adds one line to your{' '}
               <span className="font-mono">.bashrc</span> or{' '}
@@ -81,7 +81,7 @@ export function InstallRcSnippetDialog({
         <div className="mt-4 flex justify-end gap-2">
           <button
             ref={declineRef}
-            className="text-xs px-3 py-1 rounded bg-neutral-800 transition hover:bg-neutral-700 active:scale-[0.97] outline-none focus:ring-1 focus:ring-neutral-500"
+            className="text-xs px-3 py-1 rounded bg-fleet-surface-2 transition hover:bg-fleet-surface-3 active:scale-[0.97] outline-none focus:ring-1 focus:ring-neutral-500"
             onClick={onDecline}
             disabled={busy}
           >

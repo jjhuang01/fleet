@@ -108,9 +108,10 @@ export const TERMINAL_THEMES: Record<TerminalThemeId, TerminalThemeDefinition> =
       brightWhite: '#f1f1f0'
     },
     appOverrides: {
-      // Cool-gray tint (OKLCH hue 260, chroma 0.006) instead of flat neutral-*
-      // gray, same lightness as before. border/borderStrong are intentionally
-      // omitted so they fall through to deriveAppTheme's universal hairline formula.
+      // Cool-gray tint instead of flat neutral-* gray. Muted and subtle text are
+      // darker than the previous light ramp so 10-12px sidebar labels still pass
+      // WCAG AA. border/borderStrong intentionally fall through to the universal
+      // hairline formula.
       bg: '#090a0d',
       surface: '#15171a',
       surface2: '#242629',
@@ -118,7 +119,11 @@ export const TERMINAL_THEMES: Record<TerminalThemeId, TerminalThemeDefinition> =
       text: '#f8fafe',
       textSecondary: '#d2d4d8',
       textMuted: '#a1a3a7',
-      textSubtle: '#717377'
+      // #717377 read at 4.17:1 on the chrome background and 3.78:1 on a
+      // surface, so 11px sidebar section labels fell under WCAG AA. One step
+      // up the same cool-gray ramp clears AA on both (5.07 / 4.60) and keeps
+      // tertiary text visually tertiary.
+      textSubtle: '#7f8185'
     }
   },
   'fleet-light': {
@@ -126,7 +131,10 @@ export const TERMINAL_THEMES: Record<TerminalThemeId, TerminalThemeDefinition> =
     label: 'Fleet Light',
     kind: 'light',
     background: '#f8fafc',
-    inactiveBackground: '#eef2f7',
+    // Only ~2% darker than `background`, matching Fleet Dark's own step. A
+    // larger step showed as a frame: an unfocused pane paints its chrome with
+    // this colour while the xterm viewport paints `background`.
+    inactiveBackground: '#f3f5f9',
     xterm: {
       background: '#f8fafc',
       foreground: '#1f2937',
@@ -160,8 +168,8 @@ export const TERMINAL_THEMES: Record<TerminalThemeId, TerminalThemeDefinition> =
       surface3: '#e5e8eb',
       text: '#16181b',
       textSecondary: '#3e4043',
-      textMuted: '#717376',
-      textSubtle: '#9fa2a5'
+      textMuted: '#555a60',
+      textSubtle: '#62676e'
     }
   },
   dracula: {

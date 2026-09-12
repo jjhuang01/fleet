@@ -77,16 +77,16 @@ export function RemoteNameDialog({ request, onSubmit, onClose }: Props): React.J
 
   return (
     <Overlay open={request !== null} onClose={onClose} closeOnBackdrop={!busy}>
-      <div className="w-[380px] rounded-lg border border-neutral-700 bg-neutral-900 p-4">
-        <h3 className="text-sm font-semibold text-neutral-200">{shown?.title}</h3>
+      <div className="w-[380px] rounded-lg border border-fleet-border-strong bg-fleet-surface p-4">
+        <h3 className="text-sm font-semibold text-fleet-text">{shown?.title}</h3>
 
-        <label className="mt-3 block text-xs text-neutral-500" htmlFor="remote-name-input">
+        <label className="mt-3 block text-xs text-fleet-text-subtle" htmlFor="remote-name-input">
           {shown?.label}
         </label>
         <input
           id="remote-name-input"
           ref={inputRef}
-          className="mt-1 w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-200 outline-none focus:border-teal-600"
+          className="mt-1 w-full rounded border border-fleet-border-strong bg-fleet-bg px-2 py-1.5 text-sm text-fleet-text outline-none focus:border-teal-600"
           value={value}
           spellCheck={false}
           autoComplete="off"
@@ -106,7 +106,7 @@ export function RemoteNameDialog({ request, onSubmit, onClose }: Props): React.J
 
         <div className="mt-4 flex justify-end gap-2">
           <button
-            className="text-xs px-3 py-1 rounded bg-neutral-800 transition hover:bg-neutral-700 active:scale-[0.97]"
+            className="text-xs px-3 py-1 rounded bg-fleet-surface-2 transition hover:bg-fleet-surface-3 active:scale-[0.97]"
             onClick={onClose}
             disabled={busy}
           >

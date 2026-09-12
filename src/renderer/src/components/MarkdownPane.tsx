@@ -175,7 +175,7 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
 
   if (loading) {
     return (
-      <div className="h-full w-full flex items-center justify-center bg-[#282c34] text-neutral-400 text-sm">
+      <div className="h-full w-full flex items-center justify-center bg-fleet-surface text-fleet-text-muted text-sm">
         Loading…
       </div>
     );
@@ -183,7 +183,7 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
 
   if (error) {
     return (
-      <div className="h-full w-full flex items-center justify-center bg-[#282c34] text-red-400 text-sm">
+      <div className="h-full w-full flex items-center justify-center bg-fleet-surface text-red-600 dark:text-red-400 text-sm">
         Error: {error}
       </div>
     );
@@ -191,10 +191,10 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
 
   if (tooLarge) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-[#282c34] text-neutral-400 text-sm gap-2">
-        <div className="text-3xl text-neutral-500">⚠</div>
-        <div className="font-medium text-neutral-200">File too large to preview</div>
-        <div className="text-neutral-500">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-fleet-surface text-fleet-text-muted text-sm gap-2">
+        <div className="text-3xl text-fleet-text-subtle">⚠</div>
+        <div className="font-medium text-fleet-text">File too large to preview</div>
+        <div className="text-fleet-text-muted">
           {(fileSize / 1024 / 1024).toFixed(1)} MB — limit is 10 MB
         </div>
       </div>
@@ -202,16 +202,16 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
   }
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden bg-[#282c34]">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-fleet-surface">
       <PathChromeHeader filePath={displayPath} />
 
       {/* Sub-tab bar */}
-      <div className="flex-shrink-0 flex items-center gap-0 border-b border-neutral-800 bg-neutral-950/60 px-2">
+      <div className="flex-shrink-0 flex items-center gap-0 border-b border-fleet-border bg-fleet-surface-2/60 px-2">
         <button
           className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors active:scale-[0.97] ${
             activeView === 'preview'
-              ? 'border-teal-400 text-neutral-100'
-              : 'border-transparent text-neutral-500 hover:text-neutral-300'
+              ? 'fleet-accent-border text-fleet-text'
+              : 'border-transparent text-fleet-text-muted hover:text-fleet-text-secondary'
           }`}
           onClick={() => handleTabSwitch('preview')}
         >
@@ -220,8 +220,8 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
         <button
           className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors active:scale-[0.97] ${
             activeView === 'raw'
-              ? 'border-teal-400 text-neutral-100'
-              : 'border-transparent text-neutral-500 hover:text-neutral-300'
+              ? 'fleet-accent-border text-fleet-text'
+              : 'border-transparent text-fleet-text-muted hover:text-fleet-text-secondary'
           }`}
           onClick={() => handleTabSwitch('raw')}
         >
@@ -259,7 +259,7 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
               ref={previewRef}
               content={previewContent}
               baseDir={baseDir}
-              className="max-w-3xl mx-auto px-8 py-6 text-neutral-300 leading-relaxed markdown-preview"
+              className="max-w-3xl mx-auto px-8 py-6 text-fleet-text-secondary leading-relaxed markdown-preview"
             />
           </div>
         </MarkdownContextMenu>
@@ -288,7 +288,7 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
       </div>
 
       {/* Footer with path */}
-      <div className="flex-shrink-0 flex items-center px-3 h-7 bg-neutral-950/80 border-t border-neutral-800 text-xs text-neutral-500">
+      <div className="flex-shrink-0 flex items-center px-3 h-7 bg-fleet-surface-2/80 border-t border-fleet-border text-xs text-fleet-text-muted">
         <span className="font-mono truncate min-w-0" title={displayPath}>
           {displayPath}
         </span>

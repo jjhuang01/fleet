@@ -68,15 +68,15 @@ function ItemRow({
     >
       <span className="flex-1 truncate">{item.label}</span>
       {item.badge && (
-        <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
+        <span className="rounded bg-amber-500/15 dark:bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
           {item.badge}
         </span>
       )}
       {item.hasActions && !item.badge && (
-        <span className="text-[10px] text-neutral-600">{paletteShortcut}</span>
+        <span className="text-[10px] text-fleet-text-subtle">{paletteShortcut}</span>
       )}
       {item.shortcutLabel && (
-        <kbd className="ml-2 rounded border border-neutral-700 bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-400">
+        <kbd className="ml-2 rounded border border-fleet-border-strong bg-fleet-surface-2 px-1.5 py-0.5 text-xs text-fleet-text-muted">
           {item.shortcutLabel}
         </kbd>
       )}
@@ -331,8 +331,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
       }}
     >
       {scopePaneId !== null ? (
-        <div className="flex items-center border-b border-neutral-800 px-4">
-          <span className="mr-2 shrink-0 rounded bg-blue-500/20 px-2 py-0.5 text-xs text-blue-300">
+        <div className="flex items-center border-b border-fleet-border px-4">
+          <span className="mr-2 shrink-0 rounded bg-blue-500/15 dark:bg-blue-500/20 px-2 py-0.5 text-xs text-blue-700 dark:text-blue-300">
             {scopeLabel}
           </span>
           <Command.Input
@@ -340,7 +340,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
             onValueChange={setSearch}
             placeholder="Search actions..."
             autoFocus
-            className="h-12 w-full bg-transparent text-[15px] text-white outline-none placeholder:text-neutral-500 focus-ring"
+            className="h-12 w-full bg-transparent text-[15px] text-fleet-text outline-none placeholder:text-fleet-text-subtle focus-ring"
           />
         </div>
       ) : (
@@ -399,7 +399,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
         )}
       </CommandList>
 
-      <div className="flex items-center justify-between border-t border-neutral-800 px-4 py-2 text-xs text-neutral-500">
+      <div className="flex items-center justify-between border-t border-fleet-border px-4 py-2 text-xs text-fleet-text-subtle">
         <span>Command palette</span>
         <span className="flex gap-3">
           <span>↵ Run</span>

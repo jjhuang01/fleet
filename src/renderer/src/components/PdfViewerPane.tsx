@@ -206,16 +206,16 @@ export function PdfViewerPane({
   const zoomPercent = Math.round(zoom * 100);
 
   return (
-    <div className="flex flex-col h-full w-full bg-neutral-900">
+    <div className="flex flex-col h-full w-full bg-fleet-surface">
       {/* Document viewport */}
       <div ref={containerRef} className="flex-1 overflow-auto relative flex justify-center">
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center text-neutral-400 text-sm">
+          <div className="absolute inset-0 flex items-center justify-center text-fleet-text-muted text-sm">
             {error}
           </div>
         )}
         {!error && loading && (
-          <div className="absolute inset-0 flex items-center justify-center gap-2 text-neutral-400 text-sm">
+          <div className="absolute inset-0 flex items-center justify-center gap-2 text-fleet-text-muted text-sm">
             <Loader2 className="animate-spin" size={16} />
             Loading…
           </div>
@@ -229,29 +229,29 @@ export function PdfViewerPane({
       </div>
 
       {/* Status bar */}
-      <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-neutral-950/80 border-t border-neutral-800 text-xs text-neutral-400">
-        <span className="text-neutral-300 truncate max-w-xs">{filename}</span>
-        {fileSize !== null && <span className="text-neutral-500">{formatSize(fileSize)}</span>}
+      <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-fleet-bg/80 border-t border-fleet-border text-xs text-fleet-text-muted">
+        <span className="text-fleet-text-secondary truncate max-w-xs">{filename}</span>
+        {fileSize !== null && <span className="text-fleet-text-subtle">{formatSize(fileSize)}</span>}
         {!error && numPages > 0 && (
           <div className="ml-auto flex items-center gap-0.5">
             <ToolbarButton onClick={goPrev} title="Previous Page" disabled={pageNum <= 1}>
               ‹
             </ToolbarButton>
-            <span className="font-mono w-12 text-center text-neutral-400">
+            <span className="font-mono w-12 text-center text-fleet-text-muted">
               {pageNum} / {numPages}
             </span>
             <ToolbarButton onClick={goNext} title="Next Page" disabled={pageNum >= numPages}>
               ›
             </ToolbarButton>
-            <div className="w-px h-3.5 bg-neutral-700 mx-1" />
+            <div className="w-px h-3.5 bg-fleet-surface-3 mx-1" />
             <ToolbarButton onClick={() => adjustZoom(-ZOOM_STEP)} title="Zoom Out">
               −
             </ToolbarButton>
-            <span className="font-mono w-10 text-center text-neutral-400">{zoomPercent}%</span>
+            <span className="font-mono w-10 text-center text-fleet-text-muted">{zoomPercent}%</span>
             <ToolbarButton onClick={() => adjustZoom(ZOOM_STEP)} title="Zoom In">
               +
             </ToolbarButton>
-            <div className="w-px h-3.5 bg-neutral-700 mx-1" />
+            <div className="w-px h-3.5 bg-fleet-surface-3 mx-1" />
             <ToolbarButton onClick={() => void fitToWidth()} title="Fit Width">
               Fit
             </ToolbarButton>
@@ -275,7 +275,7 @@ function ToolbarButton({
 }): React.JSX.Element {
   return (
     <button
-      className="text-neutral-300 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors disabled:opacity-50 disabled:pointer-events-none active:scale-[0.97] disabled:active:scale-100"
+      className="text-fleet-text-secondary hover:text-fleet-text text-xs px-1.5 py-0.5 rounded hover:bg-fleet-surface-3 transition-colors disabled:opacity-50 disabled:pointer-events-none active:scale-[0.97] disabled:active:scale-100"
       onClick={onClick}
       title={title}
       disabled={disabled}

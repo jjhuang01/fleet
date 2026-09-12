@@ -31,7 +31,7 @@ export function CopyDocMenu({ getMarkdown, getText }: CopyDocMenuProps): React.J
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-neutral-500 transition-colors hover:text-neutral-300 active:scale-[0.97]"
+          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-fleet-text-muted transition-colors hover:text-fleet-text-secondary active:scale-[0.97]"
           title="Copy document"
         >
           <Copy size={12} />
@@ -44,18 +44,18 @@ export function CopyDocMenu({ getMarkdown, getText }: CopyDocMenuProps): React.J
           side="bottom"
           align="end"
           sideOffset={4}
-          className={`z-50 min-w-[170px] rounded-md border border-neutral-700 bg-neutral-800 p-1 shadow-lg ${popperAnim}`}
+          className={`z-50 min-w-[170px] rounded-md border border-fleet-border-strong bg-fleet-surface-2 p-1 shadow-lg ${popperAnim}`}
         >
           <button
             type="button"
-            className="w-full rounded px-3 py-1.5 text-left text-xs text-neutral-300 transition-colors hover:bg-neutral-700 hover:text-white"
+            className="w-full rounded px-3 py-1.5 text-left text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-3 hover:text-fleet-text"
             onClick={() => copy(getMarkdown(), 'Copied as Markdown')}
           >
             Copy as Markdown
           </button>
           <button
             type="button"
-            className="w-full rounded px-3 py-1.5 text-left text-xs text-neutral-300 transition-colors hover:bg-neutral-700 hover:text-white"
+            className="w-full rounded px-3 py-1.5 text-left text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-3 hover:text-fleet-text"
             onClick={() => copy(getText(), 'Copied as plain text')}
           >
             Copy as Text

@@ -18,16 +18,16 @@ export function NewFileDialog({ groups, onCancel, onCreate, error }: Props): Rea
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[360px] rounded-lg border border-neutral-700 bg-neutral-900 p-4 shadow-2xl"
+        className="w-[360px] rounded-lg border border-fleet-border-strong bg-fleet-surface p-4 shadow-2xl"
       >
-        <h3 className="mb-3 text-sm font-semibold text-neutral-100">New .env file</h3>
-        <label className="mb-1 block text-[10px] uppercase tracking-wide text-neutral-500">
+        <h3 className="mb-3 text-sm font-semibold text-fleet-text">New .env file</h3>
+        <label className="mb-1 block text-[10px] uppercase tracking-wide text-fleet-text-subtle">
           Folder
         </label>
         <select
           value={group}
           onChange={(e) => setGroup(e.target.value)}
-          className="mb-3 w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-xs text-neutral-200 outline-none focus:border-neutral-500"
+          className="mb-3 w-full rounded-md border border-fleet-border-strong bg-fleet-surface-2 px-2 py-1.5 text-xs text-fleet-text outline-none focus:border-[color:var(--fleet-accent)]"
         >
           {groups.map((g) => (
             <option key={g} value={g}>
@@ -35,7 +35,7 @@ export function NewFileDialog({ groups, onCancel, onCreate, error }: Props): Rea
             </option>
           ))}
         </select>
-        <label className="mb-1 block text-[10px] uppercase tracking-wide text-neutral-500">
+        <label className="mb-1 block text-[10px] uppercase tracking-wide text-fleet-text-subtle">
           File name
         </label>
         <input
@@ -50,20 +50,20 @@ export function NewFileDialog({ groups, onCancel, onCreate, error }: Props): Rea
             }
           }}
           spellCheck={false}
-          className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1.5 font-mono text-xs text-neutral-200 outline-none focus:border-blue-500"
+          className="w-full rounded-md border border-fleet-border-strong bg-fleet-surface-2 px-2 py-1.5 font-mono text-xs text-fleet-text outline-none focus:border-[color:var(--fleet-accent)]"
         />
-        {error && <p className="mt-2 text-[11px] text-red-400">{error}</p>}
+        {error && <p className="mt-2 text-[11px] text-red-600 dark:text-red-400">{error}</p>}
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-md px-3 py-1.5 text-xs text-neutral-300 transition hover:bg-neutral-800 active:scale-95"
+            className="rounded-md px-3 py-1.5 text-xs text-fleet-text-secondary transition hover:bg-fleet-surface-2 active:scale-95"
           >
             Cancel
           </button>
           <button
             onClick={() => onCreate(group, name)}
             disabled={!name.startsWith('.env')}
-            className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-blue-500 active:scale-95 disabled:bg-neutral-800 disabled:text-neutral-600"
+            className="rounded-md fleet-accent-bg px-3 py-1.5 text-xs font-medium text-white transition fleet-accent-bg-hover active:scale-95 disabled:opacity-50"
           >
             Create
           </button>

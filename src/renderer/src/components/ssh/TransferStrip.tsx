@@ -24,7 +24,7 @@ export function TransferStrip({ transfers, onCancel, onDismiss }: Props): React.
   if (transfers.length === 0) return null;
 
   return (
-    <div className="flex-shrink-0 border-t border-neutral-800 bg-neutral-950/60 divide-y divide-neutral-800/60">
+    <div className="flex-shrink-0 border-t border-fleet-border bg-fleet-bg/60 divide-y divide-fleet-border/60">
       {transfers.map((t) => (
         <TransferRow key={t.id} transfer={t} onCancel={onCancel} onDismiss={onDismiss} />
       ))}
@@ -50,7 +50,7 @@ function TransferRow({
 
   return (
     <div className="flex items-center gap-2 px-3 h-7 text-xs">
-      <span className="shrink-0 text-neutral-500">
+      <span className="shrink-0 text-fleet-text-subtle">
         {state === 'error' ? (
           <AlertCircle size={12} className="text-red-400" />
         ) : state === 'done' ? (
@@ -62,7 +62,7 @@ function TransferRow({
         )}
       </span>
 
-      <span className="min-w-0 max-w-[14rem] truncate text-neutral-300" title={transfer.name}>
+      <span className="min-w-0 max-w-[14rem] truncate text-fleet-text-secondary" title={transfer.name}>
         {transfer.name}
       </span>
 
@@ -71,10 +71,10 @@ function TransferRow({
           {transfer.error ?? 'Transfer failed'}
         </span>
       ) : state === 'cancelled' ? (
-        <span className="flex-1 text-neutral-500">Cancelled</span>
+        <span className="flex-1 text-fleet-text-subtle">Cancelled</span>
       ) : (
         <>
-          <div className="flex-1 min-w-0 h-1 rounded-full bg-neutral-800 overflow-hidden">
+          <div className="flex-1 min-w-0 h-1 rounded-full bg-fleet-surface-2 overflow-hidden">
             <div
               className={`h-full rounded-full transition-[width] duration-200 ${
                 state === 'done' ? 'bg-emerald-500' : 'bg-teal-500'
@@ -82,7 +82,7 @@ function TransferRow({
               style={{ width: `${percent}%` }}
             />
           </div>
-          <span className="shrink-0 tabular-nums text-neutral-500">
+          <span className="shrink-0 tabular-nums text-fleet-text-subtle">
             {known
               ? `${formatBytes(transferred)} / ${formatBytes(total)}`
               : formatBytes(transferred)}
@@ -91,7 +91,7 @@ function TransferRow({
       )}
 
       <button
-        className="shrink-0 p-0.5 rounded text-neutral-500 hover:text-white hover:bg-white/10 transition-colors active:scale-[0.97]"
+        className="shrink-0 p-0.5 rounded text-fleet-text-subtle hover:text-fleet-text hover:bg-fleet-surface-3 transition-colors active:scale-[0.97]"
         title={active ? 'Cancel transfer' : 'Dismiss'}
         aria-label={active ? `Cancel ${transfer.name}` : `Dismiss ${transfer.name}`}
         onClick={() => (active ? onCancel(transfer.id) : onDismiss(transfer.id))}

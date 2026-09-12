@@ -38,31 +38,31 @@ export function FileNavigator({
   }, [files, filter]);
 
   return (
-    <div className="flex w-[230px] shrink-0 flex-col border-r border-neutral-800 bg-neutral-900">
-      <div className="border-b border-neutral-800 p-2">
+    <div className="flex w-[230px] shrink-0 flex-col border-r border-fleet-border bg-fleet-surface">
+      <div className="border-b border-fleet-border p-2">
         <div className="relative">
           <Search
             size={13}
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-500"
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-fleet-text-subtle"
           />
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="Filter files…"
-            className="w-full rounded-md border border-neutral-700 bg-neutral-800 py-1.5 pl-7 pr-2 text-xs text-neutral-200 transition-colors focus:border-neutral-500 focus:outline-none"
+            className="w-full rounded-md border border-fleet-border-strong bg-fleet-surface-2 py-1.5 pl-7 pr-2 text-xs text-fleet-text transition-colors focus:border-[color:var(--fleet-accent)] focus:outline-none"
           />
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto py-1">
         {groups.length === 0 ? (
-          <p className="px-3 py-4 text-xs text-neutral-500">
+          <p className="px-3 py-4 text-xs text-fleet-text-subtle">
             {filter ? 'No files match the filter.' : 'No .env files found.'}
           </p>
         ) : (
           groups.map(([group, entries]) => (
             <Fragment key={group}>
-              <div className="px-3 pb-1 pt-3 text-[9px] font-medium uppercase tracking-wider text-neutral-600">
+              <div className="px-3 pb-1 pt-3 text-[9px] font-medium uppercase tracking-wider text-fleet-text-subtle">
                 {group === '·root' ? '· root' : group}
               </div>
               {entries.map((f) => {
@@ -76,9 +76,9 @@ export function FileNavigator({
                     title={f.readable ? f.relPath : 'Cannot read this file'}
                     className={`group flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs transition-colors active:scale-[0.98] ${
                       selected
-                        ? 'bg-blue-950/50 font-semibold text-white shadow-[inset_3px_0_0_0_#3b82f6]'
-                        : 'text-neutral-300 hover:bg-neutral-800'
-                    } ${f.isTemplate ? (selected ? 'italic' : 'italic text-neutral-500') : ''} disabled:cursor-not-allowed disabled:opacity-40`}
+                        ? 'bg-fleet-accent-bg-soft font-semibold text-fleet-text shadow-[inset_3px_0_0_0_var(--fleet-accent)]'
+                        : 'text-fleet-text-secondary hover:bg-fleet-surface-2'
+                    } ${f.isTemplate ? (selected ? 'italic' : 'italic text-fleet-text-subtle') : ''} disabled:cursor-not-allowed disabled:opacity-40`}
                   >
                     {renaming === f.absPath ? (
                       <input
@@ -96,19 +96,19 @@ export function FileNavigator({
                         }}
                         onBlur={() => setRenaming(null)}
                         spellCheck={false}
-                        className="w-full rounded border border-blue-500 bg-neutral-800 px-1 py-0.5 font-mono text-xs text-neutral-100 outline-none"
+                        className="w-full rounded border border-[color:var(--fleet-accent)] bg-fleet-surface-2 px-1 py-0.5 font-mono text-xs text-fleet-text outline-none"
                       />
                     ) : (
                       <>
                         <span className="truncate">{f.name}</span>
                         {dirty && (
                           <span
-                            className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.6)]"
+                            className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500 dark:bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.6)]"
                             aria-label="unsaved changes"
                           />
                         )}
                         <span className="ml-auto flex items-center gap-1">
-                          <span className="text-[9px] text-neutral-600 group-hover:hidden">
+                          <span className="text-[9px] text-fleet-text-subtle group-hover:hidden">
                             {f.varCount}
                           </span>
                           <span className="hidden items-center gap-1 group-hover:flex">
@@ -129,7 +129,7 @@ export function FileNavigator({
                                 }
                               }}
                               title="Rename"
-                              className="rounded p-0.5 text-neutral-500 transition hover:text-neutral-200 active:scale-90"
+                              className="rounded p-0.5 text-fleet-text-subtle transition hover:text-fleet-text active:scale-90"
                             >
                               <Pencil size={11} />
                             </span>
@@ -148,7 +148,7 @@ export function FileNavigator({
                                 }
                               }}
                               title="Delete"
-                              className="rounded p-0.5 text-neutral-500 transition hover:text-red-400 active:scale-90"
+                              className="rounded p-0.5 text-fleet-text-subtle transition hover:text-red-600 dark:hover:text-red-400 active:scale-90"
                             >
                               <Trash2 size={11} />
                             </span>
@@ -164,10 +164,10 @@ export function FileNavigator({
         )}
       </div>
 
-      <div className="border-t border-neutral-800 p-2">
+      <div className="border-t border-fleet-border p-2">
         <button
           onClick={onNewFile}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md bg-neutral-800 py-1.5 text-xs text-neutral-200 transition hover:bg-neutral-700 active:scale-[0.98]"
+          className="flex w-full items-center justify-center gap-1.5 rounded-md bg-fleet-surface-2 py-1.5 text-xs text-fleet-text transition hover:bg-fleet-surface-3 active:scale-[0.98]"
         >
           <FilePlus2 size={13} /> New .env file
         </button>

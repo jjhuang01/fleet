@@ -62,11 +62,37 @@ export function resolveAccentColor(id?: string): AccentColorDefinition {
   return ACCENT_COLORS[DEFAULT_ACCENT_COLOR_ID];
 }
 
-export function getAccentCssVars(id?: AccentColorId): FleetThemeCssProperties {
+/**
+ * The ramp for filled accent surfaces (buttons, toggles, progress). Those
+ * surfaces carry a white label in both modes, so they use a stop dark enough to
+ * hold 4.5:1 with white: the bright `ACCENT_COLORS` ramp is 3.68:1 at rest and
+ * 2.54:1 on hover, which is fine for an accent-coloured ring or icon on a dark
+ * surface but not for a label. Neither ramp moves; each token names where it is
+ * allowed to be used.
+ */
+const ACCENT_FILL_COLORS: Record<AccentColorId, { value: string; hover: string }> = {
+  blue: { value: '#2563eb', hover: '#1d4ed8' },
+  teal: { value: '#0f766e', hover: '#115e59' },
+  purple: { value: '#7e22ce', hover: '#6b21a8' },
+  rose: { value: '#be123c', hover: '#9f1239' },
+  amber: { value: '#b45309', hover: '#92400e' },
+  emerald: { value: '#047857', hover: '#065f46' }
+};
+
+export function getAccentCssVars(
+  id?: AccentColorId,
+  kind: TerminalThemeDefinition['kind'] = 'dark'
+): FleetThemeCssProperties {
   const accent = resolveAccentColor(id);
+  const fill = ACCENT_FILL_COLORS[accent.id];
   return {
-    '--fleet-accent': accent.value,
-    '--fleet-accent-hover': accent.hover
+    // Accent-coloured text, icons, borders and rings read against the app
+    // surface, so they keep the bright ramp on dark chrome.
+    '--fleet-accent': kind === 'light' ? fill.value : accent.value,
+    '--fleet-accent-hover': kind === 'light' ? fill.hover : accent.hover,
+    // Filled surfaces are read by a white label instead.
+    '--fleet-accent-fill': fill.value,
+    '--fleet-accent-fill-hover': fill.hover
   };
 }
 
@@ -167,10 +193,37 @@ export function mixHex(a: string, b: string, t: number): string {
   return `#${ch(ar, br)}${ch(ag, bg)}${ch(ab, bb)}`;
 }
 
+/** WCAG relative luminance of a hex color. */
+function relativeLuminance(color: string): number {
+  const channel = (value: number): number => {
+    const v = value / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const [r, g, b] = parseHex(color);
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+/** WCAG contrast ratio between two hex colors, 1 to 21. */
+function contrastRatio(a: string, b: string): number {
+  const first = relativeLuminance(a);
+  const second = relativeLuminance(b);
+  return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+}
+
+/** Walk a color toward black until it clears `minRatio` against `bg`. */
+function darkenTo(color: string, bg: string, minRatio: number): string {
+  let out = color;
+  for (let i = 0; i < 40 && contrastRatio(out, bg) < minRatio; i += 1) {
+    out = mixHex(out, '#000000', 0.08);
+  }
+  return out;
+}
+
 /**
  * Build the app-chrome token set from a theme's base colors, then layer in any
  * per-theme `appOverrides`. Surfaces/borders contrast against the background by
- * mixing toward the foreground; text mutes by mixing toward the background.
+ * mixing toward the foreground; on dark themes text mutes by mixing toward the
+ * background, and on light themes it is derived against contrast targets.
  */
 export function deriveAppTheme(def: TerminalThemeDefinition): AppThemeTokens {
   const dark = def.kind === 'dark';
@@ -183,6 +236,19 @@ export function deriveAppTheme(def: TerminalThemeDefinition): AppThemeTokens {
   // overlay at low alpha reads correctly against any surface underneath,
   // so this is universal across all 14 themes rather than per-theme mixed hex.
   const borderOverlay = dark ? '1 0 0' : '0 0 0';
+  // Light presets borrow their chrome text from a terminal palette whose
+  // foreground was tuned for a full-screen terminal: Solarized Light's #657b83
+  // is 3.95:1 on its own background, and mixing it 55% toward the background -
+  // fine on dark themes - leaves 1.7:1. Derive the ramp by contrast target
+  // instead, so a light preset stays legible in the chrome at 11px. Terminal
+  // panes keep the preset's exact colours.
+  const text = dark ? fg : darkenTo(fg, bg, 8);
+  const ramp = (mix: number, floor: number): string =>
+    dark ? mixHex(fg, bg, mix) : darkenTo(mixHex(text, bg, mix), bg, floor);
+  const textSecondary = ramp(dark ? 0.18 : 0.16, 6.3);
+  const textMuted = ramp(dark ? 0.4 : 0.3, 5.75);
+  const textSubtle = ramp(dark ? 0.55 : 0.44, 5.3);
+
   const derived: AppThemeTokens = {
     bg,
     surface: mixHex(bg, fg, 0.05),
@@ -190,10 +256,10 @@ export function deriveAppTheme(def: TerminalThemeDefinition): AppThemeTokens {
     surface3: mixHex(bg, fg, 0.16),
     border: `oklch(${borderOverlay} / 0.08)`,
     borderStrong: `oklch(${borderOverlay} / 0.16)`,
-    text: fg,
-    textSecondary: mixHex(fg, bg, 0.18),
-    textMuted: mixHex(fg, bg, 0.4),
-    textSubtle: mixHex(fg, bg, 0.55)
+    text,
+    textSecondary,
+    textMuted,
+    textSubtle
   };
   return { ...derived, ...def.appOverrides };
 }
@@ -235,6 +301,15 @@ export function getAppThemeCssVars(def: TerminalThemeDefinition): FleetThemeCssP
     '--fleet-text': t.text,
     '--fleet-text-secondary': t.textSecondary,
     '--fleet-text-muted': t.textMuted,
-    '--fleet-text-subtle': t.textSubtle
+    '--fleet-text-subtle': t.textSubtle,
+    // Glass tokens inherit from the root, where their var() references resolve
+    // against the dark initial-paint values before the App-root theme vars are
+    // applied. Publish the opaque aliases at the same cascade level so a light
+    // theme never leaves the sidebar or agent chrome on the dark defaults.
+    '--fleet-glass-bg': `color-mix(in srgb, ${t.bg} 40%, transparent)`,
+    '--fleet-glass-chrome': t.bg,
+    '--fleet-glass-surface': t.surface,
+    '--fleet-glass-surface-2': t.surface2,
+    '--fleet-glass-surface-3': t.surface3
   };
 }

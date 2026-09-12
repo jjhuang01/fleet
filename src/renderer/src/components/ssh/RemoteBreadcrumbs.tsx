@@ -32,17 +32,17 @@ export function RemoteBreadcrumbs({
   return (
     <nav
       aria-label="Remote path"
-      className="flex items-center gap-0.5 min-w-0 text-xs text-neutral-400"
+      className="flex items-center gap-0.5 min-w-0 text-xs text-fleet-text-muted"
     >
       <span
-        className="flex items-center gap-1.5 pr-1.5 text-neutral-300 shrink-0"
+        className="flex items-center gap-1.5 pr-1.5 text-fleet-text-secondary shrink-0"
         title={connected ? `Connected to ${hostLabel}` : `Not connected to ${hostLabel}`}
       >
         <Server size={12} />
         <span className="font-medium truncate max-w-[10rem]">{hostLabel}</span>
         <span
           className={`inline-block w-1.5 h-1.5 rounded-full ${
-            connected ? 'bg-emerald-500' : 'bg-neutral-600'
+            connected ? 'bg-emerald-500' : 'bg-fleet-surface-3'
           }`}
           aria-hidden
         />
@@ -54,13 +54,13 @@ export function RemoteBreadcrumbs({
         const showOverflow = collapsed && i === 1;
         return (
           <span key={crumb.path} className="flex items-center min-w-0">
-            <ChevronRight size={12} className="text-neutral-600 shrink-0" />
+            <ChevronRight size={12} className="text-fleet-text-subtle shrink-0" />
             {showOverflow && (
               <>
                 <Popover.Root open={overflowOpen} onOpenChange={setOverflowOpen}>
                   <Popover.Trigger asChild>
                     <button
-                      className="px-1 rounded hover:bg-white/10 hover:text-neutral-200 transition-colors"
+                      className="px-1 rounded hover:bg-fleet-surface-3 hover:text-fleet-text transition-colors"
                       aria-label="Show hidden path segments"
                     >
                       …
@@ -87,20 +87,20 @@ export function RemoteBreadcrumbs({
                     </Popover.Content>
                   </Popover.Portal>
                 </Popover.Root>
-                <ChevronRight size={12} className="text-neutral-600 shrink-0" />
+                <ChevronRight size={12} className="text-fleet-text-subtle shrink-0" />
               </>
             )}
             {isLast ? (
               <span
                 aria-current="page"
-                className="px-1 text-neutral-200 font-medium truncate"
+                className="px-1 text-fleet-text font-medium truncate"
                 title={crumb.path}
               >
                 {crumb.label}
               </span>
             ) : (
               <button
-                className="px-1 rounded hover:bg-white/10 hover:text-neutral-200 transition-colors truncate max-w-[9rem]"
+                className="px-1 rounded hover:bg-fleet-surface-3 hover:text-fleet-text transition-colors truncate max-w-[9rem]"
                 onClick={() => onNavigate(crumb.path)}
                 title={crumb.path}
               >

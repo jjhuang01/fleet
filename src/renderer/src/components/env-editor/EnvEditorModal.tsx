@@ -321,33 +321,33 @@ export function EnvEditorModal({
           }
         }}
         onClick={(e) => e.stopPropagation()}
-        className="flex h-[85vh] w-[860px] flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl duration-150 animate-in fade-in-0 zoom-in-95"
+        className="flex h-[85vh] w-[860px] flex-col overflow-hidden rounded-xl border border-fleet-border-strong bg-fleet-surface shadow-2xl duration-150 animate-in fade-in-0 zoom-in-95"
       >
-        <div className="flex items-center gap-3 border-b border-neutral-800 px-5 py-3">
-          <h2 className="text-base font-semibold text-neutral-100">Env Editor</h2>
+        <div className="flex items-center gap-3 border-b border-fleet-border px-5 py-3">
+          <h2 className="text-base font-semibold text-fleet-text">Env Editor</h2>
           <button
             onClick={() => void pickFolder()}
             title={root}
-            className="flex items-center gap-1.5 rounded-md bg-neutral-800 px-2.5 py-1 text-xs text-neutral-300 transition hover:bg-neutral-700 active:scale-[0.98]"
+            className="flex items-center gap-1.5 rounded-md bg-fleet-surface-2 px-2.5 py-1 text-xs text-fleet-text-secondary transition hover:bg-fleet-surface-3 active:scale-[0.98]"
           >
             <Folder size={13} />
             <span className="max-w-[260px] truncate">
               {root ? basenameOf(root) : 'Pick folder'}
             </span>
-            <ChevronDown size={13} className="text-neutral-500" />
+            <ChevronDown size={13} className="text-fleet-text-subtle" />
           </button>
           <button
             onClick={() => save()}
             disabled={!dirty || saving}
             title="Save (⌘S)"
-            className="ml-auto inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition active:scale-[0.97] hover:bg-blue-500 disabled:bg-neutral-800 disabled:text-neutral-600 disabled:active:scale-100"
+            className="ml-auto inline-flex items-center gap-2 rounded-md fleet-accent-bg px-3 py-1.5 text-xs font-medium text-white transition active:scale-[0.97] fleet-accent-bg-hover disabled:opacity-50 disabled:active:scale-100"
           >
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
             Save
           </button>
           <button
             onClick={requestClose}
-            className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-white active:scale-90"
+            className="rounded-md p-1.5 text-fleet-text-subtle transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text active:scale-90"
           >
             <X size={16} />
           </button>
@@ -368,12 +368,12 @@ export function EnvEditorModal({
           />
           <div className="relative flex min-h-0 flex-1 flex-col">
             {error && (
-              <div className="flex items-center gap-2 border-b border-red-800 bg-red-950/40 px-4 py-2 text-xs text-red-300">
+              <div className="flex items-center gap-2 border-b border-red-500/30 dark:border-red-800 bg-red-500/10 dark:bg-red-950/40 px-4 py-2 text-xs text-red-700 dark:text-red-300">
                 <AlertTriangle size={13} /> {error}
               </div>
             )}
             {externalChange && (
-              <div className="flex items-center gap-2 border-b border-amber-800 bg-amber-950/40 px-4 py-2 text-xs text-amber-300">
+              <div className="flex items-center gap-2 border-b border-amber-500/30 dark:border-amber-800 bg-amber-500/10 dark:bg-amber-950/40 px-4 py-2 text-xs text-amber-700 dark:text-amber-300">
                 <AlertTriangle size={13} />
                 This file changed on disk.
                 <button
@@ -397,32 +397,34 @@ export function EnvEditorModal({
               </div>
             )}
             {selected && (
-              <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-2">
-                <span className="font-mono text-xs text-neutral-200">{selected.name}</span>
+              <div className="flex items-center gap-2 border-b border-fleet-border px-4 py-2">
+                <span className="font-mono text-xs text-fleet-text">{selected.name}</span>
                 {selected.isTemplate && (
-                  <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-neutral-500">
+                  <span className="rounded bg-fleet-surface-2 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-fleet-text-subtle">
                     template
                   </span>
                 )}
-                {dirty && <span className="text-[10px] text-amber-400">● unsaved</span>}
+                {dirty && (
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400">● unsaved</span>
+                )}
                 <div className="ml-auto flex items-center gap-2">
                   {effectiveMode !== 'raw' && (
                     <button
                       onClick={() => setRevealAll((v) => !v)}
-                      className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-neutral-300 transition hover:bg-neutral-800 active:scale-95"
+                      className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-fleet-text-secondary transition hover:bg-fleet-surface-2 active:scale-95"
                     >
                       {revealAll ? <EyeOff size={13} /> : <Eye size={13} />}
                       {revealAll ? 'Hide all' : 'Reveal all'}
                     </button>
                   )}
                   {!rawOnly && (
-                    <div className="flex overflow-hidden rounded-md border border-neutral-700 text-xs">
+                    <div className="flex overflow-hidden rounded-md border border-fleet-border-strong text-xs">
                       <button
                         onClick={showForm}
                         className={`flex items-center gap-1 px-2.5 py-1 transition active:scale-95 ${
                           mode === 'form'
-                            ? 'bg-blue-600 text-white'
-                            : 'text-neutral-400 hover:bg-neutral-800'
+                            ? 'fleet-accent-bg text-white'
+                            : 'text-fleet-text-muted hover:bg-fleet-surface-2'
                         }`}
                       >
                         <Table size={12} /> Form
@@ -431,8 +433,8 @@ export function EnvEditorModal({
                         onClick={showRaw}
                         className={`flex items-center gap-1 px-2.5 py-1 transition active:scale-95 ${
                           mode === 'raw'
-                            ? 'bg-blue-600 text-white'
-                            : 'text-neutral-400 hover:bg-neutral-800'
+                            ? 'fleet-accent-bg text-white'
+                            : 'text-fleet-text-muted hover:bg-fleet-surface-2'
                         }`}
                       >
                         <Code size={12} /> Raw
@@ -457,8 +459,8 @@ export function EnvEditorModal({
               )
             ) : (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
-                <FilePlus2 size={28} className="text-neutral-600" />
-                <p className="text-sm text-neutral-400">
+                <FilePlus2 size={28} className="text-fleet-text-subtle" />
+                <p className="text-sm text-fleet-text-muted">
                   {files.length === 0
                     ? 'No .env files in this folder.'
                     : 'Select a file from the left to edit it.'}
@@ -469,7 +471,7 @@ export function EnvEditorModal({
                       setNewFileError(null);
                       setNewFileOpen(true);
                     }}
-                    className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 active:scale-[0.97]"
+                    className="inline-flex items-center gap-2 rounded-md fleet-accent-bg px-4 py-2 text-sm font-medium text-white transition fleet-accent-bg-hover active:scale-[0.97]"
                   >
                     <FilePlus2 size={15} /> Create .env file
                   </button>
