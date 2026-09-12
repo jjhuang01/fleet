@@ -29,12 +29,12 @@
 2. **拖到自己身上也显示投放预览（已修）**。拖拽过程中 `DataTransfer` 处于保护模式，`getData()` 在 `dragenter` / `dragover` 一律返回空串，于是 `getData(...) !== paneId` 恒为真，源 Pane 会给自己亮出「可以放这里」。解法是用 `dragstart` / `dragend` 在 PaneFrame 上记录自己是不是拖拽源。实测：修前自拖预览存在（`196,32 247x760`），修后不存在；跨 Pane 投放仍然生效且 `.xterm` 数量不变。
 3. **Tab 合并的两套判据不一致（已修）**。`Sidebar.canMergeTab` 认为 `type === 'terminal'`（历史持久化的工作区会这样写）可以合并，`workspace-store.mergeTabs` 用 `!tab.type` 拒绝，于是预览照常出现、松手却静默退化成重排。两边现在都走已有的 `isSessionTab()`。
 4. **死代码（已删）**。`TabItem` 往 dataTransfer 里写的 `application/x-fleet-tab-id` 没有任何读取方，拖拽身份一直来自 React 状态。
+5. **两套投放预览视觉语言不同（已修）**。Tab 合并预览是硬编码 `border-blue-400 bg-blue-500/15`，Pane 投放预览走 `fleet-accent-*`；同一个拖拽在手势两端换了颜色体系，非蓝色 accent 主题下尤其跳。现在两者共用 accent 令牌，实测取色为 `rgb(16, 185, 129)`，跟随主题。同时给 Tab 行补了 `select-none`，与 Pane 标题栏一致。
 
 ## 还没修的问题（按优先级）
 
 - **P1：Pane 不能在 Tab 之间移动**。`movePane` 只在同一个 Tab 内生效，而 Tab 合并是单向门：合过去就分不回来。布局手势缺少「Pane → 侧栏 Tab」这一条。
 - **P2：合并与排序共用同一块可投放区域**。Tab 行的中部（`edgeHeight` 之外的 14px）现在是合并区，想插到两个 Tab 之间只能瞄准上下各 7px。功能成立，但误合并的概率取决于行高，值得灰度观察。
-- **P2：两套投放预览视觉语言不同**。Pane 投放用 `fleet-accent-*` 令牌，Tab 合并预览硬编码 `border-blue-400 bg-blue-500/15`；同一产品里两个拖拽预览不该是两种颜色体系。
 - **P3：抓取带偏窄**。分隔条可抓区域 6px（±3px），Otty 走 iced 的 12px leeway（约 ±6.5px）。手感和「拖不动」的抱怨多半来自这里。
 - **P3：交点手柄可发现性弱**。`CORNER_PX = 14` 的命中区里只有一个 10px、16% 白的圆点，且只在悬停该手柄时出现；在知道交点能拖之前，用户看不到任何提示。
 

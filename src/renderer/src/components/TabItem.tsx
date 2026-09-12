@@ -192,7 +192,7 @@ export function TabItem({
         <div
           data-tab-id={id}
           className={`
-            group flex items-center gap-2 px-2.5 py-1 cursor-pointer rounded-md text-sm relative min-h-[28px] transition-colors
+            group flex items-center gap-2 px-2.5 py-1 cursor-pointer rounded-md text-sm relative min-h-[28px] transition-colors select-none
             ${indentLevel > 0 ? `${indentLevel > 1 ? 'ml-8' : 'ml-4'} border-l-2 ${indentAccent === 'nested' ? 'border-l-fleet-border-strong' : 'border-l-teal-500/50'}` : ''}
             ${
               isActive
@@ -233,9 +233,11 @@ export function TabItem({
             <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-blue-500 rounded-full translate-y-0.5" />
           )}
           {isDragOver === 'merge' && (
+            // Same accent tokens as the pane drop preview: one drag, one
+            // colour. Only the weight and radius stay row-sized.
             <div
               data-tab-merge-preview
-              className="pointer-events-none absolute inset-0 rounded-md border border-blue-400 bg-blue-500/15"
+              className="pointer-events-none absolute inset-0 rounded-md border fleet-accent-border fleet-accent-bg-soft"
             />
           )}
 
