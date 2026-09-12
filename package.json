@@ -5,10 +5,10 @@
   "description": "A cross-platform terminal multiplexer for AI coding agents",
   "main": "./out/main/index.mjs",
   "author": {
-    "name": "Khang Nguyen",
-    "email": "khang859@users.noreply.github.com"
+    "name": "jjhuang01",
+    "email": "jjhuang01@users.noreply.github.com"
   },
-  "homepage": "https://github.com/khang859/fleet",
+  "homepage": "https://github.com/jjhuang01/fleet",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
@@ -147,5 +147,13 @@
   },
   "overrides": {
     "node-gyp": "^12.1.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jjhuang01/fleet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jjhuang01/fleet/issues"
   }
 }

@@ -3,7 +3,7 @@ name: AI Review
 # On-demand AI code review, driven by opencode + OpenRouter.
 #
 # Trigger: comment "/fleet-review <instructions>" on a PR.
-# Gated so ONLY the repo owner (khang859) can fire it — nobody else's comment runs it,
+# Gated so ONLY the repo owner (jjhuang01) can fire it — nobody else's comment runs it,
 # so there is no way for a contributor to run up OpenRouter cost.
 #
 # Two stages run in sequence, but only ONE comment is ever posted:
@@ -48,7 +48,7 @@ jobs:
     # so we gate on BOTH it and the owner login as defense-in-depth.
     if: >-
       ${{ github.event.issue.pull_request &&
-          github.event.comment.user.login == 'khang859' &&
+          github.event.comment.user.login == 'jjhuang01' &&
           github.event.comment.author_association == 'OWNER' &&
           contains(github.event.comment.body, '/fleet-review') }}
     runs-on: ubuntu-latest

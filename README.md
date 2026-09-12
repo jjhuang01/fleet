@@ -4,14 +4,20 @@ A lightweight, cross-platform terminal multiplexer for developers running multip
 
 Fleet gives you a single window to manage all your terminal sessions with vertical tabs, split panes, real-time agent activity detection, and OS-level notifications when agents need your attention.
 
+> **This is a community fork** of [khang859/fleet](https://github.com/khang859/fleet). Everything that existed before the fork is Khang Nguyen's work, MIT licensed; see [Credits](#credits).
+>
+> On top of upstream, this fork adds the pane layout Otty users keep asking for: drag a pane onto another pane's edge to re-dock it, drop a pane on a sidebar tab to merge the two into one tab (and drop it back out to un-merge), drag a grid intersection to move a whole row and column at once, per-pane custom titles, `Cmd+Shift+B` to balance a tab, and `Cmd+Alt+Arrow` to move a pane without the mouse. [docs/pane-layout-review.md](docs/pane-layout-review.md) records what upstream has, what this fork added, and what neither has; [docs/blocks-plan.md](docs/blocks-plan.md) is the next planned project.
+
 ## Download
 
-Download the latest release for your platform:
+Releases for this fork are published at [jjhuang01/fleet releases](https://github.com/jjhuang01/fleet/releases/latest):
 
-- [macOS — Apple Silicon (M1/M2/M3/M4)](https://github.com/khang859/fleet/releases/latest) — download `fleet-<version>-arm64.dmg`
-- [macOS — Intel](https://github.com/khang859/fleet/releases/latest) — download `fleet-<version>-x64.dmg`
-- [Windows](https://github.com/khang859/fleet/releases/latest) — `.exe`
-- [Linux](https://github.com/khang859/fleet/releases/latest) — `.deb` (Debian/Ubuntu), `.rpm` (Fedora/RHEL), `.AppImage` (universal)
+- [macOS — Apple Silicon (M1/M2/M3/M4)](https://github.com/jjhuang01/fleet/releases/latest) — `fleet-<version>-arm64.dmg`
+- [macOS — Intel](https://github.com/jjhuang01/fleet/releases/latest) — `fleet-<version>-x64.dmg`
+- [Windows](https://github.com/jjhuang01/fleet/releases/latest) — `.exe`
+- [Linux](https://github.com/jjhuang01/fleet/releases/latest) — `.deb` (Debian/Ubuntu), `.rpm` (Fedora/RHEL), `.AppImage` (universal)
+
+macOS builds from this fork are **not notarized**: they need an Apple Developer account to sign and notarize, which a fork cannot borrow. Right-click the app and choose **Open** the first time, or build it yourself with `npm run build:mac` (see `electron-builder.yml` for how to turn notarization on if you have your own credentials).
 
 ### Linux install
 
@@ -173,6 +179,11 @@ npm run build:linux   # Linux
 
 Electron + electron-vite + React + TypeScript, xterm.js for terminal emulation, node-pty for PTY processes, shadcn/ui + Tailwind for UI, Zustand for state management.
 
+## Credits
+
+- **Upstream:** [Fleet](https://github.com/khang859/fleet) by [Khang Nguyen](https://github.com/khang859), MIT licensed. This fork keeps that copyright notice and builds on his work; the product, its architecture and most of the code are his.
+- **Pane layout behaviour:** [Otty](https://github.com/otty-shell/otty) by the Otty authors, also MIT. `lib/pane-balance.ts` reproduces the split-equalization semantics of Otty's `pane_balance.rs`, and the 12px divider grab strip matches the leeway iced gives Otty's splitters. Otty is Rust + iced and this app is Electron + xterm, so no code crossed over: the behaviour was re-implemented from reading Otty's source and checked against it, and `docs/pane-layout-review.md` states exactly which Otty capabilities exist upstream, which this fork added, and which exist in neither.
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE), which carries both the upstream copyright and this fork's.

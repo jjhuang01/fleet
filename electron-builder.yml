@@ -1,4 +1,4 @@
-appId: com.fleet.app
+appId: com.jjhuang01.fleet
 productName: Fleet
 directories:
   buildResources: build
@@ -53,7 +53,12 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  notarize: true
+  # Notarization needs an Apple Developer account and Apple credentials, which
+  # this fork does not ship. Turn it on by setting APPLE_ID,
+  # APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID and changing this to true -
+  # until then macOS builds are signed locally (or not at all) and the first
+  # launch needs a right-click > Open.
+  notarize: false
   # Voice dictation needs the microphone; without the usage string a hardened,
   # notarized build cannot legally prompt for it.
   extendInfo:
@@ -101,5 +106,5 @@ rpm:
 npmRebuild: true
 publish:
   provider: github
-  owner: khang859
+  owner: jjhuang01
   repo: fleet
