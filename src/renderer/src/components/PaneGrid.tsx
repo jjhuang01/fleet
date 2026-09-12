@@ -1,4 +1,4 @@
-import { Suspense, lazy, memo, useCallback, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PaneNode, PaneLeaf, TerminalBackground } from '../../../shared/types';
 import type { PathContext } from '../../../shared/shell-profiles';
 import type { RemoteFileRef } from '../../../shared/remote-ssh-types';
@@ -11,6 +11,7 @@ import { useWorkspaceStore } from '../store/workspace-store';
 import { useNotificationStore } from '../store/notification-store';
 import { activityRingClass } from '../lib/activity-glyph';
 import { PANE_DRAG_MIME, hasPanePayload } from '../lib/pane-drag';
+import { neighbourInDirection, type PaneBox, type PaneDirection } from '../lib/pane-neighbour';
 import { createLogger } from '../logger';
 
 const log = createLogger('layout:panes');
@@ -83,6 +84,20 @@ function calcToPixels(v: CalcValue, containerDim: number): number {
   return containerDim * (v.pct / 100) + v.px;
 }
 
+/**
+ * A key for "these two dividers sit on the same line".
+ *
+ * Rounding rather than comparing the expressions as written: a divider a third
+ * of the way across arrives as 33.33333333333333 on one branch and
+ * 33.333333333333336 on another, and a raw string compare would call those two
+ * different lines - leaving one column behind when the corner is dragged. A
+ * thousandth of a percent is far below anything a pointer can aim at and far
+ * above the drift.
+ */
+function lineKeyOf(v: CalcValue): string {
+  return `${Math.round(v.pct * 1000)}:${Math.round(v.px * 1000)}`;
+}
+
 // --- Layout computation ---
 
 type LeafEntry = { id: string; node: PaneLeaf; rect: Rect };
@@ -148,7 +163,7 @@ function computeLayout(node: PaneNode, rect: Rect, path: number[]): Layout {
   const groups = new Map<string, HandleEntry[]>();
   for (const handle of [...left.handles, ...right.handles]) {
     if (handle.direction === node.direction) continue;
-    const lineKey = toCSS(isH ? handle.rect.top : handle.rect.left);
+    const lineKey = lineKeyOf(isH ? handle.rect.top : handle.rect.left);
     const group = groups.get(lineKey);
     if (group) group.push(handle);
     else groups.set(lineKey, [handle]);
@@ -388,6 +403,38 @@ function PaneFrame({
   );
 }
 
+/** The layout's rectangles as pixels, which is the space the neighbour search works in. */
+function leafBoxes(
+  leaves: LeafEntry[],
+  width: number,
+  height: number
+): Array<{
+  id: string;
+  box: PaneBox;
+}> {
+  return leaves.map((leaf) => {
+    const left = calcToPixels(leaf.rect.left, width);
+    const top = calcToPixels(leaf.rect.top, height);
+    return {
+      id: leaf.id,
+      box: {
+        left,
+        top,
+        right: left + calcToPixels(leaf.rect.width, width),
+        bottom: top + calcToPixels(leaf.rect.height, height)
+      }
+    };
+  });
+}
+
+/** Where a pane lands when it is moved onto a neighbour, in `movePane` terms. */
+const MOVE_SIDES: Record<PaneDirection, PaneDropSide> = {
+  left: 'left',
+  right: 'right',
+  up: 'top',
+  down: 'bottom'
+};
+
 type ViewerPaneType = 'file' | 'markdown' | 'image' | 'pdf';
 
 function isViewerPaneType(paneType: PaneLeaf['paneType']): paneType is ViewerPaneType {
@@ -548,6 +595,29 @@ function PaneGridImpl({
   });
 
   const layout = useMemo(() => computeLayout(root, fullRect.current, []), [root]);
+  const movePane = useWorkspaceStore((s) => s.movePane);
+
+  // The keyboard's drag-and-drop: Cmd+Alt+Arrow asks the grid which pane sits
+  // that way and re-docks onto it, exactly as dropping on that pane's edge does.
+  // Only the tab on screen has an active pane, so background grids ignore it.
+  useEffect(() => {
+    const handler = (event: Event): void => {
+      if (!(event instanceof CustomEvent)) return;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+      const detail = event.detail as { paneId?: string; direction?: PaneDirection } | undefined;
+      if (!detail?.paneId || !detail.direction || detail.paneId !== activePaneId) return;
+      const grid = gridRef.current;
+      if (!grid) return;
+      const neighbour = neighbourInDirection(
+        leafBoxes(layout.leaves, grid.clientWidth, grid.clientHeight),
+        detail.paneId,
+        detail.direction
+      );
+      if (neighbour) movePane(detail.paneId, neighbour, MOVE_SIDES[detail.direction]);
+    };
+    document.addEventListener('fleet:move-pane', handler);
+    return () => document.removeEventListener('fleet:move-pane', handler);
+  }, [activePaneId, layout, movePane]);
 
   return (
     <div className={`h-full w-full ${GRID_INSET}`}>

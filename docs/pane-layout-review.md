@@ -138,3 +138,51 @@
 - 侧栏投放的两个目标都在 tab/agent 行与列表空白地面上；Tools 区（Settings / Annotate / Sessions）不是投放区，它们渲染自己的组件而不是网格。
 - 单 Pane 且属于 worktree 分组或挂着嵌套文件 Tab 的源 Tab，拖到别的行会是空操作：整 Tab 合并要处理分组与嵌套关系（`mergeTabs` 的判据），把一个 Pane 挪走又会把这样的 Tab 掏空，两个方向都不该在拖拽里静默做。这与拖 Tab 手势现有的拒绝范围一致。
 - 两路只有只读评审提出的三条没有改动，都是判断而非缺陷：浅色主题下 `focus-ring` 是 accent 65% 混合色（蓝 2.17:1、teal 1.76:1、amber 1.59:1），但那是全应用共用的令牌，改它超出本轮范围；2×2 以上网格悬停时所有交点一起露 40% 圆点，交点越多越吵（3×3 是 4 个）；`Balance Panes` 的名字没有说明它重置整个 Tab 而不只是当前分组。
+
+## 第三轮：键盘把 Pane 挪过去、回归变成一条命令、打包实测
+
+第二轮结束时留下的四条待办，前三条做完，命令块单独成文（见 `docs/blocks-plan.md`）。
+
+### 1. Pane 拖拽的键盘等价操作（原「未做」项）
+
+- `Cmd+Alt+Arrow`（非 mac 是 `Ctrl+Shift+Arrow`）把当前 Pane 挪到该方向相邻 Pane 的那一侧，落点和鼠标拖过去完全一样 —— 复用同一个 `movePane`，PTY 不重建。
+- 相邻判定在 `lib/pane-neighbour.ts`：只算完全位于该方向的 Pane，共享边长最多者胜出，距离破平局。所以 2×2 里从右下往左是左下，不是斜对角的左上。
+- 键只负责报方向（`use-pane-navigation.ts` 派发 `fleet:move-pane`），几何只有网格知道，由 `PaneGrid` 用当前布局像素矩形算出邻居。这样纯函数可单测（`pane-neighbour.test.ts` 7 例）。
+- 边界是空操作而不是报错：已经在最左就按左，布局不动。
+
+### 2. 交点共线判据改成量化键（评审 LOW）
+
+- 原来用 `toCSS()` 字符串当共线键，`{pct: 33.333333333333336}` 和 `{pct: 33.33333333333333}` 会被当成两条不同的线，进而让交点拖动只带走一半的同一行分隔线。
+- 现在量化到千分之一百分比再比较（`lineKeyOf`），远低于指针能瞄准的精度，远高于浮点漂移。行为其余不变。
+- 诚实说明：这个漂移场景没能按需复现（构造它需要两次不同算术路径恰好落在同一位置），所以证据是「等值线仍然成组」的回归实测（3 列 × 2 行，6 个 Pane，拖交点后三条列分隔线全部同步到 0.5394 且完全相等），不是漂移前后的对照。
+
+### 3. 另一条评审 LOW 有意不改
+
+`ratioAtPoint` 不提前 clamp，最终由 store 的 `resizeSplits` 限制在 `0.15..0.85`。删掉 UI 侧再加一层 clamp 不会改变任何可观察行为（指针比率本来就会被 store 夹住），属于重复约束，按 YAGNI 不加。
+
+### 4. 回归变成一条命令：`npm run qa:panes`
+
+- `scripts/qa/pane-layout.ts` 接上已有的 `scripts/drive/core.ts`，驱动真实 dev 窗口跑 9 个场景：12px 命中条与方向键步进、分割即均分、`Cmd+Shift+B` 均分、`Cmd+Alt+Arrow` 挪 Pane、Pane 拖到邻居、Pane 拖到侧栏 Tab 行、Pane 拖到空白地面独立成 Tab、交点拖动保直线、以及「工作区原样还原」。
+- 每个场景在自己的临时 Tab 里跑，脚本开头快照用户 Tab、结尾核对一致，失败退出码非 0。
+- 之前几轮的验证都是一次性 CDP 脚本、跑完就没了，这是评审两次点名的缺口（「拖拽没有自动化 E2E 覆盖」）的补法。
+- 实测输出：`9/9 scenarios passed`。
+
+### 5. 打包实测（原「未验证：打包产物」）
+
+- `npm run build` 退出 0（typecheck + electron-vite build，renderer/main/preload 全部产出）。
+- `npx electron-builder --dir` 退出 0，产出并签名 `dist/mac-arm64/Fleet.app`（约 900MB，本地 Apple Development 身份）。
+- 用一次性 profile 真机启动该 .app（`open -n -a ... --args --user-data-dir=/tmp/... --remote-debugging-port=57999`），确认：从 `app.asar` 内加载页面、`window.fleet` 预加载 API 在、`window.__FLEET__` 调试桥不在（打包构建不该有）、点「New Tab」真的起了 PTY（标题栏显示 `~`）、敲 `echo packaged-ok-$((6*7))` 返回 `packaged-ok-42`、控制台无 error。
+- 顺带修了 README 快捷键表里两条过期行：命令面板写的是 `Cmd+Shift+P`（实际 `Cmd+K`），并补上本轮新增的 `Balance panes` 与 `Move pane`。
+
+### 本轮验证
+
+| 项目        | 结果                                                                                                                                                                                               |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 键盘挪 Pane | 四个方向各一次：落点方向与侧别正确，Pane 数不变；已在边缘时不改布局                                                                                                                                |
+| 共线键回归  | 3 列 × 2 行六 Pane，拖交点后三条列分隔线同步到 0.5394（完全相等）                                                                                                                                  |
+| 回归脚本    | `npm run qa:panes` 9/9 通过                                                                                                                                                                        |
+| 单测        | 新增 `pane-neighbour` 7 例；`workspace-store`、`pane-balance`、`tab-nesting`、`composition-guard`、`terminal-keybindings`、`palette-items`、`shortcuts-palette`、`zustand-selectors` 共 160 例通过 |
+| 静态检查    | `npm run typecheck` 0 错；改动文件 `eslint --no-cache` 0 错 0 警告；`git diff --check` 干净                                                                                                        |
+| 打包        | `npm run build` 与 `electron-builder --dir` 退出 0；打包后的 .app 真机跑通「新 Tab + 执行命令」                                                                                                    |
+
+未验证 / 有意留着：真实中文输入法与 12px 命中条抢走的 2px 仍要人肉试用；`qa:panes` 需要先起 dev 窗口，没接进 CI；命令块见 `docs/blocks-plan.md`。

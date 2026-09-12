@@ -62,6 +62,32 @@ export const ALL_SHORTCUTS: ShortcutDef[] = [
     other: { key: ']', ctrl: true, shift: true }
   },
   {
+    // The keyboard's version of dragging a pane onto a neighbour's edge. Cmd+
+    // Alt+Arrow because plain Cmd+Arrow belongs to text and the terminal.
+    id: 'move-pane-left',
+    label: 'Move pane left',
+    mac: { key: 'ArrowLeft', meta: true, alt: true },
+    other: { key: 'ArrowLeft', ctrl: true, shift: true }
+  },
+  {
+    id: 'move-pane-right',
+    label: 'Move pane right',
+    mac: { key: 'ArrowRight', meta: true, alt: true },
+    other: { key: 'ArrowRight', ctrl: true, shift: true }
+  },
+  {
+    id: 'move-pane-up',
+    label: 'Move pane up',
+    mac: { key: 'ArrowUp', meta: true, alt: true },
+    other: { key: 'ArrowUp', ctrl: true, shift: true }
+  },
+  {
+    id: 'move-pane-down',
+    label: 'Move pane down',
+    mac: { key: 'ArrowDown', meta: true, alt: true },
+    other: { key: 'ArrowDown', ctrl: true, shift: true }
+  },
+  {
     id: 'cycle-tab-next',
     label: 'Next tab',
     mac: { key: 'Tab', ctrl: true },

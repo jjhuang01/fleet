@@ -80,6 +80,23 @@ export function usePaneNavigation(): void {
         return;
       }
 
+      // Moving a pane needs the layout geometry, which only the pane grid has,
+      // so the keypress is handed to it the same way rename is.
+      const moveDirection = (['left', 'right', 'up', 'down'] as const).find((dir) =>
+        matchesShortcut(e, sc(`move-pane-${dir}`))
+      );
+      if (moveDirection) {
+        e.preventDefault();
+        if (activePaneId) {
+          document.dispatchEvent(
+            new CustomEvent('fleet:move-pane', {
+              detail: { paneId: activePaneId, direction: moveDirection }
+            })
+          );
+        }
+        return;
+      }
+
       if (matchesShortcut(e, sc('balance-panes'))) {
         e.preventDefault();
         state.balancePanes();

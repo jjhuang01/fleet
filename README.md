@@ -127,30 +127,32 @@ Fleet checks GitHub Releases on launch and prompts you to install new versions.
 
 ## Keyboard Shortcuts
 
-| Action               | macOS            | Windows/Linux      |
-| -------------------- | ---------------- | ------------------ |
-| New tab              | `Cmd+T`          | `Ctrl+T`           |
-| Close pane           | `Cmd+W`          | `Ctrl+Shift+W`     |
-| Split right          | `Cmd+D`          | `Ctrl+Shift+D`     |
-| Split down           | `Cmd+Shift+D`    | `Ctrl+Shift+Alt+D` |
-| Previous pane        | `Cmd+[`          | `Ctrl+Shift+[`     |
-| Next pane            | `Cmd+]`          | `Ctrl+Shift+]`     |
-| Next tab             | `Ctrl+Tab`       | `Ctrl+Tab`         |
-| Previous tab         | `Ctrl+Shift+Tab` | `Ctrl+Shift+Tab`   |
-| Command palette      | `Cmd+Shift+P`    | `Ctrl+Shift+P`     |
-| Quick open           | `Cmd+P`          | `Ctrl+P`           |
-| Telescope finder     | `Cmd+Shift+T`    | `Ctrl+Shift+T`     |
-| Search files on disk | `Cmd+Shift+O`    | `Ctrl+Shift+O`     |
-| Search in pane       | `Cmd+F`          | `Ctrl+Shift+F`     |
-| Git changes          | `Cmd+Shift+G`    | `Ctrl+Shift+G`     |
-| Clipboard history    | `Cmd+Shift+H`    | `Ctrl+Shift+H`     |
-| Open file            | `Cmd+O`          | `Ctrl+O`           |
-| Rename tab           | `F2`             | `F2`               |
-| Rename pane          | `Shift+F2`       | `Shift+F2`         |
-| Settings             | `Cmd+,`          | `Ctrl+,`           |
-| Show shortcuts       | `Cmd+/`          | `Ctrl+/`           |
-| Switch to tab 1–9    | `Cmd+1`–`Cmd+9`  | `Ctrl+1`–`Ctrl+9`  |
-| Inject Fleet skills  | `Cmd+Shift+.`    | `Ctrl+Shift+.`     |
+| Action               | macOS            | Windows/Linux       |
+| -------------------- | ---------------- | ------------------- |
+| New tab              | `Cmd+T`          | `Ctrl+T`            |
+| Close pane           | `Cmd+W`          | `Ctrl+Shift+W`      |
+| Split right          | `Cmd+D`          | `Ctrl+Shift+D`      |
+| Split down           | `Cmd+Shift+D`    | `Ctrl+Shift+Alt+D`  |
+| Previous pane        | `Cmd+[`          | `Ctrl+Shift+[`      |
+| Next pane            | `Cmd+]`          | `Ctrl+Shift+]`      |
+| Balance panes        | `Cmd+Shift+B`    | `Ctrl+Shift+B`      |
+| Move pane            | `Cmd+Alt+Arrows` | `Ctrl+Shift+Arrows` |
+| Next tab             | `Ctrl+Tab`       | `Ctrl+Tab`          |
+| Previous tab         | `Ctrl+Shift+Tab` | `Ctrl+Shift+Tab`    |
+| Command palette      | `Cmd+K`          | `Ctrl+K`            |
+| Quick open           | `Cmd+P`          | `Ctrl+P`            |
+| Telescope finder     | `Cmd+Shift+T`    | `Ctrl+Shift+T`      |
+| Search files on disk | `Cmd+Shift+O`    | `Ctrl+Shift+O`      |
+| Search in pane       | `Cmd+F`          | `Ctrl+Shift+F`      |
+| Git changes          | `Cmd+Shift+G`    | `Ctrl+Shift+G`      |
+| Clipboard history    | `Cmd+Shift+H`    | `Ctrl+Shift+H`      |
+| Open file            | `Cmd+O`          | `Ctrl+O`            |
+| Rename tab           | `F2`             | `F2`                |
+| Rename pane          | `Shift+F2`       | `Shift+F2`          |
+| Settings             | `Cmd+,`          | `Ctrl+,`            |
+| Show shortcuts       | `Cmd+/`          | `Ctrl+/`            |
+| Switch to tab 1–9    | `Cmd+1`–`Cmd+9`  | `Ctrl+1`–`Ctrl+9`   |
+| Inject Fleet skills  | `Cmd+Shift+.`    | `Ctrl+Shift+.`      |
 
 ## Development
 
