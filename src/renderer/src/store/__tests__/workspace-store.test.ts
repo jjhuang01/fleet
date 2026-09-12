@@ -8,7 +8,7 @@ import {
 } from '../workspace-store';
 import { useCwdStore } from '../cwd-store';
 import { scratchDir, isScratchTab } from '../../lib/scratch';
-import type { Workspace } from '../../../../shared/types';
+import type { Tab, Workspace } from '../../../../shared/types';
 
 const ANNOTATE_TAB_A = {
   id: 'tab-ann-a',
@@ -695,6 +695,302 @@ describe('closePane — worktree tab last pane', () => {
     const state = useWorkspaceStore.getState();
     expect(state.workspace.tabs.some((t) => t.id === 'tab-a1')).toBe(false);
     expect(state.worktreeCloseConfirm).toBeNull();
+  });
+});
+
+describe('movePane', () => {
+  const moveWorkspace: Workspace = {
+    id: 'ws-move',
+    label: 'Move panes',
+    tabs: [
+      {
+        id: 'tab-move',
+        label: 'Move',
+        labelIsCustom: false,
+        cwd: '/tmp',
+        splitRoot: {
+          type: 'split',
+          direction: 'horizontal',
+          ratio: 0.4,
+          children: [
+            { type: 'leaf', id: 'pane-source', cwd: '/tmp', label: 'Source' },
+            {
+              type: 'split',
+              direction: 'vertical',
+              ratio: 0.6,
+              children: [
+                { type: 'leaf', id: 'pane-target', cwd: '/tmp', label: 'Target' },
+                { type: 'leaf', id: 'pane-other', cwd: '/tmp', label: 'Other' }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        id: 'tab-other',
+        label: 'Other',
+        labelIsCustom: false,
+        cwd: '/tmp',
+        splitRoot: { type: 'leaf', id: 'pane-elsewhere', cwd: '/tmp' }
+      }
+    ]
+  };
+
+  beforeEach(() => {
+    useWorkspaceStore.getState().loadWorkspace(moveWorkspace);
+    useWorkspaceStore.setState({
+      activeTabId: 'tab-move',
+      activePaneId: 'pane-target',
+      isDirty: false
+    });
+  });
+
+  it.each([
+    ['left', 'horizontal', ['pane-source', 'pane-target']],
+    ['right', 'horizontal', ['pane-target', 'pane-source']],
+    ['top', 'vertical', ['pane-source', 'pane-target']],
+    ['bottom', 'vertical', ['pane-target', 'pane-source']]
+  ] as const)('places the source on the %s of its target', (side, direction, childIds) => {
+    expect(useWorkspaceStore.getState().movePane('pane-source', 'pane-target', side)).toBe(true);
+
+    const tab = useWorkspaceStore.getState().workspace.tabs.find((item) => item.id === 'tab-move')!;
+    expect(tab.splitRoot).toEqual({
+      type: 'split',
+      direction: 'vertical',
+      ratio: 0.6,
+      children: [
+        {
+          type: 'split',
+          direction,
+          ratio: 0.5,
+          children: [
+            {
+              type: 'leaf',
+              id: childIds[0],
+              cwd: '/tmp',
+              label: childIds[0] === 'pane-source' ? 'Source' : 'Target'
+            },
+            {
+              type: 'leaf',
+              id: childIds[1],
+              cwd: '/tmp',
+              label: childIds[1] === 'pane-source' ? 'Source' : 'Target'
+            }
+          ]
+        },
+        { type: 'leaf', id: 'pane-other', cwd: '/tmp', label: 'Other' }
+      ]
+    });
+    expect(useWorkspaceStore.getState().activePaneId).toBe('pane-source');
+    expect(useWorkspaceStore.getState().isDirty).toBe(true);
+  });
+
+  it('removes the source from its old branch and preserves the remaining leaf', () => {
+    expect(useWorkspaceStore.getState().movePane('pane-source', 'pane-target', 'right')).toBe(true);
+
+    const tab = useWorkspaceStore.getState().workspace.tabs.find((item) => item.id === 'tab-move')!;
+    expect(collectPaneIds(tab.splitRoot)).toEqual(['pane-target', 'pane-source', 'pane-other']);
+    expect(tab.splitRoot.type === 'split' ? tab.splitRoot.children[1] : null).toEqual({
+      type: 'leaf',
+      id: 'pane-other',
+      cwd: '/tmp',
+      label: 'Other'
+    });
+  });
+
+  it('does not change the tree when source and target are the same pane', () => {
+    const before = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().movePane('pane-target', 'pane-target', 'left')).toBe(false);
+    expect(useWorkspaceStore.getState().workspace).toBe(before);
+  });
+
+  it('does not move a pane into another tab', () => {
+    const before = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().movePane('pane-source', 'pane-elsewhere', 'left')).toBe(
+      false
+    );
+    expect(useWorkspaceStore.getState().workspace).toBe(before);
+  });
+});
+
+describe('mergeTabs', () => {
+  const tabA: Tab = {
+    id: 'tab-a',
+    label: 'A',
+    labelIsCustom: true,
+    cwd: '/a',
+    splitRoot: { type: 'leaf' as const, id: 'pane-a', cwd: '/a' }
+  };
+  const tabB: Tab = {
+    id: 'tab-b',
+    label: 'B',
+    labelIsCustom: true,
+    cwd: '/b',
+    splitRoot: {
+      type: 'split' as const,
+      direction: 'vertical' as const,
+      ratio: 0.4,
+      children: [
+        { type: 'leaf' as const, id: 'pane-b1', cwd: '/b' },
+        { type: 'leaf' as const, id: 'pane-b2', cwd: '/b' }
+      ]
+    }
+  };
+
+  beforeEach(() => {
+    useWorkspaceStore.setState({
+      workspace: { id: 'ws-merge', label: 'Merge', tabs: [tabA, tabB] },
+      activeTabId: tabA.id,
+      activePaneId: 'pane-a',
+      isDirty: false
+    });
+  });
+
+  it('moves the source tree into the target tab without recreating panes', () => {
+    expect(useWorkspaceStore.getState().mergeTabs(tabA.id, tabB.id, 'right')).toBe(true);
+
+    const state = useWorkspaceStore.getState();
+    expect(state.workspace.tabs).toHaveLength(1);
+    expect(state.workspace.tabs[0]).toMatchObject({ id: tabB.id, label: 'B' });
+    expect(state.workspace.tabs[0]?.splitRoot).toEqual({
+      type: 'split',
+      direction: 'horizontal',
+      ratio: 0.5,
+      children: [tabB.splitRoot, tabA.splitRoot]
+    });
+    expect(state.activeTabId).toBe(tabB.id);
+    expect(state.activePaneId).toBe('pane-a');
+    expect(state.isDirty).toBe(true);
+  });
+
+  it('refuses tabs that belong to a worktree group or own nested file tabs', () => {
+    useWorkspaceStore.setState({
+      workspace: {
+        id: 'ws-merge-blocked',
+        label: 'Blocked',
+        tabs: [
+          { ...tabA, groupId: 'group-1' },
+          tabB,
+          {
+            id: 'tab-file',
+            label: 'a.ts',
+            labelIsCustom: true,
+            cwd: '/',
+            type: 'file',
+            parentTabId: tabB.id,
+            splitRoot: { type: 'leaf', id: 'pane-file', cwd: '/', paneType: 'file' }
+          }
+        ]
+      }
+    });
+    const before = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().mergeTabs(tabA.id, tabB.id, 'right')).toBe(false);
+    expect(useWorkspaceStore.getState().workspace).toBe(before);
+  });
+
+  it('refuses merging a tab into itself', () => {
+    const before = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().mergeTabs(tabA.id, tabA.id, 'right')).toBe(false);
+    expect(useWorkspaceStore.getState().workspace).toBe(before);
+  });
+});
+
+describe('resizeSplits — grid intersections', () => {
+  const gridWorkspace = (): Workspace => ({
+    id: 'ws-grid',
+    label: 'Grid',
+    tabs: [
+      {
+        id: 'tab-grid',
+        label: 'Grid',
+        labelIsCustom: false,
+        cwd: '/tmp',
+        splitRoot: {
+          type: 'split',
+          direction: 'horizontal',
+          ratio: 0.5,
+          children: [
+            {
+              type: 'split',
+              direction: 'vertical',
+              ratio: 0.5,
+              children: [
+                { type: 'leaf', id: 'pane-1', cwd: '/tmp' },
+                { type: 'leaf', id: 'pane-3', cwd: '/tmp' }
+              ]
+            },
+            {
+              type: 'split',
+              direction: 'vertical',
+              ratio: 0.5,
+              children: [
+                { type: 'leaf', id: 'pane-2', cwd: '/tmp' },
+                { type: 'leaf', id: 'pane-4', cwd: '/tmp' }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  });
+
+  const splits = (): Array<{ direction: string; ratio: number }> => {
+    const root = useWorkspaceStore.getState().workspace.tabs[0].splitRoot;
+    if (root.type !== 'split') throw new Error('expected a split root');
+    return [root, root.children[0], root.children[1]].map((node) => {
+      if (node.type !== 'split') throw new Error('expected split children');
+      return { direction: node.direction, ratio: node.ratio };
+    });
+  };
+
+  beforeEach(() => {
+    useWorkspaceStore.setState({
+      workspace: gridWorkspace(),
+      activeTabId: 'tab-grid',
+      activePaneId: 'pane-1',
+      isDirty: false
+    });
+  });
+
+  it('moves a column divider and every divider collinear with it in one update', () => {
+    useWorkspaceStore.getState().resizeSplits([
+      { path: [], ratio: 0.6 },
+      { path: [0], ratio: 0.4 },
+      { path: [1], ratio: 0.4 }
+    ]);
+
+    expect(splits()).toEqual([
+      { direction: 'horizontal', ratio: 0.6 },
+      { direction: 'vertical', ratio: 0.4 },
+      { direction: 'vertical', ratio: 0.4 }
+    ]);
+  });
+
+  it('clamps every ratio to the range a single divider allows', () => {
+    useWorkspaceStore.getState().resizeSplits([
+      { path: [], ratio: 1.4 },
+      { path: [0], ratio: -0.2 },
+      { path: [1], ratio: 0.95 }
+    ]);
+
+    expect(splits().map((s) => s.ratio)).toEqual([0.85, 0.15, 0.85]);
+  });
+
+  it('leaves the workspace untouched when no ratio moves', () => {
+    useWorkspaceStore.getState().resizeSplits([{ path: [1], ratio: 0.05 }]); // clamps to 0.15
+    const settled = useWorkspaceStore.getState().workspace;
+
+    useWorkspaceStore.getState().resizeSplits([
+      { path: [], ratio: 0.5 },
+      { path: [0], ratio: 0.5 },
+      { path: [1], ratio: 0.01 } // clamps to the 0.15 it already has
+    ]);
+
+    expect(useWorkspaceStore.getState().workspace).toBe(settled);
   });
 });
 

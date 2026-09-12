@@ -43,7 +43,7 @@ type TabItemProps = {
   onDragStart?: (index: number) => void;
   onDragOver?: (e: React.DragEvent, index: number) => void;
   onDrop?: (index: number) => void;
-  isDragOver?: 'above' | 'below' | null;
+  isDragOver?: 'above' | 'below' | 'merge' | null;
   /** Tailwind border color class for active state. Defaults to 'border-blue-500'. */
   activeBorderColor?: string;
   /** Called when user selects "Create Worktree" from context menu */
@@ -206,6 +206,7 @@ export function TabItem({
           onDragStart={(e) => {
             if (!onDragStart) return;
             e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('application/x-fleet-tab-id', id);
             e.dataTransfer.setData('text/plain', String(index));
             logDnd.debug('tabItem dragStart', { tabId: id, index, label });
             onDragStart(index);
@@ -231,6 +232,12 @@ export function TabItem({
           {/* Drop indicator line below */}
           {isDragOver === 'below' && (
             <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-blue-500 rounded-full translate-y-0.5" />
+          )}
+          {isDragOver === 'merge' && (
+            <div
+              data-tab-merge-preview
+              className="pointer-events-none absolute inset-0 rounded-md border border-blue-400 bg-blue-500/15"
+            />
           )}
 
           {/* Show the status glyph in both active and inactive states so the

@@ -1,4 +1,4 @@
-import { Suspense, lazy, memo, useCallback, useMemo, useRef } from 'react';
+import { Suspense, lazy, memo, useCallback, useMemo, useRef, useState } from 'react';
 import type { PaneNode, PaneLeaf, TerminalBackground } from '../../../shared/types';
 import type { PathContext } from '../../../shared/shell-profiles';
 import type { RemoteFileRef } from '../../../shared/remote-ssh-types';
@@ -50,6 +50,9 @@ type Rect = { top: CalcValue; left: CalcValue; width: CalcValue; height: CalcVal
 
 const HANDLE_PX = 6;
 const HALF_HANDLE = HANDLE_PX / 2;
+// The grip sitting on an intersection. Bigger than the 6px seam so it is easy to
+// hit, small enough that the rest of both dividers stays grabbable.
+const CORNER_PX = 14;
 
 function cv(pct: number, px: number): CalcValue {
   return { pct, px };
@@ -83,11 +86,23 @@ type HandleEntry = {
   rect: Rect;
   splitRect: Rect;
 };
-type Layout = { leaves: LeafEntry[]; handles: HandleEntry[] };
+/**
+ * A corner sits where two dividers cross. Dragging it moves both: this node's
+ * divider along one axis, and every divider collinear with the crossing one
+ * along the other - which is what lets a 2x2 grid resize along the diagonal
+ * instead of one axis at a time.
+ */
+type CornerEntry = {
+  key: string;
+  anchor: { path: number[]; direction: 'horizontal' | 'vertical'; rect: Rect };
+  linked: Array<{ path: number[]; rect: Rect }>;
+  rect: Rect;
+};
+type Layout = { leaves: LeafEntry[]; handles: HandleEntry[]; corners: CornerEntry[] };
 
 function computeLayout(node: PaneNode, rect: Rect, path: number[]): Layout {
   if (node.type === 'leaf') {
-    return { leaves: [{ id: node.id, node, rect }], handles: [] };
+    return { leaves: [{ id: node.id, node, rect }], handles: [], corners: [] };
   }
 
   const r = node.ratio;
@@ -118,8 +133,45 @@ function computeLayout(node: PaneNode, rect: Rect, path: number[]): Layout {
   const left = computeLayout(node.children[0], leftRect, [...path, 0]);
   const right = computeLayout(node.children[1], rightRect, [...path, 1]);
 
+  // Dividers running at right angles to this one cross it somewhere inside this
+  // band. Those that share a line are grouped first, so a corner drag keeps the
+  // row line straight instead of leaving one column behind.
+  const groups = new Map<string, HandleEntry[]>();
+  for (const handle of [...left.handles, ...right.handles]) {
+    if (handle.direction === node.direction) continue;
+    const lineKey = toCSS(isH ? handle.rect.top : handle.rect.left);
+    const group = groups.get(lineKey);
+    if (group) group.push(handle);
+    else groups.set(lineKey, [handle]);
+  }
+
+  const offset = cv(0, HALF_HANDLE - CORNER_PX / 2);
+  const corners: CornerEntry[] = [];
+  for (const [lineKey, group] of groups) {
+    const line = isH ? group[0].rect.top : group[0].rect.left;
+    corners.push({
+      key: `${path.join('-') || 'root'}:${lineKey}`,
+      anchor: { path, direction: node.direction, rect },
+      linked: group.map((handle) => ({ path: handle.path, rect: handle.splitRect })),
+      rect: isH
+        ? {
+            top: addCV(line, offset),
+            left: addCV(handleRect.left, offset),
+            width: cv(0, CORNER_PX),
+            height: cv(0, CORNER_PX)
+          }
+        : {
+            top: addCV(handleRect.top, offset),
+            left: addCV(line, offset),
+            width: cv(0, CORNER_PX),
+            height: cv(0, CORNER_PX)
+          }
+    });
+  }
+
   return {
     leaves: [...left.leaves, ...right.leaves],
+    corners: [...left.corners, ...right.corners, ...corners],
     handles: [
       ...left.handles,
       ...right.handles,
@@ -158,6 +210,8 @@ function rectStyle(rect: Rect): React.CSSProperties {
 
 // --- Components ---
 
+type PaneDropSide = 'left' | 'right' | 'top' | 'bottom';
+
 type PaneFrameProps = {
   paneId: string;
   isActive: boolean;
@@ -165,6 +219,16 @@ type PaneFrameProps = {
   showGlyph?: boolean;
   children: React.ReactNode;
 };
+
+function paneDropSide(e: React.DragEvent<HTMLDivElement>): PaneDropSide {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+  const nearest = Math.min(x, 1 - x, y, 1 - y);
+  if (nearest === x) return 'left';
+  if (nearest === 1 - x) return 'right';
+  return nearest === y ? 'top' : 'bottom';
+}
 
 /**
  * Wraps a leaf pane so it can subscribe to its own activity state - a ring
@@ -189,8 +253,66 @@ function PaneFrame({
   showGlyph = true,
   children
 }: PaneFrameProps): React.JSX.Element {
+  const movePane = useWorkspaceStore((s) => s.movePane);
   const activityState = useNotificationStore((s) => s.activities.get(paneId)?.state);
   const ringClass = activityRingClass(activityState);
+  const [dropSide, setDropSide] = useState<PaneDropSide | null>(null);
+
+  const acceptsPane = useCallback(
+    (event: React.DragEvent<HTMLDivElement>): boolean =>
+      event.dataTransfer.types.includes('application/x-fleet-pane-id') &&
+      event.dataTransfer.getData('application/x-fleet-pane-id') !== paneId,
+    [paneId]
+  );
+
+  const clearDropSide = useCallback(() => setDropSide(null), []);
+
+  const handleDragLeave = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (
+        event.relatedTarget instanceof Node &&
+        event.currentTarget.contains(event.relatedTarget)
+      ) {
+        return;
+      }
+      clearDropSide();
+    },
+    [clearDropSide]
+  );
+
+  const handleDragEnter = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!acceptsPane(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = 'move';
+      setDropSide(paneDropSide(event));
+    },
+    [acceptsPane]
+  );
+
+  const handleDragOver = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!acceptsPane(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = 'move';
+      setDropSide(paneDropSide(event));
+    },
+    [acceptsPane]
+  );
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      if (!acceptsPane(event)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const sourcePaneId = event.dataTransfer.getData('application/x-fleet-pane-id');
+      movePane(sourcePaneId, paneId, paneDropSide(event));
+      clearDropSide();
+    },
+    [acceptsPane, clearDropSide, movePane, paneId]
+  );
 
   return (
     // Two elements because the drop shadow and the state ring are both
@@ -200,6 +322,10 @@ function PaneFrame({
       className={`h-full rounded-lg transition-shadow duration-150 ${
         isActive ? 'shadow-lg shadow-black/30' : ''
       }`}
+      onDragEnterCapture={handleDragEnter}
+      onDragOverCapture={handleDragOver}
+      onDragLeaveCapture={handleDragLeave}
+      onDropCapture={handleDrop}
     >
       {/* No border. A pane is bounded by the gutter around it, its own rounded
           ground, and its title bar; drawing an edge as well only restated what
@@ -213,6 +339,20 @@ function PaneFrame({
       >
         {showGlyph && (
           <PaneStatusGlyph state={activityState} className="absolute top-1 right-1 z-10" />
+        )}
+        {dropSide && (
+          <div
+            aria-hidden
+            className={`pointer-events-none absolute z-50 rounded-lg border-2 fleet-accent-border fleet-accent-bg-soft ${
+              dropSide === 'left'
+                ? 'inset-y-0 left-0 w-1/2'
+                : dropSide === 'right'
+                  ? 'inset-y-0 right-0 w-1/2'
+                  : dropSide === 'top'
+                    ? 'inset-x-0 top-0 h-1/2'
+                    : 'inset-x-0 bottom-0 h-1/2'
+            }`}
+          />
         )}
         {/* Inactive panes used to dim the whole subtree, which dimmed terminal
             text along with the chrome. The card's ring and its ground colour
@@ -499,6 +639,11 @@ function PaneGridImpl({
             gridRef={gridRef}
           />
         ))}
+
+        {/* Intersections: drag one to resize the row and the column together */}
+        {layout.corners.map((corner) => (
+          <GridCornerHandle key={corner.key} corner={corner} gridRef={gridRef} />
+        ))}
       </div>
     </div>
   );
@@ -514,6 +659,24 @@ function PaneGridImpl({
 export const PaneGrid = memo(PaneGridImpl);
 
 // --- Resize handle (absolute positioned) ---
+
+/**
+ * Where the pointer sits inside a split, expressed as the ratio that split
+ * stores. Both the single-axis divider and the two-axis corner drag measure
+ * positions this way, so a corner never disagrees with the divider it crosses.
+ */
+function ratioAtPoint(
+  rect: Rect,
+  axis: 'x' | 'y',
+  point: { x: number; y: number },
+  gridRect: DOMRect
+): number | null {
+  const containerDim = axis === 'x' ? gridRect.width : gridRect.height;
+  const start = calcToPixels(axis === 'x' ? rect.left : rect.top, containerDim);
+  const size = calcToPixels(axis === 'x' ? rect.width : rect.height, containerDim);
+  if (size <= 0) return null;
+  return ((axis === 'x' ? point.x : point.y) - start) / size;
+}
 
 type AbsoluteResizeHandleProps = {
   direction: 'horizontal' | 'vertical';
@@ -551,16 +714,13 @@ function AbsoluteResizeHandle({
       if (inner) inner.classList.add('fleet-accent-bg', 'opacity-100');
 
       const onMouseMove = (moveEvent: MouseEvent): void => {
-        const containerDim = isH ? gridRect.width : gridRect.height;
-        const mousePos = isH ? moveEvent.clientX - gridRect.left : moveEvent.clientY - gridRect.top;
-
-        const splitStart = calcToPixels(isH ? splitRect.left : splitRect.top, containerDim);
-        const splitSize = calcToPixels(isH ? splitRect.width : splitRect.height, containerDim);
-
-        if (splitSize > 0) {
-          const ratio = (mousePos - splitStart) / splitSize;
-          resizeSplit(path, ratio);
-        }
+        const ratio = ratioAtPoint(
+          splitRect,
+          isH ? 'x' : 'y',
+          { x: moveEvent.clientX - gridRect.left, y: moveEvent.clientY - gridRect.top },
+          gridRect
+        );
+        if (ratio !== null) resizeSplit(path, ratio);
       };
 
       const onMouseUp = (): void => {
@@ -592,6 +752,84 @@ function AbsoluteResizeHandle({
           isH ? 'w-[3px] h-8' : 'h-[3px] w-8'
         }`}
       />
+    </div>
+  );
+}
+
+/**
+ * The grip at a divider intersection. Dragging it moves the divider it sits on
+ * and every divider collinear with the one it crosses, so a 2x2 grid can be
+ * pulled towards a diagonal corner - making pane 1 or pane 4 bigger - in one
+ * gesture instead of two.
+ */
+type GridCornerHandleProps = {
+  corner: CornerEntry;
+  gridRef: React.RefObject<HTMLDivElement | null>;
+};
+
+function GridCornerHandle({ corner, gridRef }: GridCornerHandleProps): React.JSX.Element {
+  const resizeSplits = useWorkspaceStore((s) => s.resizeSplits);
+  const { anchor, linked } = corner;
+
+  const onMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const grid = gridRef.current;
+      if (!grid) return;
+
+      log.debug('corner resize start', { splitNodePath: anchor.path });
+      const gridRect = grid.getBoundingClientRect();
+      // The anchor divider is crossed by dividers running the other way, so each
+      // axis of the pointer drives one of them.
+      const anchorAxis = anchor.direction === 'horizontal' ? 'x' : 'y';
+      const linkedAxis = anchorAxis === 'x' ? 'y' : 'x';
+
+      document.body.style.cursor = 'move';
+      document.body.style.userSelect = 'none';
+
+      const target = e.currentTarget;
+      const inner = target instanceof HTMLElement ? target.querySelector('div') : null;
+      if (inner) inner.classList.add('fleet-accent-bg', 'opacity-100');
+
+      const onMouseMove = (moveEvent: MouseEvent): void => {
+        const point = {
+          x: moveEvent.clientX - gridRect.left,
+          y: moveEvent.clientY - gridRect.top
+        };
+        const anchorRatio = ratioAtPoint(anchor.rect, anchorAxis, point, gridRect);
+        if (anchorRatio === null) return;
+
+        const updates = [{ path: anchor.path, ratio: anchorRatio }];
+        for (const entry of linked) {
+          const ratio = ratioAtPoint(entry.rect, linkedAxis, point, gridRect);
+          if (ratio !== null) updates.push({ path: entry.path, ratio });
+        }
+        resizeSplits(updates);
+      };
+
+      const onMouseUp = (): void => {
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        if (inner) inner.classList.remove('fleet-accent-bg', 'opacity-100');
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        log.debug('corner resize complete', { splitNodePath: anchor.path });
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    },
+    [anchor, linked, gridRef, resizeSplits]
+  );
+
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      data-grid-corner={corner.key}
+      style={{ ...rectStyle(corner.rect), zIndex: 20 }}
+      className="flex items-center justify-center cursor-move group/corner"
+    >
+      <div className="h-2.5 w-2.5 rounded-full bg-fleet-border-strong opacity-0 group-hover/corner:opacity-100 transition-opacity" />
     </div>
   );
 }

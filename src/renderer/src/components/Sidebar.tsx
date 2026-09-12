@@ -481,6 +481,7 @@ export function Sidebar({
     addTab,
     duplicateTab,
     reorderTab,
+    mergeTabs,
     reorderGroup,
     renameWorkspace,
     isDirty,
@@ -511,6 +512,7 @@ export function Sidebar({
       addTab: s.addTab,
       duplicateTab: s.duplicateTab,
       reorderTab: s.reorderTab,
+      mergeTabs: s.mergeTabs,
       reorderGroup: s.reorderGroup,
       renameWorkspace: s.renameWorkspace,
       isDirty: s.isDirty,
@@ -581,7 +583,7 @@ export function Sidebar({
   const [dragType, setDragType] = useState<'tab' | 'group' | 'userGroup'>('tab');
   const [dropTarget, setDropTarget] = useState<{
     index: number;
-    position: 'above' | 'below';
+    position: 'above' | 'below' | 'merge';
     isGroupHeader: boolean;
   } | null>(null);
 
@@ -601,6 +603,15 @@ export function Sidebar({
       setDragIndex(index);
       setDragType(type);
     },
+    [workspace.tabs]
+  );
+
+  const canMergeTab = useCallback(
+    (tab: Tab): boolean =>
+      (tab.type === undefined || tab.type === 'terminal') &&
+      !tab.groupId &&
+      !tab.parentTabId &&
+      !workspace.tabs.some((candidate) => candidate.parentTabId === tab.id),
     [workspace.tabs]
   );
 
@@ -646,11 +657,22 @@ export function Sidebar({
       }
 
       const rect = target.getBoundingClientRect();
-      const midY = rect.top + rect.height / 2;
-      const position = e.clientY < midY ? 'above' : 'below';
+      const distanceFromTop = e.clientY - rect.top;
+      const edgeHeight = Math.min(7, rect.height / 3);
+      const position =
+        dragType === 'tab' &&
+        !isGroupHeader &&
+        canMergeTab(draggedTab) &&
+        canMergeTab(targetTab) &&
+        distanceFromTop > edgeHeight &&
+        distanceFromTop < rect.height - edgeHeight
+          ? 'merge'
+          : distanceFromTop < rect.height / 2
+            ? 'above'
+            : 'below';
       setDropTarget({ index, position, isGroupHeader });
     },
-    [dragIndex, dragType, workspace.tabs]
+    [canMergeTab, dragIndex, dragType, workspace.tabs]
   );
 
   const handleDrop = useCallback(() => {
@@ -681,6 +703,17 @@ export function Sidebar({
     } else {
       // Tab drag
       const targetTab = workspace.tabs.at(dropTarget.index);
+      if (
+        dropTarget.position === 'merge' &&
+        draggedTab &&
+        targetTab &&
+        mergeTabs(draggedTab.id, targetTab.id, 'right')
+      ) {
+        logDnd.debug('drop merged tabs', { sourceTabId: draggedTab.id, targetTabId: targetTab.id });
+        setDragIndex(null);
+        setDropTarget(null);
+        return;
+      }
       if (draggedTab?.groupId && draggedTab.groupId !== targetTab?.groupId) {
         logDnd.debug('drop blocked: cross-group', {
           dragGroup: draggedTab.groupId,
@@ -724,6 +757,7 @@ export function Sidebar({
     dragType,
     dropTarget,
     reorderTab,
+    mergeTabs,
     reorderGroup,
     reorderUserGroup,
     workspace.tabs,
@@ -1353,7 +1387,9 @@ export function Sidebar({
                     onDrop={() => handleDrop()}
                     isDragOver={
                       dropTarget?.index === firstTabIdx && dropTarget.isGroupHeader
-                        ? dropTarget.position
+                        ? dropTarget.position === 'merge'
+                          ? null
+                          : dropTarget.position
                         : null
                     }
                   />
@@ -1545,7 +1581,9 @@ export function Sidebar({
                   onDrop={() => handleDrop()}
                   isDragOver={
                     dropTarget?.index === firstTabIdx && dropTarget.isGroupHeader
-                      ? dropTarget.position
+                      ? dropTarget.position === 'merge'
+                        ? null
+                        : dropTarget.position
                       : null
                   }
                 />

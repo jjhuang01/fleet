@@ -106,6 +106,18 @@ export function PaneHeader({
     [commitRename]
   );
 
+  const handleDragStart = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      if (isEditing || (e.target instanceof Element && e.target.closest('button, input'))) {
+        e.preventDefault();
+        return;
+      }
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('application/x-fleet-pane-id', paneId);
+    },
+    [isEditing, paneId]
+  );
+
   return (
     // Clicking here focuses the pane and double-clicking renames it, so it has
     // to look like it will do something - but the affordance lives on the pill,
@@ -117,7 +129,9 @@ export function PaneHeader({
     // what lets hovering anywhere on the row light the pill, so the whole width
     // still feels live even though only part of it is drawn.
     <div
-      className="group/header flex items-center gap-1.5 h-7 px-1.5 text-xs text-fleet-text-subtle group-data-[pane-active=true]/pane:text-fleet-text-secondary select-none shrink-0"
+      className="group/header flex items-center gap-1.5 h-7 px-1.5 text-xs text-fleet-text-subtle group-data-[pane-active=true]/pane:text-fleet-text-secondary select-none shrink-0 cursor-grab active:cursor-grabbing"
+      draggable={!isEditing}
+      onDragStart={handleDragStart}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       title={isEditing ? undefined : `${liveCwd ?? ''}\nDouble-click to rename`}

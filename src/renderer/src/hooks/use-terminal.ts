@@ -13,6 +13,8 @@ import '@xterm/xterm/css/xterm.css';
 import type { TerminalThemeId } from '../../../shared/theme-presets';
 import { DEFAULT_SCROLLBACK } from '../../../shared/types';
 import { resolveXtermTheme } from '../lib/theme';
+import { CompositionGuard } from '../lib/composition-guard';
+import { terminalKeyInput } from '../lib/terminal-keybindings';
 
 export type UseTerminalOptions = {
   paneId: string;
@@ -194,6 +196,7 @@ function createTerminal(
   serializeAddon: SerializeAddon;
   ipcCleanup: () => void;
   scrollCleanup: () => void;
+  compositionCleanup: () => void;
   resizeObserver: ResizeObserver;
   cleanupResizeTimer: () => void;
   cursorSuppressor: { dispose(): void };
@@ -239,21 +242,6 @@ function createTerminal(
 
   term.open(container);
   log.debug('xterm mounted', { paneId: options.paneId });
-
-  // Let the app-level Cmd/Ctrl+K command-palette shortcut win even when a
-  // terminal is focused. Returning false tells xterm to ignore the key (and
-  // crucially NOT send it to the PTY - Ctrl+K is readline kill-line on
-  // Linux/Windows). The window keydown listener then opens the palette.
-  term.attachCustomKeyEventHandler((event) => {
-    if (
-      event.type === 'keydown' &&
-      (event.metaKey || event.ctrlKey) &&
-      event.key.toLowerCase() === 'k'
-    ) {
-      return false;
-    }
-    return true;
-  });
 
   // Restore serialized content after open (before canvas addon — content is buffer-level)
   if (options.serializedContent) {
@@ -393,16 +381,47 @@ function createTerminal(
     ipcUnsubscribe();
   };
 
+  // xterm can deliver one IME commit twice when a key flushes the composition
+  // early, so the guard owns the decision to drop the repeated copy.
+  const compositionGuard = new CompositionGuard();
+  const compositionTextarea = term.textarea;
+  const onCompositionUpdate = (event: CompositionEvent): void => {
+    compositionGuard.compositionUpdate(event.data);
+  };
+  const onCompositionEnd = (event: CompositionEvent): void => {
+    compositionGuard.compositionEnd(event.data, performance.now());
+  };
+  compositionTextarea?.addEventListener('compositionupdate', onCompositionUpdate);
+  compositionTextarea?.addEventListener('compositionend', onCompositionEnd);
+
   term.onData((data) => {
+    if (!compositionGuard.shouldForward(data, performance.now())) return;
     window.fleet.pty.input({ paneId: options.paneId, data });
   });
 
-  // Shift+Enter → Meta+Enter (\x1b\r). Terminals can't natively distinguish
-  // Shift+Enter from Enter (both are \r), but TUIs like Claude Code treat
-  // Meta+Enter as "insert newline" vs. plain \r as "submit". Mirror the
-  // behavior users get from Opt+Enter on macOS.
+  // Every key the terminal must reinterpret lives in this one handler: xterm's
+  // `attachCustomKeyEventHandler` **replaces** any handler attached earlier, so
+  // a second call would silently discard the ones above it.
+  //
+  // Shift+Enter → Meta+Enter (\x1b\r) is the case below. Terminals can't
+  // natively distinguish Shift+Enter from Enter (both are \r), but TUIs like
+  // Claude Code treat Meta+Enter as "insert newline" vs. plain \r as
+  // "submit". Mirror the behavior users get from Opt+Enter on macOS.
   term.attachCustomKeyEventHandler((event) => {
     if (event.type !== 'keydown') return true;
+
+    // Let the app-level Cmd/Ctrl+K command-palette shortcut win even when a
+    // terminal is focused. Returning false keeps Ctrl+K from reaching readline.
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      return false;
+    }
+
+    const macInput = terminalKeyInput(event, window.fleet.platform);
+    if (macInput) {
+      window.fleet.pty.input({ paneId: options.paneId, data: macInput });
+      event.preventDefault();
+      return false;
+    }
 
     if (
       event.key === 'Enter' &&
@@ -752,6 +771,11 @@ function createTerminal(
     }
   };
 
+  const compositionCleanup = (): void => {
+    compositionTextarea?.removeEventListener('compositionupdate', onCompositionUpdate);
+    compositionTextarea?.removeEventListener('compositionend', onCompositionEnd);
+  };
+
   return {
     term,
     fitAddon,
@@ -761,6 +785,7 @@ function createTerminal(
     serializeAddon,
     ipcCleanup,
     scrollCleanup,
+    compositionCleanup,
     resizeObserver,
     cleanupResizeTimer,
     cursorSuppressor
@@ -809,6 +834,7 @@ export function useTerminal(
       serializeAddon,
       ipcCleanup,
       scrollCleanup,
+      compositionCleanup,
       resizeObserver,
       cleanupResizeTimer,
       cursorSuppressor
@@ -833,6 +859,7 @@ export function useTerminal(
       cursorSuppressor.dispose();
       ipcCleanup();
       scrollCleanup();
+      compositionCleanup();
       resizeObserver.disconnect();
       term.dispose();
     };

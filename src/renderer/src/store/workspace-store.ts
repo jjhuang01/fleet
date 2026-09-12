@@ -207,6 +207,11 @@ type WorkspaceStore = {
   resetTabLabel: (tabId: string, liveCwd?: string) => void;
   setActiveTab: (tabId: string) => void;
   reorderTab: (fromIndex: number, toIndex: number) => void;
+  mergeTabs: (
+    sourceTabId: string,
+    targetTabId: string,
+    side: 'left' | 'right' | 'top' | 'bottom'
+  ) => boolean;
 
   // Worktree group actions
   collapsedGroups: Set<string>;
@@ -235,9 +240,20 @@ type WorkspaceStore = {
 
   // Pane actions
   splitPane: (paneId: string, direction: 'horizontal' | 'vertical') => string;
+  movePane: (
+    sourcePaneId: string,
+    targetPaneId: string,
+    side: 'left' | 'right' | 'top' | 'bottom'
+  ) => boolean;
   closePane: (paneId: string) => void;
   setActivePane: (paneId: string) => void;
   resizeSplit: (splitNodePath: number[], ratio: number) => void;
+  /**
+   * Move several dividers at once. A grid intersection drags one divider along
+   * one axis and every divider collinear with it along the other, and those all
+   * have to land in a single update or the panes flicker between two layouts.
+   */
+  resizeSplits: (updates: Array<{ path: number[]; ratio: number }>) => void;
   renamePane: (paneId: string, label: string) => void;
   resetPaneLabel: (paneId: string) => void;
   /**
@@ -350,6 +366,21 @@ function updateLeafInTree(
   const [left, right] = node.children;
   const newLeft = updateLeafInTree(left, paneId, updater);
   const newRight = updateLeafInTree(right, paneId, updater);
+  if (newLeft === left && newRight === right) return node;
+  return { ...node, children: [newLeft, newRight] };
+}
+
+function replaceLeafInTree(
+  node: PaneNode,
+  paneId: string,
+  replacement: (leaf: PaneLeaf) => PaneNode
+): PaneNode {
+  if (node.type === 'leaf') {
+    return node.id === paneId ? replacement(node) : node;
+  }
+  const [left, right] = node.children;
+  const newLeft = replaceLeafInTree(left, paneId, replacement);
+  const newRight = replaceLeafInTree(right, paneId, replacement);
   if (newLeft === left && newRight === right) return node;
   return { ...node, children: [newLeft, newRight] };
 }
@@ -747,6 +778,44 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     });
   },
 
+  mergeTabs: (sourceTabId, targetTabId, side) => {
+    if (sourceTabId === targetTabId) return false;
+
+    const state = get();
+    const sourceTab = state.workspace.tabs.find((tab) => tab.id === sourceTabId);
+    const targetTab = state.workspace.tabs.find((tab) => tab.id === targetTabId);
+    const canMerge = (tab: Tab): boolean =>
+      !tab.type &&
+      !tab.groupId &&
+      !tab.parentTabId &&
+      !state.workspace.tabs.some((candidate) => candidate.parentTabId === tab.id);
+    if (!sourceTab || !targetTab || !canMerge(sourceTab) || !canMerge(targetTab)) return false;
+
+    const direction = side === 'left' || side === 'right' ? 'horizontal' : 'vertical';
+    const targetFirst = side === 'right' || side === 'bottom';
+    const splitRoot: PaneNode = {
+      type: 'split',
+      direction,
+      ratio: 0.5,
+      children: targetFirst
+        ? [targetTab.splitRoot, sourceTab.splitRoot]
+        : [sourceTab.splitRoot, targetTab.splitRoot]
+    };
+
+    set((current) => ({
+      workspace: {
+        ...current.workspace,
+        tabs: current.workspace.tabs
+          .filter((tab) => tab.id !== sourceTabId)
+          .map((tab) => (tab.id === targetTabId ? { ...tab, splitRoot } : tab))
+      },
+      activeTabId: targetTabId,
+      activePaneId: collectPaneIds(sourceTab.splitRoot)[0] ?? null,
+      isDirty: true
+    }));
+    return true;
+  },
+
   createWorktreeGroup: (tabId, worktreePath, branchName, repoPath) => {
     const leaf = createLeaf(worktreePath);
     const newGroupId = generateId();
@@ -1058,6 +1127,45 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     return newLeaf.id;
   },
 
+  movePane: (sourcePaneId, targetPaneId, side) => {
+    if (sourcePaneId === targetPaneId) return false;
+
+    const sourceTab = get().workspace.tabs.find((tab) =>
+      collectPaneIds(tab.splitRoot).includes(sourcePaneId)
+    );
+    const targetTab = get().workspace.tabs.find((tab) =>
+      collectPaneIds(tab.splitRoot).includes(targetPaneId)
+    );
+    if (!sourceTab || sourceTab.id !== targetTab?.id) return false;
+
+    const sourceLeaf = findLeaf(sourceTab.splitRoot, sourcePaneId);
+    const rootWithoutSource = removePaneFromTree(sourceTab.splitRoot, sourcePaneId);
+    if (!sourceLeaf || !rootWithoutSource) return false;
+
+    const direction = side === 'left' || side === 'right' ? 'horizontal' : 'vertical';
+    const targetFirst = side === 'right' || side === 'bottom';
+    const splitRoot = replaceLeafInTree(rootWithoutSource, targetPaneId, (targetLeaf) => ({
+      type: 'split',
+      direction,
+      ratio: 0.5,
+      children: targetFirst ? [targetLeaf, sourceLeaf] : [sourceLeaf, targetLeaf]
+    }));
+
+    if (splitRoot === rootWithoutSource) return false;
+    set((state) => ({
+      workspace: {
+        ...state.workspace,
+        tabs: state.workspace.tabs.map((tab) =>
+          tab.id === sourceTab.id ? { ...tab, splitRoot } : tab
+        )
+      },
+      activeTabId: sourceTab.id,
+      activePaneId: sourcePaneId,
+      isDirty: true
+    }));
+    return true;
+  },
+
   closePane: (paneId) => {
     logLayout.debug('closePane', { paneId });
     // Check pinned tools before disposing any pane resources.
@@ -1110,13 +1218,20 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   // Called per mousemove while a divider is dragged, so - like `setPaneDirty` -
   // a ratio that did not actually move must not replace the workspace.
   resizeSplit: (splitNodePath, ratio) => {
-    const clampedRatio = Math.max(0.15, Math.min(0.85, ratio));
+    get().resizeSplits([{ path: splitNodePath, ratio }]);
+  },
+
+  resizeSplits: (updates) => {
     set((state) => {
       const activeTabId = state.activeTabId;
       if (!activeTabId) return state;
       const tabs = state.workspace.tabs.map((tab) => {
         if (tab.id !== activeTabId) return tab;
-        const splitRoot = updateRatioAtPath(tab.splitRoot, splitNodePath, clampedRatio);
+        let splitRoot = tab.splitRoot;
+        for (const update of updates) {
+          const clamped = Math.max(0.15, Math.min(0.85, update.ratio));
+          splitRoot = updateRatioAtPath(splitRoot, update.path, clamped);
+        }
         return splitRoot === tab.splitRoot ? tab : { ...tab, splitRoot };
       });
       if (tabs.every((tab, i) => tab === state.workspace.tabs[i])) return state;
