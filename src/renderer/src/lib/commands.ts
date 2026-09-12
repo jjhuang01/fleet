@@ -103,6 +103,14 @@ export function createCommandRegistry(): Command[] {
       }
     },
     {
+      id: 'balance-panes',
+      label: 'Balance Panes',
+      shortcut: sc('balance-panes'),
+      category: 'Panes',
+      keywords: ['even', 'equal', 'reset', 'grid', 'tile'],
+      execute: () => useWorkspaceStore.getState().balancePanes()
+    },
+    {
       id: 'search',
       label: 'Search in Pane',
       shortcut: sc('search'),

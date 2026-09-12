@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { getFileIcon } from '../lib/file-icons';
 import { TabItem } from './TabItem';
+import { PANE_DRAG_MIME, hasPanePayload } from '../lib/pane-drag';
 import { createLogger } from '../logger';
 
 const logDnd = createLogger('sidebar:dnd');
@@ -482,6 +483,8 @@ export function Sidebar({
     duplicateTab,
     reorderTab,
     mergeTabs,
+    movePaneToTab,
+    detachPaneToTab,
     reorderGroup,
     renameWorkspace,
     isDirty,
@@ -513,6 +516,8 @@ export function Sidebar({
       duplicateTab: s.duplicateTab,
       reorderTab: s.reorderTab,
       mergeTabs: s.mergeTabs,
+      movePaneToTab: s.movePaneToTab,
+      detachPaneToTab: s.detachPaneToTab,
       reorderGroup: s.reorderGroup,
       renameWorkspace: s.renameWorkspace,
       isDirty: s.isDirty,
@@ -586,6 +591,16 @@ export function Sidebar({
     position: 'above' | 'below' | 'merge';
     isGroupHeader: boolean;
   } | null>(null);
+
+  // A pane dragged onto the sidebar. Two targets share this: a row means "join
+  // that tab on this half", the empty ground below the rows means "become a tab
+  // of your own" - which is the way back out when there is no second row to
+  // drop onto.
+  const [paneDropTarget, setPaneDropTarget] = useState<{
+    tabId: string;
+    side: 'left' | 'right';
+  } | null>(null);
+  const [isPaneDetachOver, setIsPaneDetachOver] = useState(false);
 
   const [newGroupState, setNewGroupState] = useState<{ tabId: string } | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
@@ -766,6 +781,68 @@ export function Sidebar({
     workspace.tabs,
     workspace.userGroups
   ]);
+
+  const clearPaneDrop = useCallback(() => {
+    setPaneDropTarget(null);
+    setIsPaneDetachOver(false);
+  }, []);
+
+  /** Which half of a sidebar row a pane would join. */
+  const paneDropSide = useCallback((e: React.DragEvent): 'left' | 'right' => {
+    const target = e.currentTarget;
+    if (!(target instanceof HTMLElement)) return 'right';
+    const rect = target.getBoundingClientRect();
+    return e.clientX - rect.left < rect.width / 2 ? 'left' : 'right';
+  }, []);
+
+  const handleTabPaneDragOver = useCallback(
+    (e: React.DragEvent, index: number) => {
+      const tab = workspace.tabs.at(index);
+      if (!tab) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.dataTransfer.dropEffect = 'move';
+      setPaneDropTarget({ tabId: tab.id, side: paneDropSide(e) });
+      setIsPaneDetachOver(false);
+    },
+    [paneDropSide, workspace.tabs]
+  );
+
+  const handleTabPaneDrop = useCallback(
+    (e: React.DragEvent, index: number) => {
+      const paneId = e.dataTransfer.getData(PANE_DRAG_MIME);
+      const targetTab = workspace.tabs.at(index);
+      if (!paneId || !targetTab) return;
+      const sourceTab = workspace.tabs.find((tab) =>
+        collectPaneIds(tab.splitRoot).includes(paneId)
+      );
+      const side = paneDropTarget?.tabId === targetTab.id ? paneDropTarget.side : paneDropSide(e);
+      clearPaneDrop();
+      if (!sourceTab) return;
+      // A tab holding nothing but this pane has no layout to leave behind, so
+      // the whole tab merges - the same result the tab drag gives, from the
+      // gesture the user was already making.
+      if (
+        movePaneToTab(paneId, targetTab.id, side) ||
+        mergeTabs(sourceTab.id, targetTab.id, side)
+      ) {
+        logDnd.debug('pane dropped on tab', {
+          paneId,
+          targetTabId: targetTab.id,
+          sourceTabId: sourceTab.id,
+          side
+        });
+      }
+    },
+    [clearPaneDrop, mergeTabs, movePaneToTab, paneDropSide, paneDropTarget, workspace.tabs]
+  );
+
+  // An abandoned drag raises dragend on the source, never here, so the drop
+  // zones listen for it rather than trusting a dragleave that may never arrive.
+  useEffect(() => {
+    document.addEventListener('fleet:pane-drag-end', clearPaneDrop);
+    return () => document.removeEventListener('fleet:pane-drag-end', clearPaneDrop);
+  }, [clearPaneDrop]);
 
   // --- Worktree creation ---
   const handleCreateWorktree = useCallback(
@@ -1324,9 +1401,25 @@ export function Sidebar({
           onDragOver={(e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
+            // Rows own their own sliver of this area; only the ground between
+            // and below them is the "make it a tab" target. `data-tab-id` is
+            // on every row, so no second hit test is needed.
+            const overRow = e.target instanceof Element && e.target.closest('[data-tab-id]');
+            if (hasPanePayload(e) && !overRow) setIsPaneDetachOver(true);
+          }}
+          onDragLeave={(e) => {
+            if (!(e.relatedTarget instanceof Node) || !e.currentTarget.contains(e.relatedTarget)) {
+              setIsPaneDetachOver(false);
+            }
           }}
           onDrop={(e) => {
             e.preventDefault();
+            if (hasPanePayload(e)) {
+              const paneId = e.dataTransfer.getData(PANE_DRAG_MIME);
+              clearPaneDrop();
+              if (paneId) detachPaneToTab(paneId);
+              return;
+            }
             handleDrop();
           }}
         >
@@ -1474,6 +1567,9 @@ export function Sidebar({
                   onDragStart={handleDragStart}
                   onDragOver={handleDragOver}
                   onDrop={handleDrop}
+                  onPaneDragOver={handleTabPaneDragOver}
+                  onPaneDrop={handleTabPaneDrop}
+                  paneDropSide={paneDropTarget?.tabId === tab.id ? paneDropTarget.side : null}
                   isDragOver={
                     dropTarget?.index === idx && !dropTarget.isGroupHeader
                       ? dropTarget.position
@@ -1640,6 +1736,11 @@ export function Sidebar({
             </div>
           )}
         </div>
+        {isPaneDetachOver && (
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 z-20 rounded-md border-2 border-dashed fleet-accent-border fleet-accent-bg-soft px-2 py-1.5 text-center text-xs fleet-accent-text">
+            Move pane to a new tab
+          </div>
+        )}
         {/* Scroll overflow shadow indicator */}
         {hasScrollOverflow && (
           <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-fleet-surface/90 to-transparent z-10" />
@@ -1720,6 +1821,12 @@ export function Sidebar({
                   }
                   disableReset={isScratchTab(tab)}
                   index={realIndex(tab.id)}
+                  // Agent tabs render a grid like any other, so a pane can join
+                  // them too - the same shape pressing Split already produces.
+                  // They are not reorderable, so they take only the pane drop.
+                  onPaneDragOver={handleTabPaneDragOver}
+                  onPaneDrop={handleTabPaneDrop}
+                  paneDropSide={paneDropTarget?.tabId === tab.id ? paneDropTarget.side : null}
                   pathContext={tab.pathContext}
                   onClick={() => {
                     setActiveTab(tab.id);

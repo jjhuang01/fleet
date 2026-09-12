@@ -42,6 +42,14 @@ export const ALL_SHORTCUTS: ShortcutDef[] = [
     other: { key: 'D', ctrl: true, shift: true, alt: true }
   },
   {
+    // 'B' for balance. Sits next to the split keys because it fixes what
+    // dragging a divider gets wrong, which is the same job split starts.
+    id: 'balance-panes',
+    label: 'Balance panes',
+    mac: { key: 'B', meta: true, shift: true },
+    other: { key: 'B', ctrl: true, shift: true }
+  },
+  {
     id: 'navigate-prev',
     label: 'Previous pane',
     mac: { key: '[', meta: true },

@@ -80,6 +80,12 @@ export function usePaneNavigation(): void {
         return;
       }
 
+      if (matchesShortcut(e, sc('balance-panes'))) {
+        e.preventDefault();
+        state.balancePanes();
+        return;
+      }
+
       // Navigate panes
       if (matchesShortcut(e, sc('navigate-prev')) || matchesShortcut(e, sc('navigate-next'))) {
         e.preventDefault();

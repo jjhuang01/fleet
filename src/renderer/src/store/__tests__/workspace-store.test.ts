@@ -8,7 +8,7 @@ import {
 } from '../workspace-store';
 import { useCwdStore } from '../cwd-store';
 import { scratchDir, isScratchTab } from '../../lib/scratch';
-import type { Tab, Workspace } from '../../../../shared/types';
+import type { PaneSplit, Tab, Workspace } from '../../../../shared/types';
 
 const ANNOTATE_TAB_A = {
   id: 'tab-ann-a',
@@ -926,6 +926,379 @@ describe('mergeTabs', () => {
 
     expect(useWorkspaceStore.getState().mergeTabs(tabA.id, tabA.id, 'right')).toBe(false);
     expect(useWorkspaceStore.getState().workspace).toBe(before);
+  });
+});
+
+describe('movePaneToTab', () => {
+  const sourceTab = (): Tab => ({
+    id: 'tab-src',
+    label: 'Src',
+    labelIsCustom: true,
+    cwd: '/tmp',
+    splitRoot: {
+      type: 'split',
+      direction: 'vertical',
+      ratio: 0.6,
+      children: [
+        { type: 'leaf', id: 'pane-leave', cwd: '/tmp' },
+        { type: 'leaf', id: 'pane-move', cwd: '/work', label: 'Claude', labelIsCustom: true }
+      ]
+    }
+  });
+  const targetTab = (): Tab => ({
+    id: 'tab-dst',
+    label: 'Dst',
+    labelIsCustom: true,
+    cwd: '/dst',
+    splitRoot: { type: 'leaf', id: 'pane-host', cwd: '/dst' }
+  });
+
+  beforeEach(() => {
+    useWorkspaceStore.setState({
+      workspace: { id: 'ws-pane-tab', label: 'Pane', tabs: [sourceTab(), targetTab()] },
+      activeTabId: 'tab-src',
+      activePaneId: 'pane-move',
+      isDirty: false
+    });
+  });
+
+  it('hands the pane to the target tab and leaves the rest behind', () => {
+    expect(useWorkspaceStore.getState().movePaneToTab('pane-move', 'tab-dst', 'right')).toBe(true);
+
+    const state = useWorkspaceStore.getState();
+    expect(state.workspace.tabs.map((tab) => tab.id)).toEqual(['tab-src', 'tab-dst']);
+    // The pane keeps its identity - and with it its PTY and its custom title.
+    expect(state.workspace.tabs[0]?.splitRoot).toEqual({
+      type: 'leaf',
+      id: 'pane-leave',
+      cwd: '/tmp'
+    });
+    expect(state.workspace.tabs[1]?.splitRoot).toEqual({
+      type: 'split',
+      direction: 'horizontal',
+      ratio: 0.5,
+      children: [
+        { type: 'leaf', id: 'pane-host', cwd: '/dst' },
+        { type: 'leaf', id: 'pane-move', cwd: '/work', label: 'Claude', labelIsCustom: true }
+      ]
+    });
+    expect(state.activeTabId).toBe('tab-dst');
+    expect(state.activePaneId).toBe('pane-move');
+    expect(state.isDirty).toBe(true);
+  });
+
+  it('puts the pane on the left half when that is the half it was dropped on', () => {
+    expect(useWorkspaceStore.getState().movePaneToTab('pane-move', 'tab-dst', 'left')).toBe(true);
+
+    expect(collectPaneIds(useWorkspaceStore.getState().workspace.tabs[1].splitRoot)).toEqual([
+      'pane-move',
+      'pane-host'
+    ]);
+  });
+
+  it('refuses to empty the tab the pane came from', () => {
+    useWorkspaceStore.setState({
+      workspace: {
+        id: 'ws-pane-tab',
+        label: 'Pane',
+        tabs: [
+          { ...sourceTab(), splitRoot: { type: 'leaf', id: 'pane-move', cwd: '/work' } },
+          targetTab()
+        ]
+      }
+    });
+    const before = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().movePaneToTab('pane-move', 'tab-dst', 'right')).toBe(false);
+    expect(useWorkspaceStore.getState().workspace).toBe(before);
+  });
+
+  it('refuses a target tab that renders a tool instead of a grid', () => {
+    useWorkspaceStore.setState({
+      workspace: {
+        id: 'ws-pane-tab',
+        label: 'Pane',
+        tabs: [sourceTab(), { ...targetTab(), type: 'annotate' }]
+      }
+    });
+    const before = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().movePaneToTab('pane-move', 'tab-dst', 'right')).toBe(false);
+    expect(useWorkspaceStore.getState().workspace).toBe(before);
+  });
+
+  it('refuses the tab the pane already lives in', () => {
+    const before = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().movePaneToTab('pane-move', 'tab-src', 'right')).toBe(false);
+    expect(useWorkspaceStore.getState().workspace).toBe(before);
+  });
+});
+
+describe('detachPaneToTab', () => {
+  beforeEach(() => {
+    useWorkspaceStore.setState({
+      workspace: {
+        id: 'ws-detach',
+        label: 'Detach',
+        tabs: [
+          {
+            id: 'tab-host',
+            label: 'Host',
+            labelIsCustom: true,
+            cwd: '/tmp',
+            splitRoot: {
+              type: 'split',
+              direction: 'horizontal',
+              ratio: 0.5,
+              children: [
+                { type: 'leaf', id: 'pane-host', cwd: '/tmp' },
+                {
+                  type: 'leaf',
+                  id: 'pane-leaving',
+                  cwd: '/work',
+                  label: 'Server',
+                  labelIsCustom: true
+                }
+              ]
+            }
+          },
+          {
+            id: 'tab-after',
+            label: 'After',
+            labelIsCustom: true,
+            cwd: '/after',
+            splitRoot: { type: 'leaf', id: 'pane-after', cwd: '/after' }
+          }
+        ]
+      },
+      activeTabId: 'tab-host',
+      activePaneId: 'pane-leaving',
+      isDirty: false
+    });
+  });
+
+  it('gives the pane a tab of its own, right after the one it left', () => {
+    expect(useWorkspaceStore.getState().detachPaneToTab('pane-leaving')).toBe(true);
+
+    const state = useWorkspaceStore.getState();
+    expect(state.workspace.tabs.map((tab) => tab.label)).toEqual(['Host', 'Server', 'After']);
+    expect(state.workspace.tabs[1]?.splitRoot).toEqual({
+      type: 'leaf',
+      id: 'pane-leaving',
+      cwd: '/work',
+      label: 'Server',
+      labelIsCustom: true
+    });
+    expect(state.workspace.tabs[1]?.labelIsCustom).toBe(true);
+    expect(state.workspace.tabs[0]?.splitRoot).toEqual({
+      type: 'leaf',
+      id: 'pane-host',
+      cwd: '/tmp'
+    });
+    // The tab it became is the one on screen, with the pane still focused.
+    expect(state.activeTabId).toBe(state.workspace.tabs[1]?.id);
+    expect(state.activePaneId).toBe('pane-leaving');
+  });
+
+  it('names the new tab after the folder when the pane has no title of its own', () => {
+    useWorkspaceStore.setState((state) => ({
+      workspace: {
+        ...state.workspace,
+        tabs: state.workspace.tabs.map((tab) =>
+          tab.id === 'tab-host'
+            ? {
+                ...tab,
+                splitRoot: {
+                  type: 'split' as const,
+                  direction: 'horizontal' as const,
+                  ratio: 0.5,
+                  children: [
+                    { type: 'leaf' as const, id: 'pane-host', cwd: '/tmp' },
+                    { type: 'leaf' as const, id: 'pane-leaving', cwd: '/work/fleet' }
+                  ]
+                }
+              }
+            : tab
+        )
+      }
+    }));
+
+    expect(useWorkspaceStore.getState().detachPaneToTab('pane-leaving')).toBe(true);
+    expect(useWorkspaceStore.getState().workspace.tabs[1]?.label).toBe('fleet');
+    expect(useWorkspaceStore.getState().workspace.tabs[1]?.labelIsCustom).toBe(false);
+  });
+
+  it('refuses when the pane is the tab', () => {
+    useWorkspaceStore.setState({
+      workspace: {
+        id: 'ws-detach',
+        label: 'Detach',
+        tabs: [
+          {
+            id: 'tab-solo',
+            label: 'Solo',
+            labelIsCustom: true,
+            cwd: '/solo',
+            splitRoot: { type: 'leaf', id: 'pane-solo', cwd: '/solo' }
+          }
+        ]
+      }
+    });
+    const before = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().detachPaneToTab('pane-solo')).toBe(false);
+    expect(useWorkspaceStore.getState().workspace).toBe(before);
+  });
+});
+
+describe('balancePanes', () => {
+  const quad = (ratio: number, left: number, right: number): PaneSplit => ({
+    type: 'split' as const,
+    direction: 'horizontal' as const,
+    ratio,
+    children: [
+      {
+        type: 'split' as const,
+        direction: 'vertical' as const,
+        ratio: left,
+        children: [
+          { type: 'leaf' as const, id: 'pane-1', cwd: '/tmp' },
+          { type: 'leaf' as const, id: 'pane-2', cwd: '/tmp' }
+        ]
+      },
+      {
+        type: 'split' as const,
+        direction: 'vertical' as const,
+        ratio: right,
+        children: [
+          { type: 'leaf' as const, id: 'pane-3', cwd: '/tmp' },
+          { type: 'leaf' as const, id: 'pane-4', cwd: '/tmp' }
+        ]
+      }
+    ]
+  });
+
+  beforeEach(() => {
+    useWorkspaceStore.setState({
+      workspace: {
+        id: 'ws-balance',
+        label: 'Balance',
+        tabs: [
+          {
+            id: 'tab-grid',
+            label: 'Grid',
+            labelIsCustom: true,
+            cwd: '/tmp',
+            splitRoot: quad(0.7, 0.8, 0.6)
+          },
+          {
+            id: 'tab-other',
+            label: 'Other',
+            labelIsCustom: true,
+            cwd: '/tmp',
+            splitRoot: {
+              type: 'split',
+              direction: 'horizontal',
+              ratio: 0.2,
+              children: [
+                { type: 'leaf', id: 'pane-other-a', cwd: '/tmp' },
+                { type: 'leaf', id: 'pane-other-b', cwd: '/tmp' }
+              ]
+            }
+          }
+        ]
+      },
+      activeTabId: 'tab-grid',
+      activePaneId: 'pane-1',
+      isDirty: false
+    });
+  });
+
+  it('resets every divider of the active tab, on both axes', () => {
+    useWorkspaceStore.getState().balancePanes();
+
+    const state = useWorkspaceStore.getState();
+    expect(state.workspace.tabs[0]?.splitRoot).toEqual(quad(0.5, 0.5, 0.5));
+    // Same panes, same order: balancing moves dividers, never panes.
+    expect(collectPaneIds(state.workspace.tabs[0].splitRoot)).toEqual([
+      'pane-1',
+      'pane-2',
+      'pane-3',
+      'pane-4'
+    ]);
+    expect(state.isDirty).toBe(true);
+  });
+
+  it('leaves the tabs nobody is looking at exactly as they were', () => {
+    const untouched = useWorkspaceStore.getState().workspace.tabs[1];
+
+    useWorkspaceStore.getState().balancePanes();
+
+    expect(useWorkspaceStore.getState().workspace.tabs[1]).toBe(untouched);
+  });
+
+  it('leaves a single-pane tab alone', () => {
+    useWorkspaceStore.setState({
+      workspace: {
+        id: 'ws-balance-solo',
+        label: 'Solo',
+        tabs: [
+          {
+            id: 'tab-solo',
+            label: 'Solo',
+            labelIsCustom: true,
+            cwd: '/tmp',
+            splitRoot: { type: 'leaf', id: 'pane-solo', cwd: '/tmp' }
+          }
+        ]
+      },
+      activeTabId: 'tab-solo',
+      isDirty: false
+    });
+    const before = useWorkspaceStore.getState().workspace;
+
+    useWorkspaceStore.getState().balancePanes();
+    expect(useWorkspaceStore.getState().workspace).toBe(before);
+    expect(useWorkspaceStore.getState().isDirty).toBe(false);
+  });
+});
+
+describe('splitPane — equal shares', () => {
+  it('gives the new pane an even share of the group it landed in', () => {
+    useWorkspaceStore.setState({
+      workspace: {
+        id: 'ws-split-balance',
+        label: 'Split',
+        tabs: [
+          {
+            id: 'tab-split',
+            label: 'Split',
+            labelIsCustom: true,
+            cwd: '/tmp',
+            splitRoot: {
+              type: 'split',
+              direction: 'horizontal',
+              ratio: 0.2,
+              children: [
+                { type: 'leaf', id: 'pane-wide', cwd: '/tmp' },
+                { type: 'leaf', id: 'pane-narrow', cwd: '/tmp' }
+              ]
+            }
+          }
+        ]
+      },
+      activeTabId: 'tab-split',
+      activePaneId: 'pane-narrow',
+      isDirty: false
+    });
+
+    useWorkspaceStore.getState().splitPane('pane-narrow', 'horizontal');
+
+    const root = useWorkspaceStore.getState().workspace.tabs[0].splitRoot;
+    // Otty's rule: splitting equalizes the group, so the two panes that were
+    // sharing 20% now share it evenly.
+    expect(root.type === 'split' ? root.ratio : null).toBeCloseTo(1 / 3);
   });
 });
 

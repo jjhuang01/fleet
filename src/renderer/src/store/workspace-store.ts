@@ -7,6 +7,7 @@ import { getPaneTypeForFilePath } from '../../../shared/file-open';
 import { useCwdStore } from './cwd-store';
 import { useSettingsStore } from './settings-store';
 import { injectLiveCwd, getFirstPaneLiveCwd } from '../lib/workspace-utils';
+import { balanceLayout, balancePaneGroup } from '../lib/pane-balance';
 import {
   insertNestedTab,
   isSessionTab,
@@ -246,6 +247,20 @@ type WorkspaceStore = {
     targetPaneId: string,
     side: 'left' | 'right' | 'top' | 'bottom'
   ) => boolean;
+  /**
+   * Drop a pane onto a sidebar tab: it joins that tab's layout on the given
+   * half. This is the way back out of a tab merge - the merge itself is one
+   * gesture, so leaving it irreversible would make a slip permanent.
+   */
+  movePaneToTab: (sourcePaneId: string, targetTabId: string, side: 'left' | 'right') => boolean;
+  /** Pull a pane out of its tab into a tab of its own, placed after the source. */
+  detachPaneToTab: (sourcePaneId: string) => boolean;
+  /**
+   * Reset every divider in the active tab to an even share. Splits equalize
+   * their own same-axis group; this is the heavier reset for a grid the user
+   * has dragged out of shape on both axes.
+   */
+  balancePanes: () => void;
   closePane: (paneId: string) => void;
   setActivePane: (paneId: string) => void;
   resizeSplit: (splitNodePath: number[], ratio: number) => void;
@@ -1118,10 +1133,15 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     set((state) => ({
       workspace: {
         ...state.workspace,
-        tabs: state.workspace.tabs.map((tab) => ({
-          ...tab,
-          splitRoot: splitNode(tab.splitRoot)
-        }))
+        tabs: state.workspace.tabs.map((tab) => {
+          const splitRoot = splitNode(tab.splitRoot);
+          if (splitRoot === tab.splitRoot) return tab;
+          // Otty equalizes the group the new pane landed in, so splitting a
+          // lopsided pane hands the newcomer an even share of that group
+          // instead of half of the leftovers. Dividers on the other axis, and
+          // groups elsewhere in the tab, keep the width the user gave them.
+          return { ...tab, splitRoot: balancePaneGroup(splitRoot, newLeaf.id) };
+        })
       },
       activePaneId: newLeaf.id,
       isDirty: true
@@ -1168,6 +1188,116 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       isDirty: true
     }));
     return true;
+  },
+
+  movePaneToTab: (sourcePaneId, targetTabId, side) => {
+    const state = get();
+    const sourceTab = state.workspace.tabs.find((tab) =>
+      collectPaneIds(tab.splitRoot).includes(sourcePaneId)
+    );
+    const targetTab = state.workspace.tabs.find((tab) => tab.id === targetTabId);
+    if (!sourceTab || !targetTab || sourceTab.id === targetTab.id) return false;
+    // Settings, Annotate and Sessions paint their own component instead of a
+    // grid, so a pane dropped on one of them would have nowhere to render.
+    if (isPinnedTab(targetTab)) return false;
+    // The tool's own pane is the tool; a split beside it may leave.
+    if (isToolPane(sourceTab, sourcePaneId)) return false;
+
+    const sourceLeaf = findLeaf(sourceTab.splitRoot, sourcePaneId);
+    const rootWithoutSource = removePaneFromTree(sourceTab.splitRoot, sourcePaneId);
+    if (!sourceLeaf || !rootWithoutSource) return false;
+
+    const splitRoot: PaneNode = {
+      type: 'split',
+      direction: 'horizontal',
+      ratio: 0.5,
+      children:
+        side === 'left' ? [sourceLeaf, targetTab.splitRoot] : [targetTab.splitRoot, sourceLeaf]
+    };
+
+    set((current) => ({
+      workspace: {
+        ...current.workspace,
+        tabs: current.workspace.tabs.map((tab) => {
+          if (tab.id === sourceTab.id) return { ...tab, splitRoot: rootWithoutSource };
+          if (tab.id === targetTab.id) return { ...tab, splitRoot };
+          return tab;
+        })
+      },
+      activeTabId: targetTab.id,
+      activePaneId: sourcePaneId,
+      isDirty: true
+    }));
+    logLayout.debug('movePaneToTab', {
+      paneId: sourcePaneId,
+      fromTabId: sourceTab.id,
+      toTabId: targetTab.id,
+      side
+    });
+    return true;
+  },
+
+  detachPaneToTab: (sourcePaneId) => {
+    const state = get();
+    const sourceTab = state.workspace.tabs.find((tab) =>
+      collectPaneIds(tab.splitRoot).includes(sourcePaneId)
+    );
+    if (!sourceTab || isToolPane(sourceTab, sourcePaneId)) return false;
+
+    const sourceLeaf = findLeaf(sourceTab.splitRoot, sourcePaneId);
+    const rootWithoutSource = removePaneFromTree(sourceTab.splitRoot, sourcePaneId);
+    if (!sourceLeaf || !rootWithoutSource) return false;
+
+    // A pane that carries a custom title names the tab it becomes; otherwise
+    // the folder it is sitting in does, the same way a new tab is named.
+    const cwd = sourceLeaf.cwd || sourceTab.cwd;
+    const tab: Tab = {
+      id: generateId(),
+      label: sourceLeaf.labelIsCustom && sourceLeaf.label ? sourceLeaf.label : cwdBasename(cwd),
+      labelIsCustom: !!(sourceLeaf.labelIsCustom && sourceLeaf.label),
+      cwd,
+      splitRoot: sourceLeaf,
+      shellProfileId: sourceLeaf.shellProfileId ?? sourceTab.shellProfileId,
+      pathContext: sourceLeaf.pathContext ?? sourceTab.pathContext
+    };
+
+    set((current) => {
+      const sourceIndex = current.workspace.tabs.findIndex((t) => t.id === sourceTab.id);
+      const tabs = current.workspace.tabs.map((candidate) =>
+        candidate.id === sourceTab.id ? { ...candidate, splitRoot: rootWithoutSource } : candidate
+      );
+      tabs.splice(sourceIndex + 1, 0, tab);
+      return {
+        workspace: { ...current.workspace, tabs },
+        activeTabId: tab.id,
+        activePaneId: sourcePaneId,
+        isDirty: true
+      };
+    });
+    logLayout.debug('detachPaneToTab', {
+      paneId: sourcePaneId,
+      fromTabId: sourceTab.id,
+      newTabId: tab.id
+    });
+    return true;
+  },
+
+  balancePanes: () => {
+    const state = get();
+    const activeTab = state.workspace.tabs.find((tab) => tab.id === state.activeTabId);
+    // One pane has no divider to reset, and bailing out keeps the action from
+    // marking the layout dirty every time someone leans on the shortcut.
+    if (!activeTab || activeTab.splitRoot.type === 'leaf') return;
+    set((current) => ({
+      workspace: {
+        ...current.workspace,
+        tabs: current.workspace.tabs.map((tab) =>
+          tab.id === activeTab.id ? { ...tab, splitRoot: balanceLayout(tab.splitRoot) } : tab
+        )
+      },
+      isDirty: true
+    }));
+    logLayout.debug('balancePanes', { tabId: activeTab.id });
   },
 
   closePane: (paneId) => {

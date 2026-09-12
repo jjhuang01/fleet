@@ -5,6 +5,7 @@ import { useWorkspaceStore } from '../store/workspace-store';
 import { useNotificationStore } from '../store/notification-store';
 import { PaneStatusGlyph } from './PaneStatusGlyph';
 import { shortenPath } from '../lib/shorten-path';
+import { PANE_DRAG_MIME } from '../lib/pane-drag';
 
 type PaneHeaderProps = {
   paneId: string;
@@ -113,7 +114,7 @@ export function PaneHeader({
         return;
       }
       e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('application/x-fleet-pane-id', paneId);
+      e.dataTransfer.setData(PANE_DRAG_MIME, paneId);
     },
     [isEditing, paneId]
   );

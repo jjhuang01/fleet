@@ -234,6 +234,15 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
         run: () => ws.splitPane(paneId, 'vertical')
       },
       {
+        id: 'balance',
+        label: 'Balance Panes',
+        section: 'command',
+        run: () => {
+          if (loc) ws.setActiveTab(loc.tabId);
+          ws.balancePanes();
+        }
+      },
+      {
         id: 'rename',
         label: 'Rename Pane',
         section: 'command',

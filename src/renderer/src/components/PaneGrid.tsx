@@ -10,6 +10,7 @@ import { RemoteFileGate } from './ssh/RemoteFileGate';
 import { useWorkspaceStore } from '../store/workspace-store';
 import { useNotificationStore } from '../store/notification-store';
 import { activityRingClass } from '../lib/activity-glyph';
+import { PANE_DRAG_MIME, hasPanePayload } from '../lib/pane-drag';
 import { createLogger } from '../logger';
 
 const log = createLogger('layout:panes');
@@ -50,6 +51,12 @@ type Rect = { top: CalcValue; left: CalcValue; width: CalcValue; height: CalcVal
 
 const HANDLE_PX = 6;
 const HALF_HANDLE = HANDLE_PX / 2;
+// The seam stays 6px so the gutters between cards read the same, but the strip
+// that answers the pointer is 12px - the leeway iced gives Otty's splitters
+// (`PANE_RESIZE_GRAB`). Half of the extra 6px hangs over each neighbour's own
+// 1px padding, so what a divider steals from a pane is a 2px sliver at its
+// very edge, and the target it buys is a divider you can actually hit.
+const HANDLE_HIT_PX = 12;
 // The grip sitting on an intersection. Bigger than the 6px seam so it is easy to
 // hit, small enough that the rest of both dividers stays grabbable.
 const CORNER_PX = 14;
@@ -85,6 +92,8 @@ type HandleEntry = {
   direction: 'horizontal' | 'vertical';
   rect: Rect;
   splitRect: Rect;
+  /** The split's live ratio, so keyboard resizing can step from where the divider is. */
+  ratio: number;
 };
 /**
  * A corner sits where two dividers cross. Dragging it moves both: this node's
@@ -180,7 +189,8 @@ function computeLayout(node: PaneNode, rect: Rect, path: number[]): Layout {
         path,
         direction: node.direction,
         rect: handleRect,
-        splitRect: rect
+        splitRect: rect,
+        ratio: r
       }
     ]
   };
@@ -264,8 +274,7 @@ function PaneFrame({
   const [isDragSource, setIsDragSource] = useState(false);
 
   const acceptsPane = useCallback(
-    (event: React.DragEvent<HTMLDivElement>): boolean =>
-      !isDragSource && event.dataTransfer.types.includes('application/x-fleet-pane-id'),
+    (event: React.DragEvent<HTMLDivElement>): boolean => !isDragSource && hasPanePayload(event),
     [isDragSource]
   );
 
@@ -276,6 +285,9 @@ function PaneFrame({
   const handleDragEnd = useCallback(() => {
     setIsDragSource(false);
     clearDropSide();
+    // The sidebar cannot see the drag end - it is raised on the source - and a
+    // drop zone left lit after an abandoned drag reads as a stuck state.
+    document.dispatchEvent(new CustomEvent('fleet:pane-drag-end'));
   }, [clearDropSide]);
 
   const handleDragLeave = useCallback(
@@ -318,7 +330,7 @@ function PaneFrame({
       if (!acceptsPane(event)) return;
       event.preventDefault();
       event.stopPropagation();
-      const sourcePaneId = event.dataTransfer.getData('application/x-fleet-pane-id');
+      const sourcePaneId = event.dataTransfer.getData(PANE_DRAG_MIME);
       movePane(sourcePaneId, paneId, paneDropSide(event));
       clearDropSide();
     },
@@ -539,7 +551,7 @@ function PaneGridImpl({
 
   return (
     <div className={`h-full w-full ${GRID_INSET}`}>
-      <div ref={gridRef} className="h-full w-full" style={{ position: 'relative' }}>
+      <div ref={gridRef} className="group/grid h-full w-full" style={{ position: 'relative' }}>
         {/* Terminal panes — flat keyed siblings, never unmounted by tree changes */}
         {layout.leaves.map((leaf) => {
           if (leaf.node.paneType === 'agent') {
@@ -649,6 +661,7 @@ function PaneGridImpl({
             path={h.path}
             rect={h.rect}
             splitRect={h.splitRect}
+            ratio={h.ratio}
             gridRef={gridRef}
           />
         ))}
@@ -696,6 +709,7 @@ type AbsoluteResizeHandleProps = {
   path: number[];
   rect: Rect;
   splitRect: Rect;
+  ratio: number;
   gridRef: React.RefObject<HTMLDivElement | null>;
 };
 
@@ -704,10 +718,31 @@ function AbsoluteResizeHandle({
   path,
   rect,
   splitRect,
+  ratio,
   gridRef
 }: AbsoluteResizeHandleProps): React.JSX.Element {
   const isH = direction === 'horizontal';
   const resizeSplit = useWorkspaceStore((s) => s.resizeSplit);
+  // Grow the hit strip past the seam it draws, in the one axis that matters.
+  const overhang = (HANDLE_HIT_PX - HANDLE_PX) / 2;
+  const hitRect: Rect = isH
+    ? { ...rect, left: cv(rect.left.pct, rect.left.px - overhang), width: cv(0, HANDLE_HIT_PX) }
+    : { ...rect, top: cv(rect.top.pct, rect.top.px - overhang), height: cv(0, HANDLE_HIT_PX) };
+
+  // The pointer drag is the primary gesture; the arrow keys are the same
+  // gesture for anyone who cannot use it, and they step from the live ratio so
+  // a held key keeps walking in one direction.
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const towardsStart = isH ? 'ArrowLeft' : 'ArrowUp';
+      const towardsEnd = isH ? 'ArrowRight' : 'ArrowDown';
+      if (e.key !== towardsStart && e.key !== towardsEnd) return;
+      e.preventDefault();
+      const step = e.shiftKey ? 0.1 : 0.02;
+      resizeSplit(path, ratio + (e.key === towardsStart ? -step : step));
+    },
+    [isH, path, ratio, resizeSplit]
+  );
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -754,14 +789,26 @@ function AbsoluteResizeHandle({
   return (
     <div
       onMouseDown={onMouseDown}
-      style={{ ...rectStyle(rect), zIndex: 10 }}
-      className={`flex items-center justify-center group/handle ${isH ? 'cursor-col-resize' : 'cursor-row-resize'}`}
+      onKeyDown={onKeyDown}
+      role="separator"
+      // A separator that moves left and right splits left from right, which
+      // ARIA spells `vertical` - the axis it runs along, not the one it moves.
+      aria-orientation={isH ? 'vertical' : 'horizontal'}
+      aria-label="Resize panes"
+      aria-valuenow={Math.round(ratio * 100)}
+      aria-valuemin={15}
+      aria-valuemax={85}
+      tabIndex={0}
+      style={{ ...rectStyle(hitRect), zIndex: 10 }}
+      className={`flex items-center justify-center group/handle focus-ring ${
+        isH ? 'cursor-col-resize' : 'cursor-row-resize'
+      }`}
     >
       {/* The gutter between two cards already separates them, so the handle
           shows nothing until it is worth grabbing - then a short pill, not a
           full-length rule, because the thing being offered is a grip. */}
       <div
-        className={`rounded-full bg-fleet-border-strong opacity-0 group-hover/handle:opacity-100 transition-opacity ${
+        className={`rounded-full bg-fleet-border-strong opacity-0 group-hover/handle:opacity-100 group-focus/handle:opacity-100 transition-opacity ${
           isH ? 'w-[3px] h-8' : 'h-[3px] w-8'
         }`}
       />
@@ -842,7 +889,7 @@ function GridCornerHandle({ corner, gridRef }: GridCornerHandleProps): React.JSX
       style={{ ...rectStyle(corner.rect), zIndex: 20 }}
       className="flex items-center justify-center cursor-move group/corner"
     >
-      <div className="h-2.5 w-2.5 rounded-full bg-fleet-border-strong opacity-0 group-hover/corner:opacity-100 transition-opacity" />
+      <div className="h-2.5 w-2.5 rounded-full bg-fleet-border-strong opacity-0 group-hover/grid:opacity-40 group-hover/corner:opacity-100 transition-opacity" />
     </div>
   );
 }

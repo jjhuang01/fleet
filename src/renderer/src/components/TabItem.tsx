@@ -15,6 +15,7 @@ import { displayDir } from '../lib/scratch';
 import { popperAnim } from '../lib/motion';
 import { TabStatusIndicator } from './TabStatusIndicator';
 import { COLOR_MAP } from './sidebar-constants';
+import { hasPanePayload } from '../lib/pane-drag';
 
 type TabItemProps = {
   id: string;
@@ -44,6 +45,11 @@ type TabItemProps = {
   onDragOver?: (e: React.DragEvent, index: number) => void;
   onDrop?: (index: number) => void;
   isDragOver?: 'above' | 'below' | 'merge' | null;
+  // A pane dragged out of another tab lands on a row rather than above or below
+  // it, so it gets its own preview: the half of the row it would join.
+  onPaneDragOver?: (e: React.DragEvent, index: number) => void;
+  onPaneDrop?: (e: React.DragEvent, index: number) => void;
+  paneDropSide?: 'left' | 'right' | null;
   /** Tailwind border color class for active state. Defaults to 'border-blue-500'. */
   activeBorderColor?: string;
   /** Called when user selects "Create Worktree" from context menu */
@@ -101,6 +107,9 @@ export function TabItem({
   onDragOver,
   onDrop,
   isDragOver,
+  onPaneDragOver,
+  onPaneDrop,
+  paneDropSide,
   activeBorderColor = 'border-blue-500',
   onCreateWorktree,
   worktreeDisabledReason,
@@ -211,12 +220,25 @@ export function TabItem({
             onDragStart(index);
           }}
           onDragOver={(e) => {
+            // A pane riding over the row is not a tab reorder: it is asking to
+            // join this tab, so it takes over both drag and drop here.
+            if (onPaneDragOver && hasPanePayload(e)) {
+              onPaneDragOver(e, index);
+              return;
+            }
             if (!onDragOver) return;
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
             onDragOver(e, index);
           }}
           onDrop={(e) => {
+            if (onPaneDrop && hasPanePayload(e)) {
+              e.preventDefault();
+              e.stopPropagation();
+              logDnd.debug('tabItem pane drop', { tabId: id, index, label });
+              onPaneDrop(e, index);
+              return;
+            }
             if (!onDrop) return;
             e.preventDefault();
             e.stopPropagation();
@@ -231,6 +253,16 @@ export function TabItem({
           {/* Drop indicator line below */}
           {isDragOver === 'below' && (
             <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-blue-500 rounded-full translate-y-0.5" />
+          )}
+          {paneDropSide && (
+            // Same accent tokens as the pane-on-pane preview: one drag, one
+            // colour, whichever side of the window the target lives on.
+            <div
+              data-pane-drop-preview={paneDropSide}
+              className={`pointer-events-none absolute inset-y-0 rounded-md border fleet-accent-border fleet-accent-bg-soft ${
+                paneDropSide === 'left' ? 'left-0 right-1/2' : 'left-1/2 right-0'
+              }`}
+            />
           )}
           {isDragOver === 'merge' && (
             // Same accent tokens as the pane drop preview: one drag, one
