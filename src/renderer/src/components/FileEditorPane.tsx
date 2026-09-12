@@ -378,10 +378,10 @@ export function FileEditorPane({
 
   if (tooLarge) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-[#282c34] text-neutral-400 text-sm gap-2">
-        <div className="text-3xl text-neutral-500">⚠</div>
-        <div className="font-medium text-neutral-200">{t('panes.fileEditor.tooLarge')}</div>
-        <div className="text-neutral-500">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-[#282c34] text-fleet-text-muted text-sm gap-2">
+        <div className="text-3xl text-fleet-text-subtle">⚠</div>
+        <div className="font-medium text-fleet-text">{t('panes.fileEditor.tooLarge')}</div>
+        <div className="text-fleet-text-subtle">
           {t('panes.file.sizeLimit', { size: (fileSize / 1024 / 1024).toFixed(1) })}
         </div>
       </div>
@@ -392,7 +392,7 @@ export function FileEditorPane({
   const displayPath = remote ? `${remote.host.label}:${remote.path}` : filePath;
   const langLabel = getLanguageForPath(filePath)?.label ?? t('panes.fileEditor.plainText');
   const saveStatus: { key: MessageKey; className: string } = isSaving
-    ? { key: 'panes.fileEditor.saving', className: 'text-neutral-500' }
+    ? { key: 'panes.fileEditor.saving', className: 'text-fleet-text-subtle' }
     : isDirty
       ? { key: 'panes.fileEditor.modified', className: 'text-amber-400' }
       : { key: 'panes.fileEditor.saved', className: 'text-emerald-500' };
@@ -401,13 +401,16 @@ export function FileEditorPane({
     <div ref={wrapperRef} className="relative h-full w-full flex flex-col overflow-hidden">
       {showPathChrome && <PathChromeHeader filePath={displayPath} />}
       <div ref={containerRef} className="flex-1 min-h-0" />
-      <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-neutral-950/80 border-t border-neutral-800 text-xs text-neutral-400">
-        <span className="text-neutral-300 shrink-0">{langLabel}</span>
-        <span className="text-neutral-500 shrink-0">
+      <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-fleet-bg/80 border-t border-fleet-border text-xs text-fleet-text-muted">
+        <span className="text-fleet-text-secondary shrink-0">{langLabel}</span>
+        <span className="text-fleet-text-subtle shrink-0">
           {t('panes.fileEditor.cursor', { line: cursorPos.line, col: cursorPos.col })}
         </span>
         {showPathChrome && (
-          <span className="text-neutral-500 font-mono truncate min-w-0 flex-1" title={displayPath}>
+          <span
+            className="text-fleet-text-subtle font-mono truncate min-w-0 flex-1"
+            title={displayPath}
+          >
             {displayPath}
           </span>
         )}

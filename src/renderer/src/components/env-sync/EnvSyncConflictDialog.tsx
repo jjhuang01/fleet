@@ -66,14 +66,14 @@ export function EnvSyncConflictDialog(): React.JSX.Element | null {
 
   return (
     <Overlay open={target !== null} onClose={() => setTarget(null)}>
-      <div className="w-[560px] max-h-[80vh] overflow-auto rounded-lg border border-neutral-700 bg-neutral-900 p-4">
-        <h3 className="text-sm font-semibold text-neutral-200">
+      <div className="w-[560px] max-h-[80vh] overflow-auto rounded-lg border border-fleet-border-strong bg-fleet-surface p-4">
+        <h3 className="text-sm font-semibold text-fleet-text">
           {t('envSync.conflict.title', { file: shown?.envFile })}
         </h3>
-        <p className="mt-1 text-xs text-neutral-500">{t('envSync.conflict.body')}</p>
+        <p className="mt-1 text-xs text-fleet-text-subtle">{t('envSync.conflict.body')}</p>
         <table className="mt-3 w-full text-xs">
           <thead>
-            <tr className="text-neutral-500">
+            <tr className="text-fleet-text-subtle">
               <th className="text-left">{t('envSync.conflict.key')}</th>
               <th className="text-left">{t('envSync.conflict.change')}</th>
               <th className="text-left">{t('envSync.conflict.local')}</th>
@@ -84,30 +84,30 @@ export function EnvSyncConflictDialog(): React.JSX.Element | null {
             {(diff?.entries ?? [])
               .filter((e) => e.change !== 'unchanged')
               .map((e) => (
-                <tr key={e.key} className="border-t border-neutral-800">
-                  <td className="py-1 text-neutral-300">{e.key}</td>
-                  <td className="py-1 text-neutral-500">{t(CHANGE_LABEL[e.change])}</td>
-                  <td className="py-1 text-neutral-400">{e.localMask ?? '—'}</td>
-                  <td className="py-1 text-neutral-400">{e.remoteMask ?? '—'}</td>
+                <tr key={e.key} className="border-t border-fleet-border">
+                  <td className="py-1 text-fleet-text-secondary">{e.key}</td>
+                  <td className="py-1 text-fleet-text-subtle">{t(CHANGE_LABEL[e.change])}</td>
+                  <td className="py-1 text-fleet-text-muted">{e.localMask ?? '—'}</td>
+                  <td className="py-1 text-fleet-text-muted">{e.remoteMask ?? '—'}</td>
                 </tr>
               ))}
           </tbody>
         </table>
         <div className="mt-4 flex justify-end gap-2">
           <button
-            className="text-xs px-3 py-1 rounded bg-neutral-800 transition hover:bg-neutral-700 active:scale-[0.97]"
+            className="text-xs px-3 py-1 rounded bg-fleet-surface-2 transition hover:bg-fleet-surface-3 active:scale-[0.97]"
             onClick={() => setTarget(null)}
           >
             {t('common.cancel')}
           </button>
           <button
-            className="text-xs px-3 py-1 rounded bg-neutral-700 transition hover:bg-neutral-600 active:scale-[0.97]"
+            className="text-xs px-3 py-1 rounded bg-fleet-surface-3 transition hover:bg-fleet-surface-3 active:scale-[0.97]"
             onClick={() => void resolve('keep-remote')}
           >
             {t('envSync.conflict.keepRemote')}
           </button>
           <button
-            className="text-xs px-3 py-1 rounded bg-blue-700 transition hover:bg-blue-600 active:scale-[0.97]"
+            className="text-xs px-3 py-1 rounded fleet-accent-bg transition fleet-accent-bg-hover active:scale-[0.97]"
             onClick={() => void resolve('keep-local')}
           >
             {t('envSync.conflict.keepLocal')}

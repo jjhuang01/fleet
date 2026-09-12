@@ -1,4 +1,13 @@
-import { Suspense, lazy, useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo
+} from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import {
   Terminal,
@@ -174,7 +183,7 @@ function MiniTabButton({
 
   let icon: React.ReactNode;
   if (isScratchTab(tab)) {
-    icon = <MessageCircle size={16} className="text-violet-300" />;
+    icon = <MessageCircle size={16} className="text-violet-700 dark:text-violet-300" />;
   } else if (tab.type === 'agent') {
     icon = <Bot size={16} className={tint} />;
   } else if (tab.type === 'ssh-browser') {
@@ -797,8 +806,11 @@ export function App(): React.JSX.Element {
     };
   }, []);
 
-  const accentVars = getAccentCssVars(settings?.general.accentColor);
-  const appThemeVars = useAppThemeVars(settings?.general.theme, settings?.general.terminalTheme);
+  const appTheme = useAppThemeVars(settings?.general.theme, settings?.general.terminalTheme);
+  const accentVars = useMemo(
+    () => getAccentCssVars(settings?.general.accentColor, appTheme.kind),
+    [settings?.general.accentColor, appTheme.kind]
+  );
 
   // One global slideshow clock so every pane (including hidden background
   // workspaces) shows the same image and crossfades in sync.
@@ -810,7 +822,20 @@ export function App(): React.JSX.Element {
   // re-centered per pane. Panes sit on it as translucent cards.
   const terminalBackground = settings?.general.terminalBackground;
   const canvasActive = resolveBackgroundSrc(terminalBackground, slideshowFrame) !== null;
-  const themeVars = { ...accentVars, ...appThemeVars, ...getGlassCssVars(canvasActive) };
+  const themeVars = useMemo(
+    () => ({ ...accentVars, ...appTheme.vars, ...getGlassCssVars(canvasActive) }),
+    [accentVars, appTheme.vars, canvasActive]
+  );
+
+  // Portals (menus, dialogs, tooltips) mount under <body> rather than inside the
+  // App root. Publish the live theme there too so they cannot fall back to the
+  // dark initial-paint tokens while the rest of the window is light.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    for (const [name, value] of Object.entries(themeVars)) {
+      root.style.setProperty(name, String(value));
+    }
+  }, [themeVars]);
 
   // The collapsed rail splits its icons the same way the expanded sidebar does:
   // agents are a pinned run of their own rather than mixed into the tab list.
@@ -851,7 +876,7 @@ export function App(): React.JSX.Element {
           />
         ) : (
           <div
-            className="flex flex-col items-center w-11 my-2 ml-2 rounded-lg bg-fleet-glass-chrome border border-fleet-border shadow-md shadow-black/20 shrink-0 py-2 gap-1"
+            className="flex flex-col items-center w-11 my-2 ml-2 rounded-lg bg-fleet-glass-chrome border border-fleet-border shadow-md shadow-black/5 dark:shadow-black/20 shrink-0 py-2 gap-1"
             style={{ WebkitAppRegion: 'no-drag' }}
           >
             {/* Expand sidebar button */}
@@ -892,7 +917,7 @@ export function App(): React.JSX.Element {
                 type="button"
                 aria-label={t('panes.app.newScratch')}
                 onClick={() => useWorkspaceStore.getState().openScratch()}
-                className="p-1.5 rounded text-fleet-text-subtle hover:text-violet-300 hover:bg-fleet-surface-2 transition-colors active:scale-90"
+                className="p-1.5 rounded text-fleet-text-subtle hover:text-violet-700 dark:hover:text-violet-300 hover:bg-fleet-surface-2 transition-colors active:scale-90"
               >
                 <MessageCirclePlus size={16} />
               </button>
@@ -920,13 +945,17 @@ export function App(): React.JSX.Element {
                       onClick={() => setActiveTab(tab.id)}
                       className={`p-1.5 rounded transition-colors active:scale-90 ${
                         isAnnotateActive
-                          ? 'bg-cyan-900/40 ring-1 ring-cyan-500/30'
+                          ? 'bg-cyan-500/10 ring-1 ring-cyan-500/30 dark:bg-cyan-900/40'
                           : 'hover:bg-fleet-surface-2'
                       }`}
                     >
                       <Crosshair
                         size={16}
-                        className={isAnnotateActive ? 'text-cyan-400' : 'text-cyan-400/40'}
+                        className={
+                          isAnnotateActive
+                            ? 'text-cyan-700 dark:text-cyan-400'
+                            : 'text-fleet-text-subtle dark:text-cyan-400/40'
+                        }
                       />
                     </button>
                   </MiniSidebarTooltip>
@@ -943,13 +972,17 @@ export function App(): React.JSX.Element {
                       onClick={() => setActiveTab(tab.id)}
                       className={`p-1.5 rounded transition-colors active:scale-90 ${
                         isSessionsActive
-                          ? 'bg-blue-900/40 ring-1 ring-blue-500/30'
+                          ? 'bg-blue-500/10 ring-1 ring-blue-500/30 dark:bg-blue-900/40'
                           : 'hover:bg-fleet-surface-2'
                       }`}
                     >
                       <History
                         size={16}
-                        className={isSessionsActive ? 'text-blue-400' : 'text-blue-400/40'}
+                        className={
+                          isSessionsActive
+                            ? 'text-blue-700 dark:text-blue-400'
+                            : 'text-fleet-text-subtle dark:text-blue-400/40'
+                        }
                       />
                     </button>
                   </MiniSidebarTooltip>

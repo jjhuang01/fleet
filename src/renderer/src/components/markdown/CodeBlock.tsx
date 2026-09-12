@@ -42,7 +42,7 @@ export function CodeBlock({ children, ...props }: CodeBlockProps): React.JSX.Ele
       <button
         type="button"
         onClick={handleCopy}
-        className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded bg-neutral-700/80 px-1.5 py-0.5 text-xs text-neutral-300 opacity-0 transition-all hover:bg-neutral-600 hover:text-white group-hover:opacity-100 active:scale-90"
+        className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded bg-fleet-surface-3/90 px-1.5 py-0.5 text-xs text-fleet-text-muted opacity-0 transition-all hover:bg-fleet-surface-3 hover:text-fleet-text group-hover:opacity-100 active:scale-90"
         title={copied ? t('dialogs.markdown.copied') : t('dialogs.markdown.copyCode')}
         aria-label={t('dialogs.markdown.copyCode')}
       >

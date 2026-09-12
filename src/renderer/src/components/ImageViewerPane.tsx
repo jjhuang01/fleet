@@ -195,7 +195,7 @@ export function ImageViewerPane({
   const cursor = isFit ? 'default' : isDragging ? 'grabbing' : 'grab';
 
   return (
-    <div className="flex flex-col h-full w-full bg-neutral-900 select-none">
+    <div className="flex flex-col h-full w-full bg-fleet-surface select-none">
       {/* Image viewport */}
       <div
         ref={containerRef}
@@ -215,7 +215,7 @@ export function ImageViewerPane({
         onDoubleClick={handleDoubleClick}
       >
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center text-neutral-400 text-sm">
+          <div className="absolute inset-0 flex items-center justify-center text-fleet-text-muted text-sm">
             {t(error)}
           </div>
         )}
@@ -243,21 +243,23 @@ export function ImageViewerPane({
       </div>
 
       {/* Status bar */}
-      <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-neutral-950/80 border-t border-neutral-800 text-xs text-neutral-400">
-        <span className="text-neutral-300 truncate max-w-xs">{filename}</span>
+      <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-fleet-bg/80 border-t border-fleet-border text-xs text-fleet-text-muted">
+        <span className="text-fleet-text-secondary truncate max-w-xs">{filename}</span>
         {dimensions && (
-          <span className="text-neutral-500">
+          <span className="text-fleet-text-subtle">
             {dimensions.w} × {dimensions.h}
           </span>
         )}
-        {fileSize !== null && <span className="text-neutral-500">{formatSize(fileSize)}</span>}
+        {fileSize !== null && (
+          <span className="text-fleet-text-subtle">{formatSize(fileSize)}</span>
+        )}
         {imageSrc && (
           <div className="ml-auto flex items-center gap-0.5">
             <ToolbarButton onClick={() => adjustZoom(-ZOOM_STEP)} title={t('panes.image.zoomOut')}>
               −
             </ToolbarButton>
             <span
-              className="font-mono w-10 text-center text-neutral-400 hover:text-white cursor-pointer"
+              className="font-mono w-10 text-center text-fleet-text-muted hover:text-fleet-text cursor-pointer"
               onClick={applyFit}
               title={t('panes.image.clickToFit')}
             >
@@ -266,7 +268,7 @@ export function ImageViewerPane({
             <ToolbarButton onClick={() => adjustZoom(ZOOM_STEP)} title={t('panes.image.zoomIn')}>
               +
             </ToolbarButton>
-            <div className="w-px h-3.5 bg-neutral-700 mx-1" />
+            <div className="w-px h-3.5 bg-fleet-surface-3 mx-1" />
             <ToolbarButton onClick={applyFit} title={t('panes.image.fitToWindow')}>
               {t('panes.image.fit')}
             </ToolbarButton>
@@ -298,7 +300,7 @@ function ToolbarButton({
 }): React.JSX.Element {
   return (
     <button
-      className="text-neutral-300 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors active:scale-[0.97]"
+      className="text-fleet-text-secondary hover:text-fleet-text text-xs px-1.5 py-0.5 rounded hover:bg-fleet-surface-3 transition-colors active:scale-[0.97]"
       onClick={onClick}
       title={title}
     >

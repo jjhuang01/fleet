@@ -235,7 +235,7 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
 
   if (!pane) {
     return (
-      <div className="h-full w-full flex items-center justify-center gap-2 bg-neutral-900 text-neutral-400 text-sm">
+      <div className="h-full w-full flex items-center justify-center gap-2 bg-fleet-surface text-fleet-text-muted text-sm">
         <Loader2 className="animate-spin" size={16} />
         {t('ssh.status.connecting', { host: host.label })}
       </div>
@@ -247,7 +247,7 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
 
   return (
     <div
-      className="relative flex flex-col h-full w-full bg-neutral-900 outline-none"
+      className="relative flex flex-col h-full w-full bg-fleet-surface outline-none"
       onKeyDown={handleKeyDown}
       onDragOver={(e) => {
         // Only files upload, so only a file drag lights the pane up. Dragging a
@@ -265,7 +265,7 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
       onDrop={handleDrop}
     >
       {/* Toolbar: navigation on the left, view controls on the right */}
-      <div className="flex-shrink-0 flex items-center gap-1 px-2 h-8 border-b border-neutral-800 bg-neutral-950/60">
+      <div className="flex-shrink-0 flex items-center gap-1 px-2 h-8 border-b border-fleet-border bg-fleet-bg/60">
         <ToolbarButton
           onClick={() => void goBack(paneId)}
           titleKey="ssh.action.back"
@@ -291,7 +291,7 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
           <RefreshCw size={13} className={pane.loading ? 'animate-spin' : ''} />
         </ToolbarButton>
 
-        <div className="w-px h-3.5 bg-neutral-700 mx-1" />
+        <div className="w-px h-3.5 bg-fleet-surface-3 mx-1" />
 
         <div className="flex-1 min-w-0 overflow-hidden">
           <RemoteBreadcrumbs
@@ -302,7 +302,7 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
           />
         </div>
 
-        <div className="w-px h-3.5 bg-neutral-700 mx-1" />
+        <div className="w-px h-3.5 bg-fleet-surface-3 mx-1" />
 
         <ToolbarButton
           onClick={() => setDialog({ kind: 'new-folder' })}
@@ -314,7 +314,7 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
           <Upload size={13} />
         </ToolbarButton>
 
-        <div className="w-px h-3.5 bg-neutral-700 mx-1" />
+        <div className="w-px h-3.5 bg-fleet-surface-3 mx-1" />
 
         <ToolbarButton
           onClick={() => setView(paneId, 'list')}
@@ -335,10 +335,10 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
       {/* Body */}
       {pane.error !== null ? (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
-          <ServerCrash size={28} className="text-neutral-600" />
+          <ServerCrash size={28} className="text-fleet-text-subtle" />
           <div className="text-sm text-red-400 max-w-md whitespace-pre-wrap">{pane.error}</div>
           <button
-            className="flex items-center gap-1.5 text-xs text-neutral-300 hover:text-white px-2 py-1 rounded hover:bg-white/10 transition-colors active:scale-[0.97]"
+            className="flex items-center gap-1.5 text-xs text-fleet-text-secondary hover:text-fleet-text px-2 py-1 rounded hover:bg-fleet-surface-3 transition-colors active:scale-[0.97]"
             onClick={() => void refresh(paneId)}
           >
             <RefreshCw size={12} />
@@ -346,14 +346,14 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
           </button>
         </div>
       ) : pane.loading && pane.entries.length === 0 ? (
-        <div className="flex-1 min-h-0 flex items-center justify-center gap-2 text-neutral-500 text-sm">
+        <div className="flex-1 min-h-0 flex items-center justify-center gap-2 text-fleet-text-subtle text-sm">
           <Loader2 className="animate-spin" size={16} />
           {t('ssh.status.loading')}
         </div>
       ) : pane.entries.length === 0 ? (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 text-sm">
           <FolderOpen size={28} className="text-neutral-700" />
-          <div className="text-neutral-400">{t('ssh.status.empty')}</div>
+          <div className="text-fleet-text-muted">{t('ssh.status.empty')}</div>
         </div>
       ) : (
         <RemoteEntryList
@@ -376,7 +376,7 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
       <TransferStrip transfers={transfers} onCancel={cancelTransfer} onDismiss={dismissTransfer} />
 
       {/* Status bar */}
-      <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-neutral-950/80 border-t border-neutral-800 text-xs text-neutral-500">
+      <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-fleet-bg/80 border-t border-fleet-border text-xs text-fleet-text-subtle">
         <span>
           {t(pane.entries.length === 1 ? 'ssh.status.item' : 'ssh.status.items', {
             count: pane.entries.length
@@ -391,12 +391,12 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
           the folder being uploaded into is the one currently open, not the row
           under the cursor. */}
       {dragging && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-neutral-950/80 border-2 border-dashed border-teal-500/60 pointer-events-none">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-fleet-bg/80 border-2 border-dashed border-teal-500/60 pointer-events-none">
           <Upload size={28} className="text-teal-400" />
-          <div className="text-sm text-neutral-200">
+          <div className="text-sm text-fleet-text">
             {t('ssh.status.uploadTo', { host: host.label })}
           </div>
-          <div className="text-xs font-mono text-neutral-500">{pane.cwd}</div>
+          <div className="text-xs font-mono text-fleet-text-subtle">{pane.cwd}</div>
         </div>
       )}
 
@@ -435,8 +435,8 @@ function ToolbarButton({
     <button
       className={`px-1.5 py-1 rounded transition-colors active:scale-[0.97] disabled:opacity-30 disabled:pointer-events-none disabled:active:scale-100 ${
         active
-          ? 'bg-white/10 text-neutral-100'
-          : 'text-neutral-400 hover:text-white hover:bg-white/10'
+          ? 'bg-fleet-surface-3 text-fleet-text'
+          : 'text-fleet-text-muted hover:text-fleet-text hover:bg-fleet-surface-3'
       }`}
       onClick={onClick}
       title={title}

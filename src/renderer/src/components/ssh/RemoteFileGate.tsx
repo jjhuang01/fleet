@@ -47,13 +47,13 @@ export function RemoteFileGate({ host, remotePath, children }: Props): React.JSX
           : error;
 
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center gap-3 bg-neutral-900 text-sm px-6 text-center">
+      <div className="h-full w-full flex flex-col items-center justify-center gap-3 bg-fleet-surface text-sm px-6 text-center">
         <div className="text-red-400">{errorText}</div>
-        <div className="text-neutral-500 font-mono text-xs break-all">
+        <div className="text-fleet-text-subtle font-mono text-xs break-all">
           {host.label}:{remotePath}
         </div>
         <button
-          className="flex items-center gap-1.5 text-xs text-neutral-300 hover:text-white px-2 py-1 rounded hover:bg-white/10 transition-colors active:scale-[0.97]"
+          className="flex items-center gap-1.5 text-xs text-fleet-text-secondary hover:text-fleet-text px-2 py-1 rounded hover:bg-fleet-surface-3 transition-colors active:scale-[0.97]"
           onClick={() => setAttempt((n) => n + 1)}
         >
           <RefreshCw size={12} />
@@ -65,7 +65,7 @@ export function RemoteFileGate({ host, remotePath, children }: Props): React.JSX
 
   if (fetched === null) {
     return (
-      <div className="h-full w-full flex items-center justify-center gap-2 bg-neutral-900 text-neutral-400 text-sm">
+      <div className="h-full w-full flex items-center justify-center gap-2 bg-fleet-surface text-fleet-text-muted text-sm">
         <Loader2 className="animate-spin" size={16} />
         {t('ssh.file.downloading', { host: host.label })}
       </div>

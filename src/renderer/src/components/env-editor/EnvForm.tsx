@@ -61,7 +61,9 @@ export function EnvForm({
   return (
     <div className="flex flex-1 flex-col overflow-y-auto p-3">
       {varRows.length === 0 && (
-        <p className="px-2 py-3 text-xs text-neutral-500">{t('dialogs.envEditor.noVariables')}</p>
+        <p className="px-2 py-3 text-xs text-fleet-text-subtle">
+          {t('dialogs.envEditor.noVariables')}
+        </p>
       )}
       {varRows.map(({ index, line }) => {
         const reveal = revealAll || revealed.has(index);
@@ -69,37 +71,39 @@ export function EnvForm({
         return (
           <div
             key={line.id}
-            className="group flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-neutral-800/60 focus-within:bg-neutral-800/80 focus-within:shadow-[inset_0_0_0_1px_#2563eb]"
+            className="group flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-fleet-surface-2/60 focus-within:bg-fleet-surface-2/80 focus-within:shadow-[inset_0_0_0_1px_#2563eb]"
           >
             <input
               value={line.key}
               onChange={(e) => setLine(index, updateVarLine(line, e.target.value, line.value))}
               placeholder="KEY"
               spellCheck={false}
-              className={`w-[40%] rounded border bg-neutral-900 px-2 py-1 font-mono text-xs text-sky-300 outline-none transition-colors focus:border-blue-500 ${
-                isDup ? 'border-red-600' : 'border-transparent focus:border-blue-500'
+              className={`w-[40%] rounded border bg-fleet-surface px-2 py-1 font-mono text-xs text-sky-600 dark:text-sky-300 outline-none transition-colors focus:border-[color:var(--fleet-accent)] ${
+                isDup
+                  ? 'border-red-500 dark:border-red-600'
+                  : 'border-transparent focus:border-[color:var(--fleet-accent)]'
               }`}
             />
-            <span className="text-neutral-600">=</span>
+            <span className="text-fleet-text-subtle">=</span>
             <input
               value={line.value}
               type={reveal ? 'text' : 'password'}
               onChange={(e) => setLine(index, updateVarLine(line, line.key, e.target.value))}
               placeholder={t('dialogs.envEditor.valuePlaceholder')}
               spellCheck={false}
-              className="flex-1 rounded border border-transparent bg-neutral-900 px-2 py-1 font-mono text-xs text-neutral-200 outline-none transition-colors focus:border-blue-500"
+              className="flex-1 rounded border border-transparent bg-fleet-surface px-2 py-1 font-mono text-xs text-fleet-text outline-none transition-colors focus:border-[color:var(--fleet-accent)]"
             />
             <button
               onClick={() => onToggleReveal(index)}
               title={reveal ? t('dialogs.envEditor.hideValue') : t('dialogs.envEditor.revealValue')}
-              className="rounded p-1 text-neutral-500 opacity-0 transition hover:text-neutral-200 group-hover:opacity-100 active:scale-90"
+              className="rounded p-1 text-fleet-text-subtle opacity-0 transition hover:text-fleet-text group-hover:opacity-100 active:scale-90"
             >
               {reveal ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
             <button
               onClick={() => removeLine(index)}
               title={t('dialogs.envEditor.removeVariable')}
-              className="rounded p-1 text-neutral-500 opacity-0 transition hover:text-red-400 group-hover:opacity-100 active:scale-90"
+              className="rounded p-1 text-fleet-text-subtle opacity-0 transition hover:text-red-600 dark:hover:text-red-400 group-hover:opacity-100 active:scale-90"
             >
               <Trash2 size={13} />
             </button>
@@ -108,14 +112,14 @@ export function EnvForm({
       })}
 
       {dupKeys.size > 0 && (
-        <p className="mt-2 px-2 text-[11px] text-red-400">
+        <p className="mt-2 px-2 text-[11px] text-red-600 dark:text-red-400">
           {t('dialogs.envEditor.duplicateKeys', { keys: Array.from(dupKeys).join(', ') })}
         </p>
       )}
 
       <button
         onClick={addVar}
-        className="mt-2 flex w-fit items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-blue-400 transition hover:bg-blue-500/10 active:scale-[0.98]"
+        className="mt-2 flex w-fit items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-blue-600 dark:text-blue-400 transition hover:bg-blue-500/10 active:scale-[0.98]"
       >
         <Plus size={14} /> {t('dialogs.envEditor.addVariable')}
       </button>

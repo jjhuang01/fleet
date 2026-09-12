@@ -188,7 +188,9 @@ export const en = {
   'dialogs.telescope.footer.pastePath': '⇧↵ paste path',
   'dialogs.telescope.footer.upDir': '⌫ up dir',
 
-  'dialogs.gitDiff.noContent': 'No diff content'
+  'dialogs.gitDiff.noContent': 'No diff content',
+  'dialogs.gitChanges.close': 'Close git changes',
+  'dialogs.toast.dismiss': 'Dismiss notification'
 } as const;
 
 export const zh: Record<keyof typeof en, string> = {
@@ -370,5 +372,7 @@ export const zh: Record<keyof typeof en, string> = {
   'dialogs.telescope.footer.pastePath': '⇧↵ 粘贴路径',
   'dialogs.telescope.footer.upDir': '⌫ 上级目录',
 
-  'dialogs.gitDiff.noContent': '没有差异内容'
+  'dialogs.gitDiff.noContent': '没有差异内容',
+  'dialogs.gitChanges.close': '关闭 Git 变更',
+  'dialogs.toast.dismiss': '关闭通知'
 };

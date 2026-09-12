@@ -80,8 +80,8 @@ export function EnvSyncBadge({
     agg === 'conflict' || agg === 'error'
       ? 'bg-red-600'
       : agg === 'in-sync'
-        ? 'bg-green-600'
-        : 'bg-amber-600';
+        ? 'bg-emerald-700 dark:bg-green-600'
+        : 'bg-amber-700 dark:bg-amber-600';
 
   const glyph = agg === 'in-sync' ? '✓' : agg === 'conflict' ? '!' : agg === 'error' ? '⚠' : '↑↓';
 

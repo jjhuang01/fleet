@@ -185,7 +185,9 @@ export function AgentSessionsTab({
         onOpenChange={(open) => !open && setPendingDelete(null)}
       >
         <Dialog.Portal>
-          <Dialog.Overlay className={`fixed inset-0 z-50 bg-fleet-bg/60 ${dialogFadeAnim}`} />
+          <Dialog.Overlay
+            className={`fixed inset-0 z-50 bg-black/25 dark:bg-black/60 ${dialogFadeAnim}`}
+          />
           <Dialog.Content
             className={`fixed top-1/2 left-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-fleet-border-strong bg-fleet-surface p-5 text-sm shadow-xl ${dialogFadeAnim}`}
           >

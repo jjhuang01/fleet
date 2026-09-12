@@ -30,7 +30,7 @@ function HighlightedText({ text, query }: { text: string; query: string }): Reac
   for (let i = 0; i < text.length; i++) {
     if (qi < q.length && t[i] === q[qi]) {
       chars.push(
-        <span key={i} className="text-blue-400 font-semibold">
+        <span key={i} className="text-blue-600 dark:text-blue-400 font-semibold">
           {text[i]}
         </span>
       );
@@ -130,12 +130,12 @@ export function QuickOpenOverlay({
       open={isOpen}
       onClose={onClose}
       containerClassName="justify-center"
-      panelClassName="mt-[15vh] w-[560px] max-h-[60vh] flex flex-col bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl overflow-hidden"
+      panelClassName="mt-[15vh] w-[560px] max-h-[60vh] flex flex-col bg-fleet-surface border border-fleet-border-strong rounded-lg shadow-xl overflow-hidden"
     >
       {/* Search input */}
-      <div className="px-3 py-2 border-b border-neutral-800 flex items-center gap-2">
+      <div className="px-3 py-2 border-b border-fleet-border flex items-center gap-2">
         <svg
-          className="text-neutral-500 shrink-0"
+          className="text-fleet-text-subtle shrink-0"
           width="14"
           height="14"
           viewBox="0 0 16 16"
@@ -154,17 +154,17 @@ export function QuickOpenOverlay({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t('panes.quickOpen.placeholder')}
-          className="flex-1 bg-transparent text-sm text-white outline-none placeholder-neutral-500"
+          className="flex-1 bg-transparent text-sm text-fleet-text outline-none placeholder-fleet-text-subtle"
         />
         {isLoading && (
-          <span className="text-xs text-neutral-500">{t('panes.quickOpen.loading')}</span>
+          <span className="text-xs text-fleet-text-subtle">{t('panes.quickOpen.loading')}</span>
         )}
       </div>
 
       {/* Results */}
       <div ref={listRef} className="overflow-y-auto py-1">
         {results.length === 0 && !isLoading ? (
-          <div className="px-3 py-4 text-sm text-neutral-500 text-center">
+          <div className="px-3 py-4 text-sm text-fleet-text-subtle text-center">
             {t(query ? 'panes.quickOpen.noMatches' : 'panes.quickOpen.noRecent')}
           </div>
         ) : (
@@ -173,19 +173,19 @@ export function QuickOpenOverlay({
               key={file.path}
               className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors active:scale-[0.97] ${
                 i === selectedIndex
-                  ? 'bg-neutral-700 text-white'
-                  : 'text-neutral-300 hover:bg-neutral-800'
+                  ? 'bg-fleet-surface-3 text-fleet-text'
+                  : 'text-fleet-text-secondary hover:bg-fleet-surface-2'
               }`}
               onMouseEnter={() => setSelectedIndex(i)}
               onClick={() => handleSelect(file)}
             >
-              <span className="text-neutral-500 shrink-0">{getFileIcon(file.name)}</span>
+              <span className="text-fleet-text-subtle shrink-0">{getFileIcon(file.name)}</span>
               <div className="flex flex-col min-w-0">
                 <span className="truncate font-medium">
                   <HighlightedText text={file.name} query={query} />
                 </span>
                 {file.relativePath !== file.name && (
-                  <span className="truncate text-xs text-neutral-600">
+                  <span className="truncate text-xs text-fleet-text-subtle">
                     {file.relativePath.includes('/')
                       ? file.relativePath.split('/').slice(0, -1).join('/')
                       : file.relativePath}
@@ -199,7 +199,7 @@ export function QuickOpenOverlay({
 
       {/* Footer hint */}
       {results.length > 0 && (
-        <div className="px-3 py-1.5 border-t border-neutral-800 flex items-center gap-3 text-xs text-neutral-600">
+        <div className="px-3 py-1.5 border-t border-fleet-border flex items-center gap-3 text-xs text-fleet-text-subtle">
           <span>{t('panes.quickOpen.navigate')}</span>
           <span>{t('panes.quickOpen.open')}</span>
           <span>{t('panes.quickOpen.dismiss')}</span>

@@ -17,16 +17,16 @@ function ErrorFallback({ error }: { error: Error }): React.JSX.Element {
   const { t } = useTranslation();
 
   return (
-    <div className="flex h-full w-full items-center justify-center bg-neutral-950 p-8">
+    <div className="flex h-full w-full items-center justify-center bg-fleet-bg p-8">
       <div className="max-w-md space-y-4 text-center">
-        <div className="text-lg font-medium text-neutral-100">{t('panes.error.title')}</div>
-        <p className="text-sm text-neutral-400">{t('panes.error.body')}</p>
-        <pre className="max-h-32 overflow-auto rounded-md border border-neutral-800 bg-neutral-900 p-3 text-left text-xs text-red-400">
+        <div className="text-lg font-medium text-fleet-text">{t('panes.error.title')}</div>
+        <p className="text-sm text-fleet-text-muted">{t('panes.error.body')}</p>
+        <pre className="max-h-32 overflow-auto rounded-md border border-fleet-border bg-fleet-surface-2 p-3 text-left text-xs text-red-600 dark:text-red-400">
           {error.message}
         </pre>
         <button
           onClick={() => window.location.reload()}
-          className="rounded-md bg-neutral-700 px-3 py-1.5 text-sm text-white transition-colors hover:bg-neutral-600 active:scale-[0.97]"
+          className="rounded-md bg-fleet-surface-3 px-3 py-1.5 text-sm text-fleet-text transition-colors hover:bg-fleet-surface-2 active:scale-[0.97]"
         >
           {t('panes.error.reload')}
         </button>

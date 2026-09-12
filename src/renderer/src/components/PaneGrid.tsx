@@ -359,7 +359,7 @@ function PaneFrame({
     // element with them loses. The outer div owns the lift, the inner the ring.
     <div
       className={`h-full rounded-lg transition-shadow duration-150 ${
-        isActive ? 'shadow-lg shadow-black/30' : ''
+        isActive ? 'shadow-lg shadow-black/10 dark:shadow-black/30' : ''
       }`}
       onDragStartCapture={handleDragStart}
       onDragEndCapture={handleDragEnd}

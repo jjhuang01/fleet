@@ -224,7 +224,7 @@ export function NotesModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 duration-150 animate-in fade-in-0"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 dark:bg-black/60 duration-150 animate-in fade-in-0"
       onClick={() => void requestClose()}
     >
       <div
@@ -237,18 +237,18 @@ export function NotesModal({
           }
         }}
         onClick={(e) => e.stopPropagation()}
-        className="flex h-[85vh] w-[1000px] max-w-[92vw] flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl duration-150 animate-in fade-in-0 zoom-in-95"
+        className="flex h-[85vh] w-[1000px] max-w-[92vw] flex-col overflow-hidden rounded-xl border border-fleet-border-strong bg-fleet-surface shadow-2xl duration-150 animate-in fade-in-0 zoom-in-95"
       >
         {/* Header */}
-        <div className="flex items-center gap-3 border-b border-neutral-800 px-5 py-3">
-          <div className="flex items-center gap-2 text-neutral-100">
-            <NotebookPen size={16} className="text-neutral-400" />
+        <div className="flex items-center gap-3 border-b border-fleet-border px-5 py-3">
+          <div className="flex items-center gap-2 text-fleet-text">
+            <NotebookPen size={16} className="text-fleet-text-muted" />
             <h2 className="text-base font-semibold">{t('dialogs.notes.title')}</h2>
           </div>
           {scopePath && (
             <div
               title={scopePath}
-              className="flex items-center gap-1.5 rounded-md bg-neutral-800 px-2.5 py-1 text-xs text-neutral-300"
+              className="flex items-center gap-1.5 rounded-md bg-fleet-surface-2 px-2.5 py-1 text-xs text-fleet-text-secondary"
             >
               <Folder size={13} />
               <span className="max-w-[260px] truncate">{projectName}</span>
@@ -258,20 +258,22 @@ export function NotesModal({
           {/* Save status */}
           <div className="flex min-w-[76px] items-center gap-1.5 text-xs">
             {saving ? (
-              <span className="flex items-center gap-1.5 text-neutral-400">
+              <span className="flex items-center gap-1.5 text-fleet-text-muted">
                 <Loader2 size={12} className="animate-spin" /> {t('dialogs.notes.saving')}
               </span>
             ) : dirty ? (
-              <span className="text-amber-400">● {t('dialogs.notes.unsaved')}</span>
+              <span className="text-amber-700 dark:text-amber-400">
+                ● {t('dialogs.notes.unsaved')}
+              </span>
             ) : text.length > 0 ? (
-              <span className="flex items-center gap-1 text-neutral-500">
+              <span className="flex items-center gap-1 text-fleet-text-muted">
                 <Check size={12} /> {t('dialogs.notes.saved')}
               </span>
             ) : null}
           </div>
 
           {/* Layout toggle */}
-          <div className="ml-auto flex overflow-hidden rounded-md border border-neutral-700 text-xs">
+          <div className="ml-auto flex overflow-hidden rounded-md border border-fleet-border-strong text-xs">
             {(
               [
                 ['editor', Code, 'dialogs.notes.layout.editor'],
@@ -284,7 +286,9 @@ export function NotesModal({
                 onClick={() => setLayout(id)}
                 title={t(label)}
                 className={`flex items-center gap-1 px-2.5 py-1 transition active:scale-95 ${
-                  layout === id ? 'bg-blue-600 text-white' : 'text-neutral-400 hover:bg-neutral-800'
+                  layout === id
+                    ? 'fleet-accent-bg text-white'
+                    : 'text-fleet-text-muted hover:bg-fleet-surface-2'
                 }`}
               >
                 <Icon size={12} /> {t(label)}
@@ -294,7 +298,7 @@ export function NotesModal({
 
           <button
             onClick={() => void requestClose()}
-            className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-white active:scale-90"
+            className="rounded-md p-1.5 text-fleet-text-muted transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text active:scale-90"
             aria-label={t('dialogs.notes.close')}
           >
             <X size={16} />
@@ -302,7 +306,7 @@ export function NotesModal({
         </div>
 
         {externalChange && (
-          <div className="flex items-center gap-2 border-b border-amber-800 bg-amber-950/40 px-4 py-2 text-xs text-amber-300">
+          <div className="flex items-center gap-2 border-b border-amber-600/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
             <AlertTriangle size={13} />
             {t('dialogs.notes.externalChanged')}
             <button onClick={() => void reload()} className="font-medium underline active:scale-95">
@@ -317,7 +321,7 @@ export function NotesModal({
           </div>
         )}
         {error && (
-          <div className="flex items-center gap-2 border-b border-red-800 bg-red-950/40 px-4 py-2 text-xs text-red-300">
+          <div className="flex items-center gap-2 border-b border-red-600/30 bg-red-500/10 px-4 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300">
             <AlertTriangle size={13} /> {error}
           </div>
         )}
@@ -332,22 +336,22 @@ export function NotesModal({
               spellCheck={false}
               disabled={loading || !scopePath}
               placeholder={t('dialogs.notes.placeholder')}
-              className={`min-h-0 flex-1 resize-none bg-neutral-950 p-5 font-mono text-[13px] leading-relaxed text-neutral-200 outline-none placeholder:text-neutral-600 ${
-                showPreview ? 'border-r border-neutral-800' : ''
+              className={`min-h-0 flex-1 resize-none bg-fleet-bg p-5 font-mono text-[13px] leading-relaxed text-fleet-text-secondary outline-none placeholder:text-fleet-text-subtle ${
+                showPreview ? 'border-r border-fleet-border' : ''
               }`}
             />
           )}
           {showPreview && (
-            <div className="min-h-0 flex-1 overflow-y-auto bg-neutral-900">
+            <div className="min-h-0 flex-1 overflow-y-auto bg-fleet-surface">
               {text.trim() === '' ? (
                 <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
-                  <NotebookPen size={26} className="text-neutral-600" />
-                  <p className="text-sm font-medium text-neutral-300">
+                  <NotebookPen size={26} className="text-fleet-text-subtle" />
+                  <p className="text-sm font-medium text-fleet-text-secondary">
                     {projectName
                       ? t('dialogs.notes.emptyTitleWithProject', { project: projectName })
                       : t('dialogs.notes.emptyTitle')}
                   </p>
-                  <p className="max-w-xs text-xs text-neutral-500">
+                  <p className="max-w-xs text-xs text-fleet-text-muted">
                     {t('dialogs.notes.emptyDescription')}
                   </p>
                 </div>
@@ -356,7 +360,7 @@ export function NotesModal({
                   <MarkdownPreview
                     content={text}
                     baseDir={scopePath ?? ''}
-                    className="mx-auto max-w-3xl px-6 py-5 leading-relaxed text-neutral-300 markdown-preview"
+                    className="mx-auto max-w-3xl px-6 py-5 leading-relaxed text-fleet-text-secondary markdown-preview"
                   />
                 </Suspense>
               )}

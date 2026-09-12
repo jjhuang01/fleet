@@ -297,7 +297,7 @@ export function TelescopeModal({
     const homeDir = window.fleet.homeDir;
 
     return (
-      <div className="px-3 py-1.5 border-b border-neutral-800 flex items-center gap-1 text-xs text-neutral-400 overflow-x-auto min-w-0">
+      <div className="px-3 py-1.5 border-b border-fleet-border flex items-center gap-1 text-xs text-fleet-text-muted overflow-x-auto min-w-0">
         {browseBreadcrumbs.map((segment, i) => {
           const isLast = i === browseBreadcrumbs.length - 1;
           // Build the absolute path for this crumb
@@ -308,7 +308,7 @@ export function TelescopeModal({
 
           return (
             <span key={i} className="flex items-center gap-1 shrink-0">
-              {i > 0 && <span className="text-neutral-600">/</span>}
+              {i > 0 && <span className="text-fleet-text-subtle">/</span>}
               <button
                 onClick={() => {
                   if (!isLast && activeMode.onNavigate) {
@@ -317,8 +317,8 @@ export function TelescopeModal({
                 }}
                 className={
                   isLast
-                    ? 'text-neutral-200 cursor-default transition active:scale-[0.97]'
-                    : 'text-neutral-400 hover:text-neutral-200 transition-colors active:scale-[0.97]'
+                    ? 'text-fleet-text cursor-default transition active:scale-[0.97]'
+                    : 'text-fleet-text-muted hover:text-fleet-text transition-colors active:scale-[0.97]'
                 }
               >
                 {segment}
@@ -333,7 +333,9 @@ export function TelescopeModal({
   const renderPreviewPanel = (): React.JSX.Element => {
     if (previewLoading) {
       return (
-        <div className="text-xs text-neutral-500 p-3">{t('dialogs.telescope.preview.loading')}</div>
+        <div className="text-xs text-fleet-text-subtle p-3">
+          {t('dialogs.telescope.preview.loading')}
+        </div>
       );
     }
 
@@ -351,7 +353,7 @@ export function TelescopeModal({
 
     if (!previewContent) {
       return (
-        <div className="text-xs text-neutral-600 p-3 italic">
+        <div className="text-xs text-fleet-text-subtle p-3 italic">
           {t('dialogs.telescope.preview.select')}
         </div>
       );
@@ -362,7 +364,7 @@ export function TelescopeModal({
     }
 
     return (
-      <pre className="text-[11px] text-neutral-300 font-mono leading-relaxed whitespace-pre-wrap break-all">
+      <pre className="text-[11px] text-fleet-text-secondary font-mono leading-relaxed whitespace-pre-wrap break-all">
         {previewContent}
       </pre>
     );
@@ -373,13 +375,13 @@ export function TelescopeModal({
       open={isOpen}
       onClose={onClose}
       containerClassName="justify-center"
-      panelClassName="mt-[10vh] w-[800px] h-[70vh] flex flex-col bg-neutral-900 border border-neutral-700 rounded-lg shadow-xl overflow-hidden self-start"
+      panelClassName="mt-[10vh] w-[800px] h-[70vh] flex flex-col bg-fleet-surface border border-fleet-border-strong rounded-lg shadow-xl overflow-hidden self-start"
     >
       {/* Header: search input + mode tabs */}
-      <div className="flex items-center border-b border-neutral-700">
+      <div className="flex items-center border-b border-fleet-border-strong">
         {/* Search input */}
         <div className="flex items-center gap-2 px-3 py-2 flex-1 min-w-0">
-          <Search size={14} className="text-neutral-500 shrink-0" />
+          <Search size={14} className="text-fleet-text-subtle shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -387,12 +389,12 @@ export function TelescopeModal({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t(activeMode?.placeholder ?? 'dialogs.telescope.search')}
-            className="flex-1 bg-transparent text-sm text-white outline-none placeholder-neutral-500 min-w-0"
+            className="flex-1 bg-transparent text-sm text-fleet-text outline-none placeholder-fleet-text-subtle min-w-0"
           />
         </div>
 
         {/* Mode tabs */}
-        <div className="flex items-center gap-0.5 px-2 py-1.5 border-l border-neutral-700 shrink-0">
+        <div className="flex items-center gap-0.5 px-2 py-1.5 border-l border-fleet-border-strong shrink-0">
           <Tooltip.Provider delayDuration={500}>
             {modeList.map((mode, i) => {
               const Icon = mode.icon;
@@ -409,8 +411,8 @@ export function TelescopeModal({
                       }}
                       className={`flex items-center gap-1.5 px-2 py-1 text-[11px] rounded transition-colors active:scale-[0.97] ${
                         isActive
-                          ? 'bg-neutral-700 text-neutral-200'
-                          : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800'
+                          ? 'bg-fleet-surface-3 text-fleet-text'
+                          : 'text-fleet-text-subtle hover:text-fleet-text-secondary hover:bg-fleet-surface-2'
                       }`}
                     >
                       <Icon size={12} />
@@ -420,11 +422,11 @@ export function TelescopeModal({
                   <Tooltip.Portal>
                     <Tooltip.Content
                       side="bottom"
-                      className={`z-50 rounded bg-neutral-800 border border-neutral-700 px-2 py-1 text-[11px] text-neutral-300 shadow-md ${tooltipAnim}`}
+                      className={`z-50 rounded bg-fleet-surface-2 border border-fleet-border-strong px-2 py-1 text-[11px] text-fleet-text-secondary shadow-md ${tooltipAnim}`}
                       sideOffset={4}
                     >
                       {shortcut}
-                      <Tooltip.Arrow className="fill-neutral-800" />
+                      <Tooltip.Arrow className="fill-fleet-surface-2" />
                     </Tooltip.Content>
                   </Tooltip.Portal>
                 </Tooltip.Root>
@@ -440,9 +442,9 @@ export function TelescopeModal({
       {/* Body */}
       <div className="flex flex-row flex-1 min-h-0 overflow-hidden">
         {/* Results column */}
-        <div ref={listRef} className="w-[40%] overflow-y-auto border-r border-neutral-800 py-1">
+        <div ref={listRef} className="w-[40%] overflow-y-auto border-r border-fleet-border py-1">
           {results.length === 0 ? (
-            <div className="px-3 py-4 text-xs text-neutral-600 text-center italic">
+            <div className="px-3 py-4 text-xs text-fleet-text-subtle text-center italic">
               {query ? t('dialogs.telescope.noResults') : t('dialogs.telescope.typeToSearch')}
             </div>
           ) : (
@@ -454,10 +456,10 @@ export function TelescopeModal({
                   data-result-index={i}
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors active:scale-[0.97] ${
                     isSelected
-                      ? 'bg-neutral-700 text-white'
+                      ? 'bg-fleet-surface-3 text-fleet-text'
                       : item.data?.isIgnored
-                        ? 'text-neutral-600 hover:bg-neutral-800'
-                        : 'text-neutral-300 hover:bg-neutral-800'
+                        ? 'text-fleet-text-subtle hover:bg-fleet-surface-2'
+                        : 'text-fleet-text-secondary hover:bg-fleet-surface-2'
                   }`}
                   onMouseEnter={() => setSelectedIndex(i)}
                   onClick={() => {
@@ -473,15 +475,19 @@ export function TelescopeModal({
                     }
                   }}
                 >
-                  <span className="text-neutral-500 shrink-0 flex items-center">{item.icon}</span>
+                  <span className="text-fleet-text-subtle shrink-0 flex items-center">
+                    {item.icon}
+                  </span>
                   <div className="flex flex-col min-w-0 flex-1">
                     <span className="truncate text-sm font-medium">{item.title}</span>
                     {item.subtitle && (
-                      <span className="truncate text-xs text-neutral-500">{item.subtitle}</span>
+                      <span className="truncate text-xs text-fleet-text-subtle">
+                        {item.subtitle}
+                      </span>
                     )}
                   </div>
                   {item.meta && (
-                    <span className="text-[10px] text-neutral-600 shrink-0">{item.meta}</span>
+                    <span className="text-[10px] text-fleet-text-subtle shrink-0">{item.meta}</span>
                   )}
                 </button>
               );
@@ -494,7 +500,7 @@ export function TelescopeModal({
       </div>
 
       {/* Footer */}
-      <div className="px-3 py-1.5 border-t border-neutral-800 flex items-center gap-3 text-xs text-neutral-600">
+      <div className="px-3 py-1.5 border-t border-fleet-border flex items-center gap-3 text-xs text-fleet-text-subtle">
         <span>{t('common.navigate')}</span>
         <span>{t('dialogs.telescope.footer.openFocus')}</span>
         {activeModeId !== 'panes' && <span>{t('dialogs.telescope.footer.pastePath')}</span>}

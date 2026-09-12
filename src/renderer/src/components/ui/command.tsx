@@ -38,7 +38,7 @@ export function CommandDialog({
       // cmdk applies data-state on the dialog; reuse the app's fade convention.
       // Reduced-motion is neutralized globally in index.css.
       overlayClassName={`fixed inset-0 z-50 bg-black/60 ${dialogFadeAnim}`}
-      contentClassName={`fixed left-1/2 top-[18vh] z-50 w-[640px] max-w-[90vw] -translate-x-1/2 overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl ${dialogFadeAnim} motion-reduce:transition-none`}
+      contentClassName={`fixed left-1/2 top-[18vh] z-50 w-[640px] max-w-[90vw] -translate-x-1/2 overflow-hidden rounded-xl border border-fleet-border-strong bg-fleet-surface shadow-2xl ${dialogFadeAnim} motion-reduce:transition-none`}
       {...commandProps}
     >
       {/* cmdk's Dialog points DialogContent's `aria-labelledby` at a
@@ -56,10 +56,10 @@ export function CommandInput(
   props: React.ComponentProps<typeof CommandPrimitive.Input>
 ): React.JSX.Element {
   return (
-    <div className="flex items-center border-b border-neutral-800 px-4">
+    <div className="flex items-center border-b border-fleet-border px-4">
       <CommandPrimitive.Input
         {...props}
-        className="h-12 w-full bg-transparent text-[15px] text-white outline-none placeholder:text-neutral-500 focus-ring"
+        className="h-12 w-full bg-transparent text-[15px] text-fleet-text outline-none placeholder:text-fleet-text-subtle focus-ring"
       />
     </div>
   );
@@ -80,7 +80,10 @@ export function CommandEmpty(
   props: React.ComponentProps<typeof CommandPrimitive.Empty>
 ): React.JSX.Element {
   return (
-    <CommandPrimitive.Empty {...props} className="py-8 text-center text-sm text-neutral-500" />
+    <CommandPrimitive.Empty
+      {...props}
+      className="py-8 text-center text-sm text-fleet-text-subtle"
+    />
   );
 }
 
@@ -90,7 +93,7 @@ export function CommandGroup(
   return (
     <CommandPrimitive.Group
       {...props}
-      className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-neutral-500"
+      className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-fleet-text-subtle"
     />
   );
 }
@@ -101,7 +104,7 @@ export function CommandItem(
   return (
     <CommandPrimitive.Item
       {...props}
-      className="flex h-12 cursor-pointer select-none items-center gap-2 rounded-lg px-3 text-sm text-neutral-300 outline-none data-[selected=true]:bg-white/10 data-[selected=true]:text-white data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50"
+      className="flex h-12 cursor-pointer select-none items-center gap-2 rounded-lg px-3 text-sm text-fleet-text-secondary outline-none data-[selected=true]:bg-fleet-surface-3 data-[selected=true]:text-fleet-text data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50"
     />
   );
 }

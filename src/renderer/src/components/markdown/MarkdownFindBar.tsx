@@ -45,7 +45,7 @@ export function MarkdownFindBar({
     : '';
 
   return (
-    <div className="absolute top-2 right-2 z-30 flex items-center gap-1 rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 shadow-lg">
+    <div className="absolute top-2 right-2 z-30 flex items-center gap-1 rounded-md border border-fleet-border-strong bg-fleet-surface-2 px-2 py-1 shadow-lg">
       <input
         ref={inputRef}
         type="text"
@@ -62,10 +62,10 @@ export function MarkdownFindBar({
           }
         }}
         placeholder={t('dialogs.markdown.find.placeholder')}
-        className="w-48 bg-transparent text-sm text-white outline-none placeholder-neutral-500"
+        className="w-48 bg-transparent text-sm text-fleet-text outline-none placeholder:text-fleet-text-subtle"
       />
       {counter && (
-        <span className="shrink-0 select-none text-xs tabular-nums text-neutral-500">
+        <span className="shrink-0 select-none text-xs tabular-nums text-fleet-text-muted">
           {counter}
         </span>
       )}
@@ -73,7 +73,7 @@ export function MarkdownFindBar({
         type="button"
         onClick={onPrev}
         disabled={matchCount === 0}
-        className="rounded p-0.5 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent"
+        className="rounded p-0.5 text-fleet-text-muted transition-colors hover:bg-fleet-surface-3 hover:text-fleet-text active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent"
         title={t('dialogs.markdown.find.previous')}
       >
         <ChevronUp size={14} />
@@ -82,7 +82,7 @@ export function MarkdownFindBar({
         type="button"
         onClick={onNext}
         disabled={matchCount === 0}
-        className="rounded p-0.5 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent"
+        className="rounded p-0.5 text-fleet-text-muted transition-colors hover:bg-fleet-surface-3 hover:text-fleet-text active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent"
         title={t('dialogs.markdown.find.next')}
       >
         <ChevronDown size={14} />
@@ -90,7 +90,7 @@ export function MarkdownFindBar({
       <button
         type="button"
         onClick={onClose}
-        className="ml-1 rounded p-0.5 text-neutral-500 transition-colors hover:bg-neutral-700 hover:text-white active:scale-90"
+        className="ml-1 rounded p-0.5 text-fleet-text-subtle transition-colors hover:bg-fleet-surface-3 hover:text-fleet-text active:scale-90"
         title={t('dialogs.markdown.find.close')}
       >
         <X size={14} />

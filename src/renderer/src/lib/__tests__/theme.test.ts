@@ -1,11 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
   deriveAppTheme,
+  getAccentCssVars,
+  mixHex,
+  getAppThemeCssVars,
   resolveAccentColor,
   resolveTerminalTheme,
   resolveXtermTheme
 } from '../theme';
-import { TERMINAL_THEMES, type TerminalThemeId } from '../../../../shared/theme-presets';
+import {
+  ACCENT_COLORS,
+  TERMINAL_THEMES,
+  type AccentColorId,
+  type TerminalThemeId
+} from '../../../../shared/theme-presets';
 import { contrastRatio } from '../contrast';
 
 describe('theme resolvers', () => {
@@ -90,7 +98,7 @@ describe('fleet-dark / fleet-light cool-gray retint', () => {
     expect(t.text).toBe('#f8fafe');
     expect(t.textSecondary).toBe('#d2d4d8');
     expect(t.textMuted).toBe('#a1a3a7');
-    expect(t.textSubtle).toBe('#717377');
+    expect(t.textSubtle).toBe('#7f8185');
   });
 
   it('retints fleet-light neutrals to OKLCH hue 260 chroma 0.006 at the same lightness', () => {
@@ -101,8 +109,8 @@ describe('fleet-dark / fleet-light cool-gray retint', () => {
     expect(t.surface3).toBe('#e5e8eb');
     expect(t.text).toBe('#16181b');
     expect(t.textSecondary).toBe('#3e4043');
-    expect(t.textMuted).toBe('#717376');
-    expect(t.textSubtle).toBe('#9fa2a5');
+    expect(t.textMuted).toBe('#555a60');
+    expect(t.textSubtle).toBe('#62676e');
   });
 
   it('does not regress WCAG contrast for fleet-dark after retinting', () => {
@@ -111,7 +119,10 @@ describe('fleet-dark / fleet-light cool-gray retint', () => {
     expect(contrastRatio(t.text, t.surface)).toBeCloseTo(17.19, 1);
     expect(contrastRatio(t.textSecondary, t.bg)).toBeCloseTo(13.34, 1);
     expect(contrastRatio(t.textMuted, t.bg)).toBeCloseTo(7.84, 1);
-    expect(contrastRatio(t.textSubtle, t.bg)).toBeCloseTo(4.17, 1);
+    // Tertiary text clears AA on both the chrome background and a surface;
+    // #717377 fell to 4.17 / 3.78 and read as too dim in the sidebar.
+    expect(contrastRatio(t.textSubtle, t.bg)).toBeCloseTo(5.07, 1);
+    expect(contrastRatio(t.textSubtle, t.surface)).toBeGreaterThanOrEqual(4.5);
   });
 
   it('does not regress WCAG contrast for fleet-light after retinting', () => {
@@ -119,7 +130,78 @@ describe('fleet-dark / fleet-light cool-gray retint', () => {
     expect(contrastRatio(t.text, t.bg)).toBeCloseTo(16.58, 1);
     expect(contrastRatio(t.text, t.surface)).toBeCloseTo(17.72, 1);
     expect(contrastRatio(t.textSecondary, t.bg)).toBeCloseTo(9.7, 1);
-    expect(contrastRatio(t.textMuted, t.bg)).toBeCloseTo(4.43, 1);
-    expect(contrastRatio(t.textSubtle, t.bg)).toBeCloseTo(2.39, 1);
+    expect(contrastRatio(t.textMuted, t.bg)).toBeCloseTo(6.49, 1);
+    expect(contrastRatio(t.textSubtle, t.bg)).toBeCloseTo(5.31, 1);
+  });
+});
+
+describe('light preset chrome text', () => {
+  it('derives every light preset text token above WCAG AA on its own surfaces', () => {
+    for (const def of Object.values(TERMINAL_THEMES)) {
+      if (def.kind !== 'light') continue;
+      const t = deriveAppTheme(def);
+      for (const token of [t.text, t.textSecondary, t.textMuted, t.textSubtle]) {
+        for (const surface of [t.bg, t.surface, t.surface2]) {
+          expect(contrastRatio(token, surface)).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+  });
+
+  it('leaves dark themes on the previous muted ramp', () => {
+    const t = deriveAppTheme(TERMINAL_THEMES['dracula']);
+    expect(t.textSubtle).toBe(mixHex(t.text, t.bg, 0.55));
+    expect(t.textMuted).toBe(mixHex(t.text, t.bg, 0.4));
+  });
+});
+
+describe('runtime theme variables', () => {
+  it('publishes light glass aliases at the App root instead of inheriting the dark root defaults', () => {
+    const vars = getAppThemeCssVars(TERMINAL_THEMES['fleet-light']);
+    expect(vars['--fleet-glass-chrome']).toBe('#f5f7fb');
+    expect(vars['--fleet-glass-surface']).toBe('#fdffff');
+    expect(vars['--fleet-glass-surface-2']).toBe('#eff2f6');
+    expect(vars['--fleet-glass-surface-3']).toBe('#e5e8eb');
+    expect(vars['--fleet-glass-bg']).toContain('#f5f7fb 40%');
+  });
+
+  it('keeps white labels readable on filled accent surfaces in both modes', () => {
+    for (const kind of ['light', 'dark'] as const) {
+      for (const id of Object.keys(ACCENT_COLORS) as AccentColorId[]) {
+        const vars = getAccentCssVars(id, kind);
+        expect(contrastRatio('#ffffff', vars['--fleet-accent-fill'])).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio('#ffffff', vars['--fleet-accent-fill-hover'])).toBeGreaterThanOrEqual(
+          4.5
+        );
+      }
+    }
+    // The bright ramp still carries accent text, icons and rings on dark chrome.
+    expect(getAccentCssVars('blue', 'dark')).toMatchObject({
+      '--fleet-accent': '#3b82f6',
+      '--fleet-accent-fill': '#2563eb'
+    });
+  });
+
+  it('uses darker accent stops on light chrome so text and filled-button labels remain readable', () => {
+    expect(getAccentCssVars('blue', 'light')).toMatchObject({
+      '--fleet-accent': '#2563eb',
+      '--fleet-accent-hover': '#1d4ed8'
+    });
+    expect(getAccentCssVars('amber', 'light')).toMatchObject({
+      '--fleet-accent': '#b45309',
+      '--fleet-accent-hover': '#92400e'
+    });
+    expect(getAccentCssVars('blue', 'dark')).toMatchObject({
+      '--fleet-accent': '#3b82f6',
+      '--fleet-accent-hover': '#60a5fa'
+    });
+
+    const light = deriveAppTheme(TERMINAL_THEMES['fleet-light']);
+    for (const id of Object.keys(ACCENT_COLORS) as AccentColorId[]) {
+      const vars = getAccentCssVars(id, 'light');
+      const accent = vars['--fleet-accent'];
+      expect(contrastRatio(accent, light.bg)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio('#ffffff', accent)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });
