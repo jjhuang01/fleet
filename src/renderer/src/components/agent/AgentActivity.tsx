@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
 import type { AgentMessage } from '../../../../shared/agent-types';
-import { agentPhase, formatElapsed, phaseShimmers, PHASE_LABEL } from './activity';
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
+import { agentPhase, formatElapsed, phaseShimmers, type AgentPhase } from './activity';
+
+const PHASE_LABEL_KEY: Record<AgentPhase, MessageKey> = {
+  waiting: 'agent.activity.thinking',
+  reasoning: 'agent.activity.reasoning',
+  writing: 'agent.activity.writing',
+  tooling: 'agent.activity.working',
+  compacting: 'agent.activity.compacting',
+  asking: 'agent.activity.waitingForYou'
+};
 
 /**
  * What the agent is doing, while it is doing it.
@@ -27,6 +38,7 @@ export function AgentActivity({
   asking: boolean;
   startedAt: number | null;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const phase = agentPhase(last, compacting, asking);
   const elapsed = useElapsed(startedAt);
 
@@ -48,7 +60,7 @@ export function AgentActivity({
               : 'text-fleet-text-muted'
         }`}
       >
-        {PHASE_LABEL[phase]}…
+        {t(PHASE_LABEL_KEY[phase])}…
       </span>
       {elapsed !== null && (
         <span aria-hidden="true" className="shrink-0 tabular-nums text-fleet-text-subtle">

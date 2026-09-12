@@ -1,5 +1,6 @@
 import { ArrowUp } from 'lucide-react';
 import { useUpdateStore } from '../store/update-store';
+import { useTranslation } from '../lib/i18n';
 
 /**
  * The standing "there is a newer Fleet" marker, in the title strip.
@@ -15,6 +16,7 @@ import { useUpdateStore } from '../store/update-store';
  * only that *something* was different, which is not enough to act on.
  */
 export function UpdatePill(): React.JSX.Element | null {
+  const { t } = useTranslation();
   const update = useUpdateStore((s) => s.staged);
   const setWhatsNewOpen = useUpdateStore((s) => s.setWhatsNewOpen);
 
@@ -29,7 +31,7 @@ export function UpdatePill(): React.JSX.Element | null {
       onClick={() => setWhatsNewOpen(true)}
       className={`${positionClass} flex h-5 items-center gap-1 rounded-full border border-fleet-border bg-fleet-glass-chrome pl-1.5 pr-2 text-[11px] text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text active:scale-95`}
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-      title={`Fleet ${update.version} is ready to install`}
+      title={t('panes.updatePill.title', { version: update.version })}
     >
       <ArrowUp size={11} className="shrink-0 fleet-accent-text" />
       {update.version}

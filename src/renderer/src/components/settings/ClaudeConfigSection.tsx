@@ -5,7 +5,8 @@ import { useCwdStore } from '../../store/cwd-store';
 import { useClaudeConfigStore, isDirty } from '../../store/claude-config-store';
 import { resolveClaudeConfig, resolveClaudeFilePath } from '../../../../shared/claude-config';
 import type { ClaudeConfigScope, ClaudeFileKind } from '../../../../shared/claude-config';
-import { PRECEDENCE_SENTENCE } from '../../../../shared/claude-settings-precedence';
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
 import { ClaudeConfigRawEditor } from './ClaudeConfigRawEditor';
 import { ClaudeConfigForm } from './ClaudeConfigForm';
 import { ClaudeConfigSaveBar } from './ClaudeConfigSaveBar';
@@ -31,16 +32,25 @@ const SCOPES: ClaudeConfigScope[] = ['user', 'project', 'projectLocal'];
  * personal setting committed to a shared repository - and it has to be legible
  * at the moment of choosing, not after switching.
  */
-const SCOPE_TABS: Record<ClaudeConfigScope, { name: string; consequence: string }> = {
-  user: { name: 'User', consequence: 'Everywhere' },
-  project: { name: 'Project', consequence: 'Shared with your team' },
-  projectLocal: { name: 'Project local', consequence: 'Only you, not committed' }
+const SCOPE_TABS: Record<ClaudeConfigScope, { name: MessageKey; consequence: MessageKey }> = {
+  user: {
+    name: 'settings.claudeConfig.scope.user.name',
+    consequence: 'settings.claudeConfig.scope.user.consequence'
+  },
+  project: {
+    name: 'settings.claudeConfig.scope.project.name',
+    consequence: 'settings.claudeConfig.scope.project.consequence'
+  },
+  projectLocal: {
+    name: 'settings.claudeConfig.scope.projectLocal.name',
+    consequence: 'settings.claudeConfig.scope.projectLocal.consequence'
+  }
 };
 
-const ROOT_RULE_LABELS: Record<string, string> = {
-  worktreeMainCheckout: "the worktree's main checkout",
-  repositoryRoot: 'the git repository root',
-  sessionDirectory: 'the chosen folder'
+const ROOT_RULE_LABELS: Record<string, MessageKey> = {
+  worktreeMainCheckout: 'settings.claudeConfig.path.rule.worktreeMainCheckout',
+  repositoryRoot: 'settings.claudeConfig.path.rule.repositoryRoot',
+  sessionDirectory: 'settings.claudeConfig.path.rule.sessionDirectory'
 };
 
 function SegmentedControl<T extends string>({
@@ -107,11 +117,13 @@ function PathLine({
   onPick
 }: {
   path: string;
-  rule: string;
-  action: string;
+  rule: MessageKey;
+  action: MessageKey;
   missing?: boolean;
   onPick: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <p className="text-[11px] leading-relaxed text-fleet-text-secondary">
       {path ? (
@@ -119,16 +131,20 @@ function PathLine({
           {path}
         </span>
       ) : (
-        <span className="text-fleet-text-subtle">No folder chosen</span>
+        <span className="text-fleet-text-subtle">{t('settings.claudeConfig.path.noFolder')}</span>
       )}
-      {missing ? <span className="text-fleet-text-subtle"> - not created yet</span> : null}
+      {missing ? (
+        <span className="text-fleet-text-subtle">
+          {t('settings.claudeConfig.path.notCreatedSuffix')}
+        </span>
+      ) : null}
       {' - '}
-      {rule}{' '}
+      {t(rule)}{' '}
       <button
         onClick={onPick}
         className="fleet-accent-text underline underline-offset-2 transition active:scale-[0.97]"
       >
-        {action}
+        {t(action)}
       </button>
     </p>
   );
@@ -142,10 +158,12 @@ function TextTabs<T extends string>({
   mono
 }: {
   value: T;
-  options: Array<{ id: T; label: string }>;
+  options: Array<{ id: T; label: MessageKey }>;
   onChange: (id: T) => void;
   mono?: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center gap-4">
       {options.map((option) => (
@@ -158,7 +176,7 @@ function TextTabs<T extends string>({
               : 'border-transparent text-fleet-text-secondary hover:text-fleet-text'
           }`}
         >
-          {option.label}
+          {t(option.label)}
         </button>
       ))}
     </div>
@@ -166,6 +184,7 @@ function TextTabs<T extends string>({
 }
 
 export function ClaudeConfigSection({ onNavigate }: SettingsSectionProps): React.JSX.Element {
+  const { t } = useTranslation();
   const settings = useSettingsStore((s) => s.settings);
   const activeWorkspaceId = useWorkspaceStore((s) => s.workspace.id);
 
@@ -264,17 +283,18 @@ export function ClaudeConfigSection({ onNavigate }: SettingsSectionProps): React
           value={scope}
           options={SCOPES.map((s) => ({
             id: s,
-            label: SCOPE_TABS[s].name,
-            sublabel: SCOPE_TABS[s].consequence
+            label: t(SCOPE_TABS[s].name),
+            sublabel: t(SCOPE_TABS[s].consequence)
           }))}
           onChange={setScope}
         />
 
         <div className="space-y-1">
-          <p className="text-xs leading-relaxed text-fleet-text-secondary">{PRECEDENCE_SENTENCE}</p>
+          <p className="text-xs leading-relaxed text-fleet-text-secondary">
+            {t('settings.claudeConfig.precedence')}
+          </p>
           <p className="text-[11px] leading-relaxed text-fleet-text-subtle">
-            Managed settings deployed by an administrator, <code>--settings</code>, command-line
-            flags and environment variables override all three and are not shown here.
+            {t('settings.claudeConfig.overrides')}
           </p>
         </div>
 
@@ -282,8 +302,8 @@ export function ClaudeConfigSection({ onNavigate }: SettingsSectionProps): React
           <PathLine
             path={path ?? ''}
             missing={doc !== undefined && !doc.exists}
-            rule="in the Claude folder assigned to this workspace."
-            action="Change"
+            rule="settings.claudeConfig.path.rule.user"
+            action="settings.claudeConfig.action.change"
             onPick={() => onNavigate?.('workspaces', activeWorkspaceId)}
           />
         ) : null}
@@ -292,8 +312,8 @@ export function ClaudeConfigSection({ onNavigate }: SettingsSectionProps): React
           <PathLine
             path={path ?? ''}
             missing={doc !== undefined && !doc.exists}
-            rule="in the folder a session runs in."
-            action="Change"
+            rule="settings.claudeConfig.path.rule.project"
+            action="settings.claudeConfig.action.change"
             onPick={() => void pickFolder('session')}
           />
         ) : null}
@@ -302,8 +322,10 @@ export function ClaudeConfigSection({ onNavigate }: SettingsSectionProps): React
           <PathLine
             path={path ?? ''}
             missing={doc !== undefined && !doc.exists}
-            rule={`resolved from ${ROOT_RULE_LABELS[localRootRule]}.`}
-            action="Change"
+            rule={
+              ROOT_RULE_LABELS[localRootRule] ?? 'settings.claudeConfig.path.rule.sessionDirectory'
+            }
+            action="settings.claudeConfig.action.change"
             onPick={() => void pickFolder('localRoot')}
           />
         ) : null}
@@ -319,8 +341,11 @@ export function ClaudeConfigSection({ onNavigate }: SettingsSectionProps): React
                 mono
                 value={effectiveKind}
                 options={[
-                  { id: 'settings' as ClaudeFileKind, label: 'settings.json' },
-                  { id: 'memory' as ClaudeFileKind, label: 'CLAUDE.md' }
+                  {
+                    id: 'settings' as ClaudeFileKind,
+                    label: 'settings.claudeConfig.file.settings'
+                  },
+                  { id: 'memory' as ClaudeFileKind, label: 'settings.claudeConfig.file.memory' }
                 ]}
                 onChange={setKind}
               />
@@ -329,8 +354,8 @@ export function ClaudeConfigSection({ onNavigate }: SettingsSectionProps): React
               <TextTabs
                 value={view}
                 options={[
-                  { id: 'form' as const, label: 'Form' },
-                  { id: 'raw' as const, label: 'Raw' }
+                  { id: 'form' as const, label: 'settings.claudeConfig.view.form' },
+                  { id: 'raw' as const, label: 'settings.claudeConfig.view.raw' }
                 ]}
                 onChange={setView}
               />
@@ -341,7 +366,7 @@ export function ClaudeConfigSection({ onNavigate }: SettingsSectionProps): React
 
       {needsFolder ? (
         <div className="rounded border border-fleet-border-strong bg-fleet-surface-2 px-3 py-6 text-center text-sm text-fleet-text-secondary">
-          Choose a folder to edit this scope.
+          {t('settings.claudeConfig.noFolder')}
         </div>
       ) : (
         <>

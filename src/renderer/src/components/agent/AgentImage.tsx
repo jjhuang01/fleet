@@ -19,7 +19,9 @@ import {
   useTransformEffect
 } from 'react-zoom-pan-pinch';
 import { Overlay } from '../Overlay';
+import type { MessageKey } from '../../../../shared/i18n';
 import { addToSlideshow, setAsBackground } from '../../lib/background-actions';
+import { useTranslation } from '../../lib/i18n';
 import {
   copyImageToClipboard,
   revealImage,
@@ -58,6 +60,7 @@ export function AgentImage({
    */
   path?: string;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [zoomed, setZoomed] = useState(false);
 
   return (
@@ -71,7 +74,7 @@ export function AgentImage({
         <button
           type="button"
           onClick={() => setZoomed(true)}
-          aria-label={`View full size: ${alt}`}
+          aria-label={t('agent.image.viewFullSize', { alt })}
           className="block w-fit max-w-full cursor-zoom-in overflow-hidden rounded-lg border border-fleet-border focus-ring"
         >
           {/* Draggable, so the picture can go straight into a folder or another
@@ -171,13 +174,13 @@ export function AgentImageOverlay({
 function ExportActions({ path }: { path: string }): React.JSX.Element {
   return (
     <>
-      <Tool label="Save image as..." onClick={() => void saveImageAs(path)}>
+      <Tool label="agent.image.saveAs" onClick={() => void saveImageAs(path)}>
         <Download size={15} />
       </Tool>
-      <Tool label="Copy image" onClick={() => void copyImageToClipboard(path)}>
+      <Tool label="agent.image.copy" onClick={() => void copyImageToClipboard(path)}>
         <ImagePlus size={15} />
       </Tool>
-      <Tool label="Show in folder" onClick={() => void revealImage(path)}>
+      <Tool label="agent.image.showInFolder" onClick={() => void revealImage(path)}>
         <FolderOpen size={15} />
       </Tool>
     </>
@@ -200,10 +203,10 @@ function ExportActions({ path }: { path: string }): React.JSX.Element {
 function BackgroundActions({ path }: { path: string }): React.JSX.Element {
   return (
     <>
-      <Tool label="Set as background" onClick={() => void setAsBackground(path)}>
+      <Tool label="agent.image.setBackground" onClick={() => void setAsBackground(path)}>
         <Wallpaper size={15} />
       </Tool>
-      <Tool label="Add to slideshow" onClick={() => void addToSlideshow(path)}>
+      <Tool label="agent.image.addToSlideshow" onClick={() => void addToSlideshow(path)}>
         <Images size={15} />
       </Tool>
     </>
@@ -256,16 +259,16 @@ function Viewer({
             <span aria-hidden className="mx-0.5 h-4 w-px bg-white/15" />
           </>
         )}
-        <Tool label="Zoom out" onClick={() => zoomOut()} disabled={!magnified}>
+        <Tool label="agent.image.zoomOut" onClick={() => zoomOut()} disabled={!magnified}>
           <ZoomOut size={15} />
         </Tool>
-        <Tool label="Zoom in" onClick={() => zoomIn()}>
+        <Tool label="agent.image.zoomIn" onClick={() => zoomIn()}>
           <ZoomIn size={15} />
         </Tool>
-        <Tool label="Reset zoom" onClick={() => resetTransform()} disabled={!magnified}>
+        <Tool label="agent.image.resetZoom" onClick={() => resetTransform()} disabled={!magnified}>
           <RotateCcw size={15} />
         </Tool>
-        <Tool label="Close" onClick={onClose}>
+        <Tool label="common.close" onClick={onClose}>
           <X size={15} />
         </Tool>
       </div>
@@ -313,7 +316,7 @@ function CopyPath({ path }: { path: string }): React.JSX.Element {
 
   return (
     <Tool
-      label={copied ? 'Path copied' : 'Copy path'}
+      label={copied ? 'agent.image.pathCopied' : 'agent.image.copyPath'}
       onClick={() => {
         void navigator.clipboard.writeText(path).then(() => {
           setCopied(true);
@@ -333,18 +336,21 @@ function Tool({
   disabled = false,
   children
 }: {
-  label: string;
+  label: MessageKey;
   onClick: () => void;
   disabled?: boolean;
   children: React.ReactNode;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+  const title = t(label);
+
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={label}
-      title={label}
+      aria-label={title}
+      title={title}
       className="rounded p-1.5 text-white/80 transition-colors hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-35 focus-ring"
     >
       {children}
@@ -362,11 +368,13 @@ function Tool({
  * exists, which is long enough to know it is going wrong.
  */
 export function AgentImagePreview({ src }: { src: string }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="w-fit max-w-full overflow-hidden rounded-lg border border-fleet-border">
       <img
         src={src}
-        alt="Partly generated image"
+        alt={t('agent.image.partlyGenerated')}
         className="block max-h-80 w-auto max-w-full animate-pulse object-contain opacity-80"
       />
     </div>

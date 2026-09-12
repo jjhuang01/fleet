@@ -10,7 +10,30 @@ import type { MessageKey } from './en';
  * 快捷键（shortcut）沿用中文开发者日常说法；产品名 Fleet / Copilot / Telescope
  * 不译，因为它们是界面里可直接搜索的专有名词。
  */
+import * as agentpane from './parts/agent-pane';
+import * as agentsettings from './parts/agent-settings';
+import * as ssh from './parts/ssh';
+import * as dialogs from './parts/dialogs';
+import * as panes from './parts/panes';
+import * as main from './parts/main';
+import * as copilot from './parts/copilot';
+import * as remotehosts from './parts/remote-hosts';
+import * as workspaces from './parts/workspaces';
+import * as envsync from './parts/env-sync';
+import * as claudeconfig from './parts/claude-config';
+
 export const zhCN: Record<MessageKey, string> = {
+  ...agentpane.zh,
+  ...agentsettings.zh,
+  ...ssh.zh,
+  ...dialogs.zh,
+  ...panes.zh,
+  ...main.zh,
+  ...copilot.zh,
+  ...remotehosts.zh,
+  ...workspaces.zh,
+  ...envsync.zh,
+  ...claudeconfig.zh,
   // 通用
   'common.cancel': '取消',
   'common.close': '关闭',
@@ -28,6 +51,9 @@ export const zhCN: Record<MessageKey, string> = {
   'common.dismiss': 'esc 关闭',
   'common.noActiveTerminal': '没有活动终端',
   'common.searching': '搜索中…',
+
+  'common.decrease': '减少{label}',
+  'common.increase': '增加{label}',
 
   // 侧边栏
   'sidebar.newTab': '新建标签页',
@@ -57,6 +83,10 @@ export const zhCN: Record<MessageKey, string> = {
   'sidebar.movePaneToNewTab': '把窗格移动到一个新标签页',
   'sidebar.fileClose.title': '保存对“{label}”的修改？',
   'sidebar.fileClose.body': '如果不保存，你的修改将会丢失。',
+  'sidebar.worktree.groupLabel': 'Worktree 分组',
+  'sidebar.worktree.alreadyWorktree': '已经是 worktree',
+  'sidebar.worktree.groupExists': '已创建 worktree',
+  'sidebar.worktree.notGitRepo': '不是 git 仓库',
   'sidebar.worktree.removeTitle': '移除 worktree“{label}”？',
   'sidebar.worktree.removeBody': '这会删除该 worktree 及其目录。任何未提交、未推送的工作都会丢失。',
 
@@ -183,6 +213,7 @@ export const zhCN: Record<MessageKey, string> = {
   'palette.section.commands': '命令',
   'palette.section.destinations': '跳转到窗格',
   'palette.badge.needsYou': '需要你',
+  'palette.aria.commands': '命令面板',
   'palette.footer.title': '命令面板',
   'palette.footer.run': '↵ 执行',
   'palette.footer.back': 'esc 返回',
@@ -262,7 +293,7 @@ export const zhCN: Record<MessageKey, string> = {
   'settings.nav.diagnostics': '诊断',
   'settings.nav.updates': '更新',
   'settings.language.title': '语言',
-  'settings.language.hint': '对整个应用生效。尚未翻译的页面仍显示英文。',
+  'settings.language.hint': '应用于整个应用。模型、工具和服务器返回的文本仍按原文显示。',
   'settings.language.system': '跟随系统',
   'settings.language.en': 'English',
   'settings.language.zhCN': '简体中文',
@@ -306,6 +337,11 @@ export const zhCN: Record<MessageKey, string> = {
   'settings.background.add': '添加…',
   'settings.background.selectFiles': '选择文件…',
   'settings.background.clearAll': '全部清除',
+  'settings.background.legibility.highOpacity':
+    '图片不透明度过高，终端文字可能难以辨认——请降低不透明度或增加模糊。',
+  'settings.background.legibility.moderateOpacity':
+    '图片不透明度偏高，建议降低不透明度或增加模糊以提升可读性。',
+  'settings.background.legibility.lowThemeContrast': '当前终端主题本身的文字对比度已经偏低。',
   'settings.background.order': '顺序',
   'settings.background.orderAria': '轮播顺序',
   'settings.background.shuffle': '随机',
@@ -338,6 +374,55 @@ export const zhCN: Record<MessageKey, string> = {
   'settings.background.saturationAria': '窗格饱和度',
   'settings.background.scanning': '正在扫描…',
   'settings.background.noImages': '该文件夹中没有找到图片。',
+
+  // 设置页：Socket、标注、通知、经验记录
+  'settings.socket.enabled': '启用 Socket API',
+  'settings.socket.path': 'Socket 路径',
+  'settings.annotate.title': '标注',
+  'settings.annotate.body': '配置网页标注的保存与清理方式。',
+  'settings.annotate.storage': '存储',
+  'settings.annotate.retention': '删除早于以下天数的标注',
+  'settings.annotate.days': '天',
+  'notifications.event': '事件',
+  'notifications.badge': '角标',
+  'notifications.sound': '声音',
+  'notifications.os': '系统通知',
+  'notifications.taskComplete': '任务完成',
+  'notifications.needsPermission': '需要授权',
+  'notifications.processExitError': '进程退出（出错）',
+  'notifications.processExitClean': '进程退出（正常）',
+  'settings.learnings.title': '经验记录',
+  'settings.learnings.body':
+    '在你的跨项目经验库上做语义搜索。向量在本地计算，内容不会离开这台机器。',
+  'settings.learnings.semantic': '语义搜索',
+  'settings.learnings.status': '状态',
+  'settings.learnings.modelCache': '模型缓存',
+  'settings.learnings.modelCacheNote': 'all-MiniLM-L6-v2，首次使用时下载',
+  'settings.learnings.clearCache': '清除缓存',
+  'settings.learnings.clearing': '正在清除…',
+  'settings.learnings.confirmClear': '删除已下载的嵌入模型？下次使用时会重新下载。',
+  'learnings.status.checking': '检查中…',
+  'learnings.status.keywordOnlyVector': '仅关键词（向量扩展不可用）',
+  'learnings.status.active': '语义搜索已启用',
+  'learnings.status.preparing': '正在准备模型…',
+  'learnings.status.keywordOnlyModel': '仅关键词（模型不可用）',
+
+  // 设置页：诊断与更新
+  'diagnostics.body':
+    '遇到问题？点“反馈问题”会打开一个已预填版本、系统信息和近期日志（已脱敏）的 GitHub issue。完整日志请打开日志文件夹，附上最新的 fleet-*.log。在你提交之前，任何内容都不会被发送。',
+  'diagnostics.report': '反馈问题',
+  'diagnostics.opening': '正在打开…',
+  'diagnostics.openLogs': '打开日志文件夹',
+  'diagnostics.failed': '无法打开反馈页面',
+  'updates.restart': '重启以更新',
+  'updates.checking': '正在检查…',
+  'updates.check': '检查更新',
+  'updates.upToDate': '已是最新版本。',
+  'updates.downloading': '正在下载 v{version}… {percent}%',
+  'updates.ready': 'v{version} 已可安装。',
+  'updates.releaseNotes': '更新说明',
+  'updates.pending': '待安装',
+  'updates.current': '当前版本',
 
   // 空状态
   'dashboard.newTerminal': '新建终端',

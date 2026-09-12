@@ -3,6 +3,7 @@ import { ChevronRight, Copy } from 'lucide-react';
 import type { AgentToolCall } from '../../../../shared/agent-tools';
 import { diffLineKind } from '../../../../shared/agent-diff';
 import { useToastStore } from '../../store/toast-store';
+import { useTranslation } from '../../lib/i18n';
 import { diffBody } from './diff-body';
 import { imageBody, toolBody } from './output-body';
 import { toolLabel, toolStatus } from './tool-label';
@@ -57,6 +58,7 @@ export const AgentToolRow = memo(function AgentToolRow({
    */
   cleared?: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const status = toolStatus(call);
   const { verb, target } = toolLabel(call);
   // All three walk the whole of what the call returned - splitting it into
@@ -109,14 +111,14 @@ export const AgentToolRow = memo(function AgentToolRow({
         <span className="flex shrink-0 items-center gap-2">
           {cleared && (
             <span
-              title="This result is no longer sent to the model, to save context. The agent can run the tool again if it needs it."
+              title={t('agent.tool.clearedTitle')}
               className="text-[10px] text-fleet-text-muted/60"
             >
-              cleared
+              {t('agent.tool.cleared')}
             </span>
           )}
           {status === 'failed' ? (
-            <span className="text-amber-400/90">failed</span>
+            <span className="text-amber-400/90">{t('agent.tool.failed')}</span>
           ) : (
             <Summary text={call.summary} />
           )}
@@ -127,7 +129,7 @@ export const AgentToolRow = memo(function AgentToolRow({
           <>
             <AgentImage
               src={image.src}
-              alt={target === '' ? 'Generated image' : target}
+              alt={target === '' ? t('agent.tool.generatedImage') : target}
               path={image.path}
             />
             {/* The prompt under the picture it asked for, whole and wrapped.
@@ -175,6 +177,7 @@ export const AgentToolRow = memo(function AgentToolRow({
  * which one this is, so the folders are what the ellipsis takes.
  */
 function ImagePath({ path }: { path: string }): React.JSX.Element {
+  const { t } = useTranslation();
   const showToast = useToastStore((s) => s.show);
   const home = window.fleet.homeDir;
   const shown = home !== '' && path.startsWith(home) ? `~${path.slice(home.length)}` : path;
@@ -189,9 +192,9 @@ function ImagePath({ path }: { path: string }): React.JSX.Element {
         // the call says it worked either way.
         void navigator.clipboard
           .writeText(path)
-          .then(() => showToast('Image path copied to clipboard'));
+          .then(() => showToast(t('agent.tool.imagePathCopied')));
       }}
-      title={`Copy ${path}`}
+      title={t('agent.tool.copyPath', { path })}
       className="flex w-full items-center gap-1.5 text-left font-mono text-[11px] text-fleet-text-subtle transition-colors hover:text-fleet-text focus-ring"
     >
       <Copy size={11} className="shrink-0" />

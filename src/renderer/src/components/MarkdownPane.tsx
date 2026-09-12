@@ -10,6 +10,8 @@ import { useToastStore } from '../store/toast-store';
 import { dirname } from '../lib/path-utils';
 import type { PathContext } from '../../../shared/shell-profiles';
 import type { RemoteFileRef } from '../../../shared/remote-ssh-types';
+import type { MessageKey } from '../../../shared/i18n';
+import { useTranslation } from '../lib/i18n';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -22,11 +24,13 @@ type Props = {
 };
 
 type ViewMode = 'preview' | 'raw';
+type VisibleError = { key: MessageKey } | { raw: string };
 
 export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [activeView, setActiveView] = useState<ViewMode>('preview');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<VisibleError | null>(null);
   const [tooLarge, setTooLarge] = useState(false);
   const [fileSize, setFileSize] = useState(0);
   const [previewContent, setPreviewContent] = useState<string>('');
@@ -75,11 +79,11 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
   const showToast = useToastStore((s) => s.show);
 
   const copyText = useCallback(
-    (text: string, label: string) => {
+    (text: string, label: MessageKey) => {
       if (!text) return;
-      void navigator.clipboard.writeText(text).then(() => showToast(label));
+      void navigator.clipboard.writeText(text).then(() => showToast(t(label)));
     },
-    [showToast]
+    [showToast, t]
   );
 
   // The current selection's text, but only if it lives inside the preview.
@@ -92,7 +96,7 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
   }, []);
 
   const copySelection = useCallback(() => {
-    copyText(getSelectedText(), 'Copied selection');
+    copyText(getSelectedText(), 'panes.markdown.copiedSelection');
   }, [copyText, getSelectedText]);
 
   const selectAllDoc = useCallback(() => {
@@ -120,13 +124,13 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
 
   // Auto-copy on highlight: when a drag/selection settles, copy it. Confirms with a toast.
   const handlePreviewMouseUp = useCallback(() => {
-    copyText(getSelectedText(), 'Copied selection');
+    copyText(getSelectedText(), 'panes.markdown.copiedSelection');
   }, [copyText, getSelectedText]);
 
   // Native Cmd/Ctrl+C: the browser already copied the selection — just confirm it.
   const handlePreviewCopy = useCallback(() => {
-    if (getSelectedText()) showToast('Copied selection');
-  }, [getSelectedText, showToast]);
+    if (getSelectedText()) showToast(t('panes.markdown.copiedSelection'));
+  }, [getSelectedText, showToast, t]);
 
   // Load file content on mount
   useEffect(() => {
@@ -140,7 +144,8 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
           setPreviewContent(result.data.content);
         }
       } else {
-        setError(('error' in result ? result.error : undefined) ?? 'Failed to read file');
+        const rawError = 'error' in result ? result.error : undefined;
+        setError(rawError ? { raw: rawError } : { key: 'panes.file.readFailed' });
       }
       setLoading(false);
     });
@@ -176,7 +181,7 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
   if (loading) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-[#282c34] text-neutral-400 text-sm">
-        Loading…
+        {t('panes.markdown.loading')}
       </div>
     );
   }
@@ -184,7 +189,7 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
   if (error) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-[#282c34] text-red-400 text-sm">
-        Error: {error}
+        {t('panes.file.error', { error: 'key' in error ? t(error.key) : error.raw })}
       </div>
     );
   }
@@ -193,9 +198,9 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-[#282c34] text-neutral-400 text-sm gap-2">
         <div className="text-3xl text-neutral-500">⚠</div>
-        <div className="font-medium text-neutral-200">File too large to preview</div>
+        <div className="font-medium text-neutral-200">{t('panes.markdown.tooLarge')}</div>
         <div className="text-neutral-500">
-          {(fileSize / 1024 / 1024).toFixed(1)} MB — limit is 10 MB
+          {t('panes.file.sizeLimit', { size: (fileSize / 1024 / 1024).toFixed(1) })}
         </div>
       </div>
     );
@@ -215,7 +220,7 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
           }`}
           onClick={() => handleTabSwitch('preview')}
         >
-          Preview
+          {t('panes.markdown.preview')}
         </button>
         <button
           className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors active:scale-[0.97] ${
@@ -225,7 +230,7 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
           }`}
           onClick={() => handleTabSwitch('raw')}
         >
-          Raw
+          {t('panes.markdown.raw')}
         </button>
 
         {activeView === 'preview' && (
@@ -243,8 +248,10 @@ export function MarkdownPane({ paneId, filePath, pathContext, remote }: Props): 
         <MarkdownContextMenu
           getSelectedText={getSelectedText}
           onCopySelection={copySelection}
-          onCopyMarkdown={() => copyText(contentRef.current, 'Copied as Markdown')}
-          onCopyText={() => copyText(previewRef.current?.innerText ?? '', 'Copied as plain text')}
+          onCopyMarkdown={() => copyText(contentRef.current, 'panes.markdown.copiedMarkdown')}
+          onCopyText={() =>
+            copyText(previewRef.current?.innerText ?? '', 'panes.markdown.copiedText')
+          }
           onSelectAll={selectAllDoc}
           onFind={() => setSearchOpen(true)}
         >

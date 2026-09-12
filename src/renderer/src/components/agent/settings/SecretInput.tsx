@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff, Lock, Check, AlertCircle } from 'lucide-react';
+import type { MessageKey } from '../../../../../shared/i18n';
+import { useTranslation } from '../../../lib/i18n';
 import { inputCls } from './controls';
 
 /**
@@ -21,9 +23,10 @@ export function SecretInput({
   onSave: (key: string) => void | Promise<void>;
   onClear: () => void | Promise<void>;
   placeholder?: string;
-  validate?: (key: string) => string | null;
+  validate?: (key: string) => MessageKey | null;
   inputId?: string;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState('');
   const [reveal, setReveal] = useState(false);
@@ -42,7 +45,7 @@ export function SecretInput({
     if (!key) return;
     const err = validate?.(key) ?? null;
     if (err) {
-      setError(err);
+      setError(t(err));
       return;
     }
     try {
@@ -51,7 +54,7 @@ export function SecretInput({
       // Surface a rejected save (e.g. the key failed validation against the
       // provider) inline, and stay in the editable form so the message shows
       // even though `present` may have flipped true.
-      setError(e instanceof Error ? e.message : 'Could not save. Try again.');
+      setError(e instanceof Error ? e.message : t('agentSettings.secret.saveError'));
       setEditing(true);
       return;
     }
@@ -67,21 +70,22 @@ export function SecretInput({
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-md border border-fleet-border bg-fleet-surface-2 px-2.5 py-1.5 text-xs text-fleet-text-secondary">
             <Lock size={12} className="text-fleet-text-muted" />
-            {justSaved ? 'Saved' : 'Key stored'} · encrypted
+            {justSaved ? t('agentSettings.secret.saved') : t('agentSettings.secret.stored')} ·{' '}
+            {t('agentSettings.secret.encrypted')}
           </span>
           <button
             type="button"
             onClick={() => setEditing(true)}
             className="rounded-md px-2 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text"
           >
-            Replace
+            {t('agentSettings.secret.replace')}
           </button>
           <button
             type="button"
             onClick={() => void onClear()}
             className="rounded-md px-2 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/10"
           >
-            Remove
+            {t('agentSettings.common.remove')}
           </button>
         </div>
       </div>
@@ -116,7 +120,7 @@ export function SecretInput({
           <button
             type="button"
             onClick={() => setReveal((r) => !r)}
-            aria-label={reveal ? 'Hide key' : 'Show key'}
+            aria-label={reveal ? t('agentSettings.secret.hide') : t('agentSettings.secret.show')}
             className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-fleet-text-muted transition-colors hover:text-fleet-text"
           >
             {reveal ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -128,7 +132,7 @@ export function SecretInput({
           disabled={!value.trim()}
           className="rounded-md fleet-accent-bg px-3 py-1.5 text-sm font-medium text-white transition active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100"
         >
-          Save
+          {t('agentSettings.common.save')}
         </button>
         {present && (
           <button
@@ -136,7 +140,7 @@ export function SecretInput({
             onClick={reset}
             className="rounded-md px-2 py-1.5 text-sm text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text"
           >
-            Cancel
+            {t('agentSettings.common.cancel')}
           </button>
         )}
       </div>
@@ -146,7 +150,7 @@ export function SecretInput({
         </p>
       ) : justSaved ? (
         <p className="flex items-center gap-1 text-xs text-emerald-400">
-          <Check size={12} /> Saved
+          <Check size={12} /> {t('agentSettings.secret.saved')}
         </p>
       ) : null}
     </div>

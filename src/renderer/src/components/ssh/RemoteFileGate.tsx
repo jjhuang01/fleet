@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import type { RemoteFetchResult, RemoteHost } from '../../../../shared/remote-ssh-types';
+import { useTranslation } from '../../lib/i18n';
 
 type Props = {
   host: RemoteHost;
@@ -18,6 +19,7 @@ type Props = {
  * no notion of SSH at all.
  */
 export function RemoteFileGate({ host, remotePath, children }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [fetched, setFetched] = useState<RemoteFetchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -37,9 +39,16 @@ export function RemoteFileGate({ host, remotePath, children }: Props): React.JSX
   }, [host, remotePath, attempt]);
 
   if (error !== null) {
+    const errorText =
+      error === 'File not found on the remote host.'
+        ? t('ssh.file.error.notFound')
+        : error === 'Path is a directory.'
+          ? t('ssh.file.error.isDirectory')
+          : error;
+
     return (
       <div className="h-full w-full flex flex-col items-center justify-center gap-3 bg-neutral-900 text-sm px-6 text-center">
-        <div className="text-red-400">{error}</div>
+        <div className="text-red-400">{errorText}</div>
         <div className="text-neutral-500 font-mono text-xs break-all">
           {host.label}:{remotePath}
         </div>
@@ -48,7 +57,7 @@ export function RemoteFileGate({ host, remotePath, children }: Props): React.JSX
           onClick={() => setAttempt((n) => n + 1)}
         >
           <RefreshCw size={12} />
-          Retry
+          {t('ssh.file.retry')}
         </button>
       </div>
     );
@@ -58,7 +67,7 @@ export function RemoteFileGate({ host, remotePath, children }: Props): React.JSX
     return (
       <div className="h-full w-full flex items-center justify-center gap-2 bg-neutral-900 text-neutral-400 text-sm">
         <Loader2 className="animate-spin" size={16} />
-        Downloading from {host.label}…
+        {t('ssh.file.downloading', { host: host.label })}
       </div>
     );
   }

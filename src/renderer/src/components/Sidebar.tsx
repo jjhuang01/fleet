@@ -1483,7 +1483,11 @@ export function Sidebar({
                 rendered.push(
                   <GroupHeader
                     key={`group-${groupId}`}
-                    label={groupTabs[0].groupLabel ?? parentTab?.label ?? 'Worktree Group'}
+                    label={
+                      groupTabs[0].groupLabel ??
+                      parentTab?.label ??
+                      t('sidebar.worktree.groupLabel')
+                    }
                     tabCount={groupTabs.length}
                     isCollapsed={isCollapsed}
                     onToggle={() => toggleGroupCollapsed(groupId)}
@@ -1599,11 +1603,11 @@ export function Sidebar({
                     isFile
                       ? undefined
                       : tab.groupRole === 'worktree'
-                        ? 'Already a worktree'
+                        ? 'sidebar.worktree.alreadyWorktree'
                         : tab.groupId
-                          ? 'Worktrees already created'
+                          ? 'sidebar.worktree.groupExists'
                           : !gitRepoTabs.has(tab.id)
-                            ? 'Not a git repository'
+                            ? 'sidebar.worktree.notGitRepo'
                             : null
                   }
                   onCreateWorktree={

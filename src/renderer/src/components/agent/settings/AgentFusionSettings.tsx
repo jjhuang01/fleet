@@ -9,6 +9,7 @@ import {
   type AgentFusionConfig
 } from '../../../../../shared/agent-fusion';
 import type { AgentCatalogModel } from '../../../../../shared/agent-types';
+import { useTranslation } from '../../../lib/i18n';
 import { BoundedNumber, RoleCard } from './controls';
 import { ModelSelect } from './ModelSelect';
 
@@ -30,21 +31,22 @@ export function AgentFusionSettings({
   config: AgentFusionConfig;
   onChange: (patch: Partial<AgentFusionConfig>) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const panel = config.models;
   const full = panel.length >= FUSION_MAX_PANEL;
 
   return (
     <RoleCard
-      title="Panel review"
-      description="Run /fusion in a chat to put a change in front of several models at once and have a further one reconcile them. One model call per panel member plus the analyst, billed per review."
+      title={t('agentSettings.fusion.title')}
+      description={t('agentSettings.fusion.description')}
       icon={<Users size={16} />}
     >
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm text-fleet-text-secondary">Panel</label>
+        <label className="text-sm text-fleet-text-secondary">
+          {t('agentSettings.fusion.panel.label')}
+        </label>
         <p className="text-xs text-fleet-text-muted">
-          Up to {FUSION_MAX_PANEL}. Left empty, OpenRouter picks a panel of current frontier models
-          and keeps that choice current - which is usually better than a list written here and left
-          to age. Choose your own when you want models that disagree in particular ways.
+          {t('agentSettings.fusion.panel.hint', { count: FUSION_MAX_PANEL })}
         </p>
         {panel.length > 0 && (
           <ul className="flex flex-col gap-1">
@@ -56,7 +58,7 @@ export function AgentFusionSettings({
                 <span className="truncate font-mono text-xs text-fleet-text-secondary">{id}</span>
                 <button
                   type="button"
-                  aria-label={`Remove ${id} from the panel`}
+                  aria-label={t('agentSettings.fusion.panel.remove', { name: id })}
                   onClick={() => onChange({ models: panel.filter((m) => m !== id) })}
                   className="shrink-0 text-fleet-text-subtle transition-colors hover:text-fleet-text focus-ring"
                 >
@@ -80,32 +82,34 @@ export function AgentFusionSettings({
               if (model === null || panel.includes(model)) return;
               onChange({ models: [...panel, model] });
             }}
-            placeholder={panel.length === 0 ? "Add a model, or leave OpenRouter's" : 'Add a model'}
+            placeholder={
+              panel.length === 0
+                ? t('agentSettings.fusion.panel.addOrDefault')
+                : t('agentSettings.fusion.panel.add')
+            }
           />
         )}
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label className="text-sm text-fleet-text-secondary">Analyst</label>
-        <p className="text-xs text-fleet-text-muted">
-          Reads every reply and reports the agreement, the disagreements and what only one model
-          saw. Left unset it is the model running the chat, which is a fair default - this is
-          summarising opinions rather than forming one.
-        </p>
+        <label className="text-sm text-fleet-text-secondary">
+          {t('agentSettings.fusion.analyst.label')}
+        </label>
+        <p className="text-xs text-fleet-text-muted">{t('agentSettings.fusion.analyst.hint')}</p>
         <ModelSelect
           models={models}
           value={config.analyst}
           onChange={(analyst) => onChange({ analyst })}
           allowNone
-          noneLabel="The model running the chat"
-          placeholder="The model running the chat"
+          noneLabel={t('agentSettings.fusion.analyst.model')}
+          placeholder={t('agentSettings.fusion.analyst.model')}
         />
       </div>
 
       <NumberRow
         id="agent-fusion-max-tokens"
-        label="Reply length"
-        hint="Tokens for one reply, thinking included. Every panel member gets this, so it multiplies."
+        label={t('agentSettings.fusion.replyLength.label')}
+        hint={t('agentSettings.fusion.replyLength.hint')}
         value={config.maxTokens}
         min={FUSION_MIN_TOKENS}
         max={FUSION_MAX_TOKENS}
@@ -116,8 +120,8 @@ export function AgentFusionSettings({
 
       <NumberRow
         id="agent-fusion-max-tool-calls"
-        label="Lookups per model"
-        hint="Web searches and fetches one panel member may make while forming its answer. Multiplied by the size of the panel."
+        label={t('agentSettings.fusion.lookups.label')}
+        hint={t('agentSettings.fusion.lookups.hint')}
         value={config.maxToolCalls}
         min={FUSION_MIN_TOOL_CALLS}
         max={FUSION_MAX_TOOL_CALLS}

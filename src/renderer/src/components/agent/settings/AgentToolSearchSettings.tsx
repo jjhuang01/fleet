@@ -4,6 +4,8 @@ import {
   TOOL_SEARCH_MIN_RESULTS,
   type AgentToolSearchConfig
 } from '../../../../../shared/agent-tool-search';
+import type { MessageKey } from '../../../../../shared/i18n';
+import { useTranslation } from '../../../lib/i18n';
 import { RoleCard, inputCls } from './controls';
 import { Toggle } from './Toggle';
 
@@ -35,16 +37,19 @@ export function AgentToolSearchSettings({
   /** Whether there is an OpenRouter key at all. See the search card. */
   hasKey: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+  const hintKey = hint(hasKey, serverCount);
+
   return (
     <RoleCard
-      title="Deferred tools"
-      description="Holds back the tools from your connected servers until the agent searches for one. They stay usable - the agent is just told about them later, so it stops paying to have every one described on every round."
+      title={t('agentSettings.toolSearch.title')}
+      description={t('agentSettings.toolSearch.description')}
       icon={<Layers size={16} />}
     >
       <Row
         id="agent-tool-search-enabled"
-        label="Hold back server tools"
-        hint={hint(hasKey, serverCount)}
+        label={t('agentSettings.toolSearch.enabled.label')}
+        hint={t(hintKey, { count: serverCount })}
       >
         <Toggle
           id="agent-tool-search-enabled"
@@ -56,8 +61,8 @@ export function AgentToolSearchSettings({
       {config.enabled && (
         <Row
           id="agent-tool-search-max-results"
-          label="Tools per search"
-          hint="How many tools one search may load. A small number keeps the saving; the agent can always search again."
+          label={t('agentSettings.toolSearch.maxResults.label')}
+          hint={t('agentSettings.toolSearch.maxResults.hint')}
         >
           <input
             id="agent-tool-search-max-results"
@@ -92,13 +97,14 @@ export function AgentToolSearchSettings({
  * better than letting them wonder. The saving is stated as a rule rather than
  * as a figure, because the figure is theirs and Fleet cannot know it from here.
  */
-function hint(hasKey: boolean, serverCount: number): string {
-  if (!hasKey) return 'Needs an OpenRouter API key. The search runs on OpenRouter, not here.';
+function hint(hasKey: boolean, serverCount: number): MessageKey {
+  if (!hasKey) return 'agentSettings.toolSearch.hint.noKey';
   if (serverCount === 0) {
-    return 'Nothing to hold back yet - this starts saving once you connect a server under Tools.';
+    return 'agentSettings.toolSearch.hint.noServers';
   }
-  const servers = serverCount === 1 ? '1 server' : `${serverCount} servers`;
-  return `Holds back the tools from your ${servers}. The first turn that needs one spends a round finding it, and every round after that is cheaper.`;
+  return serverCount === 1
+    ? 'agentSettings.toolSearch.hint.oneServer'
+    : 'agentSettings.toolSearch.hint.manyServers';
 }
 
 /** Label and hint on the left, the control on the right - the panel's own shape. */

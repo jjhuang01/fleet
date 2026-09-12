@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { translate, type MessageKey, type TranslateParams } from './i18n';
 
 /**
  * A schedule the agent set for itself: what it is, what it costs, and what it
@@ -267,7 +268,9 @@ export function renderScheduleBlock(records: AgentScheduleRecord[], now: Date): 
   if (records.length === 0) return null;
 
   const lines = records.map((record) => {
-    const when = record.state === 'due' ? 'due now' : `next ${nextFireLabel(record, now)}`;
+    const fire = nextFireLabel(record, now, 'en-US');
+    const when =
+      record.state === 'due' ? 'due now' : `next ${translate('en', fire.key, fire.params)}`;
     return `- \`${record.id}\` (${record.cron}, ${record.recurring ? 'recurring' : 'once'}, ${when}): ${record.note}`;
   });
 
@@ -281,21 +284,39 @@ export function renderScheduleBlock(records: AgentScheduleRecord[], now: Date): 
 }
 
 /**
- * When a schedule next fires, as a person would say it.
+ * When a schedule next fires, as a catalogue key plus its placeholders.
+ *
+ * A key rather than a sentence because two readers want it in different words:
+ * the panel shows the user's language and the roster below is read by a model,
+ * which is told the same fact in English rather than a translated second
+ * opinion about when its own reminder fires.
+ *
+ * The date and time themselves are formatted with the locale the caller passes,
+ * so the panel follows the language setting rather than the machine.
  *
  * A time of day for today and tomorrow, and a date for anything further out.
  * Shared with the panel because the model and the user should not be told two
  * different things about the same schedule.
  */
-export function nextFireLabel(record: AgentScheduleRecord, now: Date): string {
-  const at = new Date(record.nextDueAt);
-  if (Number.isNaN(at.getTime())) return record.cron;
+export type NextFireLabel = { key: MessageKey; params: TranslateParams };
 
-  const time = at.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+export function nextFireLabel(
+  record: AgentScheduleRecord,
+  now: Date,
+  locale: string
+): NextFireLabel {
+  const at = new Date(record.nextDueAt);
+  if (Number.isNaN(at.getTime())) {
+    return { key: 'agent.schedule.rawWhen', params: { cron: record.cron } };
+  }
+
+  const time = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(at);
   const days = calendarDaysBetween(now, at);
-  if (days === 0) return `today ${time}`;
-  if (days === 1) return `tomorrow ${time}`;
-  return `${at.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} ${time}`;
+  if (days === 0) return { key: 'agent.schedule.today', params: { time } };
+  if (days === 1) return { key: 'agent.schedule.tomorrow', params: { time } };
+
+  const date = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(at);
+  return { key: 'agent.schedule.onDate', params: { date, time } };
 }
 
 /** Whole calendar days from one local date to another, ignoring the time of day. */

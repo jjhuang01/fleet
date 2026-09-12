@@ -107,16 +107,31 @@ describe('a pasted config', () => {
   });
 
   it('says what is wrong rather than throwing', () => {
-    expect(parsePasted('')).toEqual({ ok: false, error: 'Nothing to read yet.' });
-    expect(parsePasted('{oops')).toEqual({ ok: false, error: 'That is not valid JSON.' });
-    expect(parsePasted('[1,2,3]').ok).toBe(false);
-    expect(parsePasted('"just a string"').ok).toBe(false);
+    expect(parsePasted('')).toEqual({
+      ok: false,
+      error: 'agentSettings.mcp.add.pasteErrorEmpty'
+    });
+    expect(parsePasted('{oops')).toEqual({
+      ok: false,
+      error: 'agentSettings.mcp.add.pasteErrorInvalidJson'
+    });
+    expect(parsePasted('[1,2,3]')).toEqual({
+      ok: false,
+      error: 'agentSettings.mcp.add.pasteErrorNoServers'
+    });
+    expect(parsePasted('"just a string"')).toEqual({
+      ok: false,
+      error: 'agentSettings.mcp.add.pasteErrorNoServers'
+    });
   });
 
   it('refuses a server that could never be connected to', () => {
     // Valid JSON, shaped like a config, and describing nothing runnable. Kept
     // it would sit in the list as a row that fails forever.
-    expect(parsePasted('{"a": {"note": "todo"}}').ok).toBe(false);
+    expect(parsePasted('{"a": {"note": "todo"}}')).toEqual({
+      ok: false,
+      error: 'agentSettings.mcp.add.pasteErrorUnusableServer'
+    });
   });
 
   it('drops the unusable one and keeps the rest', () => {

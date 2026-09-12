@@ -1,3 +1,5 @@
+import type { MessageKey, TranslateParams } from './i18n';
+
 /**
  * Reading the address of a local inference server out of whatever was typed.
  *
@@ -9,7 +11,9 @@
  * the server is, so the path is trimmed rather than refused.
  */
 
-export type NormalizedEndpointUrl = { ok: true; origin: string } | { ok: false; error: string };
+export type NormalizedEndpointUrl =
+  | { ok: true; origin: string }
+  | { ok: false; error: MessageKey; params?: TranslateParams };
 
 /** Paths that are ours to add, and so are dropped rather than rejected. */
 const KNOWN_SUFFIXES = ['/v1/chat/completions', '/v1/models', '/v1/completions', '/props', '/v1'];
@@ -30,7 +34,7 @@ const KNOWN_SUFFIXES = ['/v1/chat/completions', '/v1/models', '/v1/completions',
  */
 export function normalizeEndpointUrl(input: string): NormalizedEndpointUrl {
   const trimmed = input.trim();
-  if (trimmed === '') return { ok: false, error: 'Enter the address the server is running on.' };
+  if (trimmed === '') return { ok: false, error: 'agentSettings.endpoint.errorAddressEmpty' };
 
   // A bare host:port has no scheme for `URL` to find. Adding one is the whole
   // fix, and doing it before parsing keeps the rest of this function honest
@@ -41,19 +45,26 @@ export function normalizeEndpointUrl(input: string): NormalizedEndpointUrl {
   try {
     url = new URL(withScheme);
   } catch {
-    return { ok: false, error: `“${trimmed}” is not an address Fleet can read.` };
+    return {
+      ok: false,
+      error: 'agentSettings.endpoint.errorAddressInvalid',
+      params: { input: trimmed }
+    };
   }
 
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    return { ok: false, error: 'The address has to start with http:// or https://.' };
+    return { ok: false, error: 'agentSettings.endpoint.errorAddressScheme' };
   }
-  if (url.hostname === '') return { ok: false, error: 'The address is missing a host name.' };
+  if (url.hostname === '') {
+    return { ok: false, error: 'agentSettings.endpoint.errorAddressMissingHost' };
+  }
 
   const path = url.pathname.replace(/\/+$/, '');
   if (path !== '' && !KNOWN_SUFFIXES.includes(path)) {
     return {
       ok: false,
-      error: `Leave off the path - “${url.origin}” is the whole address Fleet needs.`
+      error: 'agentSettings.endpoint.errorAddressPath',
+      params: { origin: url.origin }
     };
   }
 

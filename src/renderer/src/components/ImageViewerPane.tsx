@@ -2,6 +2,8 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { toFleetImageUrl } from '../../../shared/path-platform';
 import type { PathContext } from '../../../shared/shell-profiles';
 import type { RemoteFileRef } from '../../../shared/remote-ssh-types';
+import type { MessageKey } from '../../../shared/i18n';
+import { useTranslation } from '../lib/i18n';
 
 function getBasename(filePath: string): string {
   return filePath.split('/').pop() || filePath.split('\\').pop() || filePath;
@@ -33,11 +35,12 @@ export function ImageViewerPane({
   pathContext,
   remote
 }: ImageViewerPaneProps): React.JSX.Element {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<MessageKey | null>(null);
   const [fileSize, setFileSize] = useState<number | null>(null);
   const [dimensions, setDimensions] = useState<{ w: number; h: number } | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -213,7 +216,7 @@ export function ImageViewerPane({
       >
         {error && (
           <div className="absolute inset-0 flex items-center justify-center text-neutral-400 text-sm">
-            {error}
+            {t(error)}
           </div>
         )}
 
@@ -223,7 +226,7 @@ export function ImageViewerPane({
             src={imageSrc}
             alt={filename}
             onLoad={handleImageLoad}
-            onError={() => setError('Failed to load image')}
+            onError={() => setError('panes.image.loadFailed')}
             draggable={false}
             style={{
               position: 'absolute',
@@ -250,22 +253,22 @@ export function ImageViewerPane({
         {fileSize !== null && <span className="text-neutral-500">{formatSize(fileSize)}</span>}
         {imageSrc && (
           <div className="ml-auto flex items-center gap-0.5">
-            <ToolbarButton onClick={() => adjustZoom(-ZOOM_STEP)} title="Zoom Out (−)">
+            <ToolbarButton onClick={() => adjustZoom(-ZOOM_STEP)} title={t('panes.image.zoomOut')}>
               −
             </ToolbarButton>
             <span
               className="font-mono w-10 text-center text-neutral-400 hover:text-white cursor-pointer"
               onClick={applyFit}
-              title="Click to fit"
+              title={t('panes.image.clickToFit')}
             >
               {zoomPercent}%
             </span>
-            <ToolbarButton onClick={() => adjustZoom(ZOOM_STEP)} title="Zoom In (+)">
+            <ToolbarButton onClick={() => adjustZoom(ZOOM_STEP)} title={t('panes.image.zoomIn')}>
               +
             </ToolbarButton>
             <div className="w-px h-3.5 bg-neutral-700 mx-1" />
-            <ToolbarButton onClick={applyFit} title="Fit to Window (0)">
-              Fit
+            <ToolbarButton onClick={applyFit} title={t('panes.image.fitToWindow')}>
+              {t('panes.image.fit')}
             </ToolbarButton>
             <ToolbarButton
               onClick={() => {
@@ -273,7 +276,7 @@ export function ImageViewerPane({
                 setOffset({ x: 0, y: 0 });
                 setIsFit(false);
               }}
-              title="Actual Size"
+              title={t('panes.image.actualSize')}
             >
               1:1
             </ToolbarButton>

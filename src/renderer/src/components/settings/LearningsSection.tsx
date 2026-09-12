@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { LearningsStatus } from '../../../../shared/learnings';
+import { useTranslation } from '../../lib/i18n';
+import type { MessageKey } from '../../../../shared/i18n';
 
 function formatBytes(bytes: number): string {
   if (bytes <= 0) return '0 MB';
@@ -7,21 +9,22 @@ function formatBytes(bytes: number): string {
   return mb >= 1 ? `${mb.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
 }
 
-function statusLabel(status: LearningsStatus | null): string {
-  if (!status) return 'Checking…';
-  if (!status.vectorSupport) return 'Keyword only (vector extension unavailable)';
+function statusLabelKey(status: LearningsStatus | null): MessageKey {
+  if (!status) return 'learnings.status.checking';
+  if (!status.vectorSupport) return 'learnings.status.keywordOnlyVector';
   switch (status.embedder) {
     case 'ready':
-      return 'Semantic search active';
+      return 'learnings.status.active';
     case 'loading':
     case 'idle':
-      return 'Preparing model…';
+      return 'learnings.status.preparing';
     case 'failed':
-      return 'Keyword only (model unavailable)';
+      return 'learnings.status.keywordOnlyModel';
   }
 }
 
 export function LearningsSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<LearningsStatus | null>(null);
   const [cacheBytes, setCacheBytes] = useState<number | null>(null);
   const [clearing, setClearing] = useState(false);
@@ -40,8 +43,7 @@ export function LearningsSection(): React.JSX.Element {
   }, [load]);
 
   const clearCache = useCallback(async (): Promise<void> => {
-    if (!window.confirm('Delete the downloaded embedding model? It re-downloads on next use.'))
-      return;
+    if (!window.confirm(t('settings.learnings.confirmClear'))) return;
     setClearing(true);
     try {
       await window.fleet.learnings.clearModelCache();
@@ -49,29 +51,32 @@ export function LearningsSection(): React.JSX.Element {
     } finally {
       setClearing(false);
     }
-  }, [load]);
+  }, [load, t]);
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-medium text-fleet-text mb-1">Learnings</h2>
-        <p className="text-sm text-fleet-text-muted">
-          Semantic search over your cross-project Learnings knowledge base. Embeddings run locally —
-          nothing leaves your machine.
-        </p>
+        <h2 className="text-lg font-medium text-fleet-text mb-1">
+          {t('settings.learnings.title')}
+        </h2>
+        <p className="text-sm text-fleet-text-muted">{t('settings.learnings.body')}</p>
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-fleet-text-secondary">Semantic search</h3>
+        <h3 className="text-sm font-medium text-fleet-text-secondary">
+          {t('settings.learnings.semantic')}
+        </h3>
         <div className="flex items-center justify-between">
-          <label className="text-sm text-fleet-text-muted">Status</label>
-          <span className="text-sm text-fleet-text">{statusLabel(status)}</span>
+          <label className="text-sm text-fleet-text-muted">{t('settings.learnings.status')}</label>
+          <span className="text-sm text-fleet-text">{t(statusLabelKey(status))}</span>
         </div>
         <div className="flex items-center justify-between">
           <div>
-            <label className="text-sm text-fleet-text-muted block">Model cache</label>
+            <label className="text-sm text-fleet-text-muted block">
+              {t('settings.learnings.modelCache')}
+            </label>
             <span className="text-xs text-fleet-text-subtle">
-              all-MiniLM-L6-v2, downloaded on first use
+              {t('settings.learnings.modelCacheNote')}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -83,7 +88,7 @@ export function LearningsSection(): React.JSX.Element {
               disabled={clearing || !cacheBytes}
               className="px-2.5 py-1 text-sm rounded-md bg-fleet-surface-3 border border-fleet-border-strong text-fleet-text hover:bg-fleet-surface-3 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] transition"
             >
-              {clearing ? 'Clearing…' : 'Clear cache'}
+              {clearing ? t('settings.learnings.clearing') : t('settings.learnings.clearCache')}
             </button>
           </div>
         </div>

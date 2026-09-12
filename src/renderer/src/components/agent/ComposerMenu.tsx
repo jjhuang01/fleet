@@ -1,4 +1,6 @@
 import type { ComposerMenuState } from './composer-menu';
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
 
 /**
  * How both composer menus look: a list above the box with one row highlighted.
@@ -8,10 +10,11 @@ import type { ComposerMenuState } from './composer-menu';
 export function ComposerMenu<T>(props: {
   menu: ComposerMenuState<T>;
   /** What the list is, for anyone who cannot see it. */
-  label: string;
+  label: MessageKey;
   itemKey: (item: T) => string;
   children: (item: T) => React.ReactNode;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   const { menu, label, itemKey, children } = props;
   if (!menu.open) return null;
 
@@ -19,7 +22,7 @@ export function ComposerMenu<T>(props: {
     <div
       id={menu.id}
       role="listbox"
-      aria-label={label}
+      aria-label={t(label)}
       className="absolute bottom-full left-0 z-20 mb-1 max-h-56 w-full animate-in overflow-y-auto rounded border border-fleet-border bg-fleet-glass-surface-2 py-1 shadow-lg backdrop-blur-md fade-in zoom-in-95 duration-100"
     >
       {menu.items.map((item, i) => (

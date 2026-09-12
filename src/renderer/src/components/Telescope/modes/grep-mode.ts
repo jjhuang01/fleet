@@ -11,9 +11,9 @@ export function createGrepMode(cwd: string, activePaneId: string | null): Telesc
 
   return {
     id: 'grep',
-    label: 'Grep',
+    label: 'dialogs.telescope.mode.grep',
     icon: TextSearch,
-    placeholder: 'Search file contents...',
+    placeholder: 'dialogs.telescope.placeholder.grep',
 
     onSearch: async (query: string): Promise<TelescopeItem[]> => {
       if (!query) return [];

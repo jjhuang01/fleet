@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n';
 
 type MarkdownFindBarProps = {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function MarkdownFindBar({
   onPrev,
   onClose
 }: MarkdownFindBarProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -38,7 +40,7 @@ export function MarkdownFindBar({
 
   const counter = query
     ? matchCount === 0
-      ? 'No results'
+      ? t('dialogs.markdown.find.noResults')
       : `${currentIndex + 1}/${matchCount}`
     : '';
 
@@ -59,7 +61,7 @@ export function MarkdownFindBar({
             onClose();
           }
         }}
-        placeholder="Find in document…"
+        placeholder={t('dialogs.markdown.find.placeholder')}
         className="w-48 bg-transparent text-sm text-white outline-none placeholder-neutral-500"
       />
       {counter && (
@@ -72,7 +74,7 @@ export function MarkdownFindBar({
         onClick={onPrev}
         disabled={matchCount === 0}
         className="rounded p-0.5 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent"
-        title="Previous match (Shift+Enter)"
+        title={t('dialogs.markdown.find.previous')}
       >
         <ChevronUp size={14} />
       </button>
@@ -81,7 +83,7 @@ export function MarkdownFindBar({
         onClick={onNext}
         disabled={matchCount === 0}
         className="rounded p-0.5 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white active:scale-90 disabled:opacity-30 disabled:hover:bg-transparent"
-        title="Next match (Enter)"
+        title={t('dialogs.markdown.find.next')}
       >
         <ChevronDown size={14} />
       </button>
@@ -89,7 +91,7 @@ export function MarkdownFindBar({
         type="button"
         onClick={onClose}
         className="ml-1 rounded p-0.5 text-neutral-500 transition-colors hover:bg-neutral-700 hover:text-white active:scale-90"
-        title="Close (Esc)"
+        title={t('dialogs.markdown.find.close')}
       >
         <X size={14} />
       </button>

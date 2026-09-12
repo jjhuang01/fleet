@@ -65,6 +65,7 @@ import type {
   UpdateStatus
 } from '../shared/types';
 import { createLogger } from './logger';
+import { resolveLocale, translate, type MessageKey, type TranslateParams } from '../shared/i18n';
 import { initCopilot, stopCopilot, pruneDeadCopilotSessions } from './copilot/index';
 import { SessionsService } from './sessions/service';
 import { registerSessionsIpcHandlers } from './sessions/ipc-handlers';
@@ -809,9 +810,18 @@ void app.whenReady().then(async () => {
     const errorCount = settings.notifications.processExitError.badge ? counts.error : 0;
     const total = needsMe + errorCount;
 
+    const t = (key: MessageKey, params?: TranslateParams): string =>
+      translate(resolveLocale(settings.general.language, app.getLocale()), key, params);
+
     const parts: string[] = [];
-    if (needsMe > 0) parts.push(`${needsMe} awaiting input`);
-    if (errorCount > 0) parts.push(`${errorCount} error${errorCount > 1 ? 's' : ''}`);
+    if (needsMe > 0) parts.push(t('main.window.awaitingInput', { count: needsMe }));
+    if (errorCount > 0) {
+      parts.push(
+        t(errorCount > 1 ? 'main.window.errorOther' : 'main.window.errorOne', {
+          count: errorCount
+        })
+      );
+    }
     const title = parts.length > 0 ? `${parts.join(', ')} · Fleet` : 'Fleet';
 
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -937,6 +947,9 @@ void app.whenReady().then(async () => {
     const hasPermission = batch.some((n) => n.level === 'permission');
     const hasError = batch.some((n) => n.level === 'error');
 
+    const t = (key: MessageKey, params?: TranslateParams): string =>
+      translate(resolveLocale(settingsStore.get().general.language, app.getLocale()), key, params);
+
     let body: string;
     if (batch.length === 1) {
       // Named where we can. With several panes running, "an agent" is the one
@@ -947,23 +960,42 @@ void app.whenReady().then(async () => {
       if (hasPermission) {
         body =
           where === undefined
-            ? 'An agent needs your permission'
-            : `Agent in ${where} needs your permission`;
+            ? t('main.notify.permissionSingle')
+            : t('main.notify.permissionIn', { where });
       } else if (hasError) {
         body =
-          where === undefined ? 'A process exited with an error' : `Agent in ${where} hit an error`;
+          where === undefined ? t('main.notify.errorSingle') : t('main.notify.errorIn', { where });
       } else {
-        body = where === undefined ? 'Task completed' : `Agent in ${where} finished`;
+        body =
+          where === undefined ? t('main.notify.doneSingle') : t('main.notify.doneIn', { where });
       }
     } else {
       const parts: string[] = [];
       const permCount = batch.filter((n) => n.level === 'permission').length;
       const errCount = batch.filter((n) => n.level === 'error').length;
       const infoCount = batch.length - permCount - errCount;
-      if (permCount > 0) parts.push(`${permCount} need${permCount > 1 ? '' : 's'} permission`);
-      if (errCount > 0) parts.push(`${errCount} error${errCount > 1 ? 's' : ''}`);
-      if (infoCount > 0) parts.push(`${infoCount} completed`);
-      body = `${batch.length} agents: ${parts.join(', ')}`;
+      if (permCount > 0) {
+        parts.push(
+          t(permCount > 1 ? 'main.notify.manyPermissionOther' : 'main.notify.manyPermissionOne', {
+            count: permCount
+          })
+        );
+      }
+      if (errCount > 0) {
+        parts.push(
+          t(errCount > 1 ? 'main.notify.manyErrorOther' : 'main.notify.manyErrorOne', {
+            count: errCount
+          })
+        );
+      }
+      if (infoCount > 0) {
+        parts.push(
+          t(infoCount > 1 ? 'main.notify.manyCompletedOther' : 'main.notify.manyCompletedOne', {
+            count: infoCount
+          })
+        );
+      }
+      body = t('main.notify.many', { count: batch.length, parts: parts.join(', ') });
     }
 
     const notif = new Notification({ title: 'Fleet', body });

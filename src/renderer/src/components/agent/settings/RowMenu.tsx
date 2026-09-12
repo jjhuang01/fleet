@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { MoreHorizontal } from 'lucide-react';
+import { useTranslation } from '../../../lib/i18n';
 import { popperAnim } from '../../../lib/motion';
 
 /**
@@ -22,6 +23,7 @@ export function RowMenu({
   /** `MenuItem`s. Given `close` so picking one dismisses the menu. */
   children: (close: (run: () => void) => () => void) => React.ReactNode;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const pick = (run: () => void) => (): void => {
     setOpen(false);
@@ -33,7 +35,7 @@ export function RowMenu({
       <Popover.Trigger asChild>
         <button
           type="button"
-          aria-label={`More actions for ${label}`}
+          aria-label={t('agentSettings.rowMenu.moreActions', { label })}
           className="shrink-0 rounded p-1 text-fleet-text-subtle transition-colors hover:bg-fleet-surface-3 hover:text-fleet-text focus-ring"
         >
           <MoreHorizontal size={15} />

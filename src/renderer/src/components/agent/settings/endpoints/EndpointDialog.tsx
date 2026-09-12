@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, HardDrive, Loader2, TriangleAlert } from 'lucide-react';
 import type { LocalEndpointConfig } from '../../../../../../shared/agent-endpoints';
 import { hostPort, normalizeEndpointUrl } from '../../../../../../shared/agent-endpoint-url';
+import type { MessageKey, TranslateParams } from '../../../../../../shared/i18n';
 import { Overlay } from '../../../Overlay';
+import { useTranslation } from '../../../../lib/i18n';
 import { inputCls } from '../controls';
 import { Field } from '../primitives';
 import { useAgentEndpointsStore } from '../../../../store/agent-endpoints-store';
@@ -38,10 +40,14 @@ export function EndpointDialog({
   onCancel: () => void;
   onSave: (endpoint: LocalEndpointConfig) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const test = useAgentEndpointsStore((s) => s.test);
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{
+    key: MessageKey;
+    params?: TranslateParams;
+  } | null>(null);
   const [testing, setTesting] = useState(false);
   const [outcome, setOutcome] = useState<TestOutcome | null>(null);
 
@@ -59,7 +65,7 @@ export function EndpointDialog({
   const runTest = (): void => {
     const normalized = normalizeEndpointUrl(url);
     if (!normalized.ok) {
-      setError(normalized.error);
+      setError({ key: normalized.error, params: normalized.params });
       return;
     }
     // The address is put in its canonical form as soon as it has been read, so
@@ -76,11 +82,11 @@ export function EndpointDialog({
   const submit = (): void => {
     const normalized = normalizeEndpointUrl(url);
     if (!normalized.ok) {
-      setError(normalized.error);
+      setError({ key: normalized.error, params: normalized.params });
       return;
     }
     if (takenUrls.some((taken) => taken === normalized.origin && taken !== editing?.baseUrl)) {
-      setError('That address is already set up.');
+      setError({ key: 'agentSettings.endpoint.dialog.errorDuplicate' });
       return;
     }
     const trimmed = name.trim();
@@ -111,18 +117,20 @@ export function EndpointDialog({
         </div>
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-fleet-text">
-            {editing === null ? 'Add a local server' : 'Edit server'}
+            {editing === null
+              ? t('agentSettings.endpoint.dialog.addTitle')
+              : t('agentSettings.endpoint.dialog.editTitle')}
           </h2>
           <p className="text-xs text-fleet-text-muted">
-            Its models join the pickers above, alongside the OpenRouter ones.
+            {t('agentSettings.endpoint.dialog.description')}
           </p>
         </div>
       </div>
 
       <div className="space-y-4 border-t border-fleet-border px-5 py-4">
         <Field
-          label="Address"
-          description="Where the server is listening. Fleet takes every model it serves - and a plain llama-server serves one, so a second model there is a second entry here."
+          label={t('agentSettings.endpoint.dialog.address.label')}
+          description={t('agentSettings.endpoint.dialog.address.description')}
           layout="stack"
           htmlFor="endpoint-url"
         >
@@ -152,7 +160,7 @@ export function EndpointDialog({
               className="flex shrink-0 items-center gap-1.5 rounded-md border border-fleet-border-strong px-3 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 disabled:opacity-40 focus-ring"
             >
               {testing && <Loader2 size={12} className="animate-spin" />}
-              Test
+              {t('agentSettings.endpoint.dialog.test')}
             </button>
           </div>
         </Field>
@@ -160,8 +168,8 @@ export function EndpointDialog({
         {outcome !== null && <Outcome outcome={outcome} />}
 
         <Field
-          label="Name"
-          description="Optional. Without one it is known by its address, which is usually clearer."
+          label={t('agentSettings.endpoint.dialog.name.label')}
+          description={t('agentSettings.endpoint.dialog.name.description')}
           layout="stack"
           htmlFor="endpoint-name"
         >
@@ -170,27 +178,31 @@ export function EndpointDialog({
             value={name}
             onChange={(e) => setName(e.target.value)}
             spellCheck={false}
-            placeholder="Workstation"
+            placeholder={t('agentSettings.endpoint.dialog.name.placeholder')}
             className={`${inputCls} w-full`}
           />
         </Field>
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-fleet-border px-5 py-3">
-        <span className="min-w-0 flex-1 truncate text-xs text-red-300">{error}</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-red-300">
+          {error === null ? '' : t(error.key, error.params)}
+        </span>
         <button
           type="button"
           onClick={onCancel}
           className="shrink-0 rounded-md border border-fleet-border-strong px-3 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 focus-ring"
         >
-          Cancel
+          {t('agentSettings.common.cancel')}
         </button>
         <button
           type="button"
           onClick={submit}
           className="shrink-0 rounded-md fleet-accent-bg px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 active:scale-[0.98] focus-ring-offset"
         >
-          {editing === null ? 'Add server' : 'Save'}
+          {editing === null
+            ? t('agentSettings.endpoint.dialog.add')
+            : t('agentSettings.common.save')}
         </button>
       </div>
     </Overlay>
@@ -199,6 +211,7 @@ export function EndpointDialog({
 
 /** What Test found. Never a reason not to save - see the note at the top. */
 function Outcome({ outcome }: { outcome: TestOutcome }): React.JSX.Element {
+  const { t } = useTranslation();
   const look =
     outcome.tone === 'ok'
       ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200'
@@ -211,11 +224,11 @@ function Outcome({ outcome }: { outcome: TestOutcome }): React.JSX.Element {
         <TriangleAlert size={13} className="mt-px shrink-0" />
       )}
       <span className="min-w-0">
-        <span className="block font-medium">{outcome.title}</span>
-        <span className="block opacity-90">{outcome.hint}</span>
+        <span className="block font-medium">{t(outcome.title)}</span>
+        <span className="block opacity-90">{t(outcome.hint.key, outcome.hint.params)}</span>
         {outcome.tone === 'warn' && (
           <span className="mt-1 block opacity-75">
-            You can still save it - Fleet will check again when the server is up.
+            {t('agentSettings.endpoint.dialog.warningSave')}
           </span>
         )}
       </span>

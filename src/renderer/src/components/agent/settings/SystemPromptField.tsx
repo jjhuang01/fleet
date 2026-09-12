@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { DEFAULT_AGENT_SYSTEM_PROMPT } from '../../../../../shared/agent-types';
+import { useTranslation } from '../../../lib/i18n';
 import { Field } from './primitives';
 
 /**
@@ -15,6 +16,7 @@ export function SystemPromptField({
   value: string | null;
   onChange: (value: string | null) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState(value ?? '');
   const custom = (value ?? '').trim() !== '';
 
@@ -29,8 +31,8 @@ export function SystemPromptField({
 
   return (
     <Field
-      label="System prompt"
-      description="Replaces the built-in instructions. The working folder is always appended, so the agent still knows where it is."
+      label={t('agentSettings.systemPrompt.label')}
+      description={t('agentSettings.systemPrompt.description')}
       layout="stack"
       htmlFor="agent-system-prompt"
     >
@@ -47,7 +49,11 @@ export function SystemPromptField({
         className="w-full resize-y rounded-md border border-fleet-border bg-fleet-surface-2 px-2.5 py-2 font-mono text-xs leading-relaxed text-fleet-text outline-none transition-colors placeholder:text-fleet-text-subtle focus:border-fleet-border-strong focus-ring"
       />
       <div className="flex items-center justify-between gap-3 text-xs text-fleet-text-muted">
-        <span>{custom ? 'Custom prompt.' : 'Using the default prompt.'}</span>
+        <span>
+          {custom
+            ? t('agentSettings.systemPrompt.custom')
+            : t('agentSettings.systemPrompt.default')}
+        </span>
         {custom && (
           <button
             type="button"
@@ -58,7 +64,7 @@ export function SystemPromptField({
             className="flex shrink-0 items-center gap-1.5 rounded-md border border-fleet-border-strong px-2 py-1 text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 focus-ring"
           >
             <RotateCcw size={12} />
-            Reset to default
+            {t('agentSettings.systemPrompt.reset')}
           </button>
         )}
       </div>

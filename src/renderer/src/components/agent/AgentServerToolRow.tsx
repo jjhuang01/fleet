@@ -9,6 +9,7 @@ import {
 import { parseAdvisorPrompt, parseAdvisorResult } from '../../../../shared/agent-advisor';
 import { FUSION_TOOL_NAME } from '../../../../shared/agent-fusion';
 import { parseHostedFetchResult } from '../../../../shared/agent-hosted-fetch';
+import { useTranslation } from '../../lib/i18n';
 import { AgentFusionRow } from './AgentFusionRow';
 import { AgentMarkdown } from './AgentMarkdown';
 
@@ -36,6 +37,7 @@ export const AgentServerToolRow = memo(function AgentServerToolRow({
 }: {
   call: ServerToolRecord;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const query = serverToolQuery(call.args);
   const sources = call.citations;
@@ -68,7 +70,10 @@ export const AgentServerToolRow = memo(function AgentServerToolRow({
         <span className="flex shrink-0 items-center gap-2">
           {sources.length > 0 && (
             <span className="text-fleet-text-muted">
-              {sources.length} {sources.length === 1 ? 'source' : 'sources'}
+              {t(
+                sources.length === 1 ? 'agent.serverTool.sourceOne' : 'agent.serverTool.sourceMany',
+                { count: sources.length }
+              )}
             </span>
           )}
         </span>
@@ -108,6 +113,7 @@ export const AgentSources = memo(function AgentSources({
 }: {
   citations: Citation[];
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   if (citations.length === 0) return null;
 
@@ -125,7 +131,10 @@ export const AgentSources = memo(function AgentSources({
         />
         <Link2 size={12} className="shrink-0 opacity-70" />
         <span className="shrink-0">
-          {citations.length} {citations.length === 1 ? 'source' : 'sources'}
+          {t(
+            citations.length === 1 ? 'agent.serverTool.sourceOne' : 'agent.serverTool.sourceMany',
+            { count: citations.length }
+          )}
         </span>
       </button>
       {open && (
@@ -214,6 +223,7 @@ export const AgentAdvisorRow = memo(function AgentAdvisorRow({
 }: {
   call: ServerToolRecord;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const prompt = parseAdvisorPrompt(call.args);
   const result = parseAdvisorResult(call.result);
@@ -232,16 +242,20 @@ export const AgentAdvisorRow = memo(function AgentAdvisorRow({
           className={`shrink-0 transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
         />
         <Lightbulb size={12} className="shrink-0 opacity-70" />
-        <span className="shrink-0">Asked</span>
+        <span className="shrink-0">{t('agent.serverTool.asked')}</span>
         <span className="shrink-0 font-mono text-[11px]">
-          {result?.status === 'ok' ? (result.model ?? 'an advisor') : 'an advisor'}
+          {result?.status === 'ok'
+            ? (result.model ?? t('agent.serverTool.advisor'))
+            : t('agent.serverTool.advisor')}
         </span>
         {prompt !== null && <span className="truncate">{prompt}</span>}
         {/*
          * A failed consultation is not a failed turn - the model carried on
          * without the advice - so this is a note rather than an error state.
          */}
-        {failed && <span className="shrink-0 text-fleet-text-subtle">no answer</span>}
+        {failed && (
+          <span className="shrink-0 text-fleet-text-subtle">{t('agent.serverTool.noAnswer')}</span>
+        )}
       </button>
       {open && (
         <div className="flex flex-col gap-2 border-l-2 border-fleet-border pl-3">
@@ -287,6 +301,7 @@ export const AgentHostedFetchRow = memo(function AgentHostedFetchRow({
 }: {
   call: ServerToolRecord;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const result = parseHostedFetchResult(call.result);
   const requested = serverToolQuery(call.args);
@@ -305,10 +320,10 @@ export const AgentHostedFetchRow = memo(function AgentHostedFetchRow({
           className={`shrink-0 transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
         />
         <FileDown size={12} className="shrink-0 opacity-70" />
-        <span className="shrink-0">Fetched</span>
+        <span className="shrink-0">{t('agent.serverTool.fetched')}</span>
         {address !== null && <span className="truncate font-mono text-[11px]">{address}</span>}
         {result?.status === 'failed' && (
-          <span className="shrink-0 text-fleet-text-subtle">no page</span>
+          <span className="shrink-0 text-fleet-text-subtle">{t('agent.serverTool.noPage')}</span>
         )}
       </button>
       {open && (
@@ -319,7 +334,7 @@ export const AgentHostedFetchRow = memo(function AgentHostedFetchRow({
             </pre>
           ) : result.status === 'failed' ? (
             <p className="text-[11px] leading-relaxed text-fleet-text-muted">
-              {result.error ?? 'The page could not be read.'}
+              {result.error ?? t('agent.serverTool.pageReadFailed')}
             </p>
           ) : (
             <>

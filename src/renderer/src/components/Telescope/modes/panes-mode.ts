@@ -10,9 +10,9 @@ import type { TelescopeMode, TelescopeItem } from '../types';
 export function createPanesMode(): TelescopeMode {
   return {
     id: 'panes',
-    label: 'Panes',
+    label: 'dialogs.telescope.mode.panes',
     icon: TerminalSquare,
-    placeholder: 'Search open panes...',
+    placeholder: 'dialogs.telescope.placeholder.panes',
 
     onSearch: (query: string): TelescopeItem[] => {
       const state = useWorkspaceStore.getState();

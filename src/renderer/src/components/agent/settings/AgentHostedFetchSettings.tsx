@@ -9,6 +9,7 @@ import {
   type AgentHostedFetchConfig,
   type HostedFetchEngine
 } from '../../../../../shared/agent-hosted-fetch';
+import { useTranslation } from '../../../lib/i18n';
 import { BoundedNumber, LineList, OptionalNumber, RoleCard, selectCls } from './controls';
 import { Toggle } from './Toggle';
 
@@ -36,19 +37,21 @@ export function AgentHostedFetchSettings({
   /** Whether there is an OpenRouter key at all. See the search card. */
   hasKey: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <RoleCard
-      title="Hosted page reader"
-      description="A second way to read a page, running on OpenRouter. Worth it for public PDFs and for pages Fleet's own reader cannot extract. It cannot reach this machine or this network."
+      title={t('agentSettings.hostedFetch.title')}
+      description={t('agentSettings.hostedFetch.description')}
       icon={<FileDown size={16} />}
     >
       <Row
         id="agent-hosted-fetch-enabled"
-        label="Read pages on OpenRouter too"
+        label={t('agentSettings.hostedFetch.enabled.label')}
         hint={
           hasKey
-            ? 'Fleet keeps reading pages itself by default. This adds a second reader for the public pages the first one struggles with.'
-            : 'Needs an OpenRouter API key. Fetches run on OpenRouter, not on this machine.'
+            ? t('agentSettings.hostedFetch.enabled.hint')
+            : t('agentSettings.hostedFetch.enabled.noKey')
         }
       >
         <Toggle
@@ -62,8 +65,8 @@ export function AgentHostedFetchSettings({
         <>
           <Row
             id="agent-hosted-fetch-engine"
-            label="Engine"
-            hint="OpenRouter's own is a plain fetch and is free. Exa and Parallel are $1 per 1,000 fetches and extract more from an awkward page. Firecrawl spends your own Firecrawl credits."
+            label={t('agentSettings.common.engine')}
+            hint={t('agentSettings.hostedFetch.engine.hint')}
           >
             <select
               id="agent-hosted-fetch-engine"
@@ -81,8 +84,8 @@ export function AgentHostedFetchSettings({
 
           <NumberRow
             id="agent-hosted-fetch-max-uses"
-            label="Fetches per round"
-            hint="Per round, not per turn: a turn is many rounds and this number starts again on each one."
+            label={t('agentSettings.hostedFetch.maxFetches.label')}
+            hint={t('agentSettings.hostedFetch.maxFetches.hint')}
             value={config.maxFetches}
             min={HOSTED_FETCH_MIN_FETCHES}
             max={HOSTED_FETCH_MAX_FETCHES}
@@ -96,16 +99,16 @@ export function AgentHostedFetchSettings({
 
           <DomainsRow
             id="agent-hosted-fetch-blocked"
-            label="Never read"
-            hint="Hosts this reader must refuse, one per line. Applies whether or not the list below is set."
+            label={t('agentSettings.hostedFetch.blocked.label')}
+            hint={t('agentSettings.hostedFetch.blocked.hint')}
             value={config.blockedDomains}
             onChange={(blockedDomains) => onChange({ blockedDomains })}
           />
 
           <DomainsRow
             id="agent-hosted-fetch-allowed"
-            label="Only read"
-            hint="Leave empty for anything public. Filling it in means the reader refuses everything else, which is a list you then have to keep up to date."
+            label={t('agentSettings.hostedFetch.allowed.label')}
+            hint={t('agentSettings.hostedFetch.allowed.hint')}
             value={config.allowedDomains}
             onChange={(allowedDomains) => onChange({ allowedDomains })}
           />
@@ -197,11 +200,13 @@ function ContentTokensRow({
   value: number | null;
   onChange: (next: number | null) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <Row
       id="agent-hosted-fetch-content-tokens"
-      label="Page length"
-      hint="Approximate tokens of one page that reach the model. Leave empty to let the engine decide. Longer pages are cut, not refused."
+      label={t('agentSettings.hostedFetch.pageLength.label')}
+      hint={t('agentSettings.hostedFetch.pageLength.hint')}
     >
       <OptionalNumber
         id="agent-hosted-fetch-content-tokens"
@@ -209,7 +214,7 @@ function ContentTokensRow({
         min={HOSTED_FETCH_MIN_CONTENT_TOKENS}
         max={HOSTED_FETCH_MAX_CONTENT_TOKENS}
         step={1_000}
-        placeholder="engine"
+        placeholder={t('agentSettings.hostedFetch.pageLength.placeholder')}
         onCommit={onChange}
       />
     </Row>

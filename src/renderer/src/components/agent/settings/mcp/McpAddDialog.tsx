@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Plug } from 'lucide-react';
 import type { McpAuth, McpServerConfig } from '../../../../../../shared/agent-mcp';
 import { transportOf } from '../../../../../../shared/agent-mcp';
+import type { MessageKey, TranslateParams } from '../../../../../../shared/i18n';
 import { Overlay } from '../../../Overlay';
+import { useTranslation } from '../../../../lib/i18n';
 import { inputCls, selectCls } from '../controls';
 import { SecretInput } from '../SecretInput';
 import { Field } from '../primitives';
@@ -53,6 +55,7 @@ export function McpAddDialog({
   onCancel: () => void;
   onSave: (draft: McpDraft) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('form');
   const [name, setName] = useState('');
   const [transport, setTransport] = useState<Transport>('stdio');
@@ -65,7 +68,10 @@ export function McpAddDialog({
   const [hasToken, setHasToken] = useState(false);
   const [token, setToken] = useState<string | null | undefined>(undefined);
   const [paste, setPaste] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{
+    key: MessageKey;
+    params?: TranslateParams;
+  } | null>(null);
 
   // Every open starts from what is being edited, or from nothing. Without this
   // the second Add of a session opens holding the first one's answers.
@@ -105,12 +111,12 @@ export function McpAddDialog({
     if (tab === 'paste') {
       const result = parsePasted(paste);
       if (!result.ok) {
-        setError(result.error);
+        setError({ key: result.error });
         return;
       }
       const clash = Object.keys(result.servers).find((n) => taken.has(n));
       if (clash !== undefined) {
-        setError(`There is already a server called "${clash}".`);
+        setError({ key: 'agentSettings.mcp.add.errorDuplicate', params: { name: clash } });
         return;
       }
       onSave({ replacing: editing?.name ?? null, servers: result.servers });
@@ -119,19 +125,19 @@ export function McpAddDialog({
 
     const trimmed = name.trim();
     if (trimmed === '') {
-      setError('Give the server a name.');
+      setError({ key: 'agentSettings.mcp.add.errorName' });
       return;
     }
     if (taken.has(trimmed)) {
-      setError(`There is already a server called "${trimmed}".`);
+      setError({ key: 'agentSettings.mcp.add.errorDuplicate', params: { name: trimmed } });
       return;
     }
     if (transport === 'stdio' && command.trim() === '') {
-      setError('A local server needs a command to run.');
+      setError({ key: 'agentSettings.mcp.add.errorCommand' });
       return;
     }
     if (transport === 'http' && url.trim() === '') {
-      setError('A remote server needs a URL.');
+      setError({ key: 'agentSettings.mcp.add.errorUrl' });
       return;
     }
 
@@ -176,11 +182,11 @@ export function McpAddDialog({
         </div>
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-fleet-text">
-            {editing === null ? 'Add MCP server' : `Edit ${editing.name}`}
+            {editing === null
+              ? t('agentSettings.mcp.add.title')
+              : t('agentSettings.mcp.add.editTitle', { name: editing.name })}
           </h2>
-          <p className="text-xs text-fleet-text-muted">
-            Its tools become available to every agent pane.
-          </p>
+          <p className="text-xs text-fleet-text-muted">{t('agentSettings.mcp.add.description')}</p>
         </div>
       </div>
 
@@ -189,8 +195,8 @@ export function McpAddDialog({
           <div className="inline-flex gap-0.5 rounded-lg border border-fleet-border bg-fleet-surface-2 p-0.5">
             {(
               [
-                { id: 'form', label: 'Form' },
-                { id: 'paste', label: 'Paste JSON' }
+                { id: 'form', label: t('agentSettings.mcp.add.tab.form') },
+                { id: 'paste', label: t('agentSettings.mcp.add.tab.paste') }
               ] as const
             ).map(({ id, label }) => (
               <button
@@ -216,8 +222,8 @@ export function McpAddDialog({
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto border-t border-fleet-border px-5 py-4">
         {tab === 'paste' ? (
           <Field
-            label="Server JSON"
-            description='Either {"mcpServers": {…}} or the servers on their own. Paste it straight from the docs.'
+            label={t('agentSettings.mcp.add.paste.label')}
+            description={t('agentSettings.mcp.add.paste.description')}
             layout="stack"
             htmlFor="mcp-paste"
           >
@@ -238,7 +244,7 @@ export function McpAddDialog({
           </Field>
         ) : (
           <>
-            <Field label="Name" layout="stack" htmlFor="mcp-name">
+            <Field label={t('agentSettings.mcp.add.name.label')} layout="stack" htmlFor="mcp-name">
               <input
                 id="mcp-name"
                 value={name}
@@ -249,12 +255,12 @@ export function McpAddDialog({
               />
             </Field>
 
-            <Field label="Kind" layout="stack">
+            <Field label={t('agentSettings.mcp.add.kind.label')} layout="stack">
               <div className="inline-flex gap-0.5 rounded-lg border border-fleet-border bg-fleet-surface-2 p-0.5">
                 {(
                   [
-                    { id: 'stdio', label: 'Local command' },
-                    { id: 'http', label: 'Remote URL' }
+                    { id: 'stdio', label: t('agentSettings.mcp.add.kind.local') },
+                    { id: 'http', label: t('agentSettings.mcp.add.kind.remote') }
                   ] as const
                 ).map(({ id, label }) => (
                   <button
@@ -275,7 +281,11 @@ export function McpAddDialog({
 
             {transport === 'stdio' ? (
               <>
-                <Field label="Command" layout="stack" htmlFor="mcp-command">
+                <Field
+                  label={t('agentSettings.mcp.add.command.label')}
+                  layout="stack"
+                  htmlFor="mcp-command"
+                >
                   <input
                     id="mcp-command"
                     value={command}
@@ -286,8 +296,8 @@ export function McpAddDialog({
                   />
                 </Field>
                 <Field
-                  label="Arguments"
-                  description="One per line, so an argument with a space in it needs no quoting."
+                  label={t('agentSettings.mcp.add.args.label')}
+                  description={t('agentSettings.mcp.add.args.description')}
                   layout="stack"
                   htmlFor="mcp-args"
                 >
@@ -302,8 +312,8 @@ export function McpAddDialog({
                   />
                 </Field>
                 <Field
-                  label="Environment"
-                  description="KEY=value, one per line. Anything that looks like a credential is stored encrypted."
+                  label={t('agentSettings.mcp.add.env.label')}
+                  description={t('agentSettings.mcp.add.env.description')}
                   layout="stack"
                   htmlFor="mcp-env"
                 >
@@ -320,7 +330,11 @@ export function McpAddDialog({
               </>
             ) : (
               <>
-                <Field label="URL" layout="stack" htmlFor="mcp-url">
+                <Field
+                  label={t('agentSettings.mcp.add.url.label')}
+                  layout="stack"
+                  htmlFor="mcp-url"
+                >
                   <input
                     id="mcp-url"
                     value={url}
@@ -330,22 +344,26 @@ export function McpAddDialog({
                     className={`${inputCls} w-full font-mono text-xs`}
                   />
                 </Field>
-                <Field label="Sign-in" layout="stack" htmlFor="mcp-auth">
+                <Field
+                  label={t('agentSettings.mcp.add.auth.label')}
+                  layout="stack"
+                  htmlFor="mcp-auth"
+                >
                   <select
                     id="mcp-auth"
                     value={authKind}
                     onChange={(e) => setAuthKind(readAuthKind(e.target.value))}
                     className={`${selectCls} w-full`}
                   >
-                    <option value="none">None</option>
-                    <option value="bearer">Bearer token</option>
-                    <option value="oauth">Sign in with the browser (OAuth)</option>
+                    <option value="none">{t('agentSettings.mcp.add.auth.none')}</option>
+                    <option value="bearer">{t('agentSettings.mcp.add.auth.bearer')}</option>
+                    <option value="oauth">{t('agentSettings.mcp.add.auth.oauth')}</option>
                   </select>
                 </Field>
                 {authKind === 'bearer' && (
                   <Field
-                    label="Token"
-                    description="Stored encrypted on this device when you save, and never shown again."
+                    label={t('agentSettings.mcp.add.token.label')}
+                    description={t('agentSettings.mcp.add.token.description')}
                     layout="stack"
                     htmlFor="mcp-token"
                   >
@@ -360,13 +378,13 @@ export function McpAddDialog({
                         setToken(null);
                         setHasToken(false);
                       }}
-                      placeholder="Paste the token"
+                      placeholder={t('agentSettings.mcp.add.token.placeholder')}
                     />
                   </Field>
                 )}
                 <Field
-                  label="Headers"
-                  description="Name: value, one per line. For anything the server wants besides the token."
+                  label={t('agentSettings.mcp.add.headers.label')}
+                  description={t('agentSettings.mcp.add.headers.description')}
                   layout="stack"
                   htmlFor="mcp-headers"
                 >
@@ -387,20 +405,22 @@ export function McpAddDialog({
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-fleet-border px-5 py-3">
-        <span className="min-w-0 flex-1 truncate text-xs text-red-300">{error}</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-red-300">
+          {error === null ? '' : t(error.key, error.params)}
+        </span>
         <button
           type="button"
           onClick={onCancel}
           className="shrink-0 rounded-md border border-fleet-border-strong px-3 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 focus-ring"
         >
-          Cancel
+          {t('agentSettings.common.cancel')}
         </button>
         <button
           type="button"
           onClick={submit}
           className="shrink-0 rounded-md fleet-accent-bg px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 active:scale-[0.98] focus-ring-offset"
         >
-          {editing === null ? 'Add server' : 'Save'}
+          {editing === null ? t('agentSettings.mcp.add.add') : t('agentSettings.common.save')}
         </button>
       </div>
     </Overlay>

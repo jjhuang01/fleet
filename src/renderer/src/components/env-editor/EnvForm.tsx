@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Eye, EyeOff, Trash2, Plus } from 'lucide-react';
 import type { EnvLine, VarLine } from '../../../../shared/env-parse';
 import { updateVarLine, newVarLine } from '../../../../shared/env-parse';
+import { useTranslation } from '../../lib/i18n';
 
 type Props = {
   lines: EnvLine[];
@@ -22,6 +23,7 @@ export function EnvForm({
   onResetReveal,
   onChange
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   // Var lines paired with their absolute index, cast-free via a type guard.
   const varRows = useMemo<VarRow[]>(() => {
     const rows: VarRow[] = [];
@@ -59,9 +61,7 @@ export function EnvForm({
   return (
     <div className="flex flex-1 flex-col overflow-y-auto p-3">
       {varRows.length === 0 && (
-        <p className="px-2 py-3 text-xs text-neutral-500">
-          No variables yet. Add one below, or switch to Raw to add comments.
-        </p>
+        <p className="px-2 py-3 text-xs text-neutral-500">{t('dialogs.envEditor.noVariables')}</p>
       )}
       {varRows.map(({ index, line }) => {
         const reveal = revealAll || revealed.has(index);
@@ -85,20 +85,20 @@ export function EnvForm({
               value={line.value}
               type={reveal ? 'text' : 'password'}
               onChange={(e) => setLine(index, updateVarLine(line, line.key, e.target.value))}
-              placeholder="value"
+              placeholder={t('dialogs.envEditor.valuePlaceholder')}
               spellCheck={false}
               className="flex-1 rounded border border-transparent bg-neutral-900 px-2 py-1 font-mono text-xs text-neutral-200 outline-none transition-colors focus:border-blue-500"
             />
             <button
               onClick={() => onToggleReveal(index)}
-              title={reveal ? 'Hide value' : 'Reveal value'}
+              title={reveal ? t('dialogs.envEditor.hideValue') : t('dialogs.envEditor.revealValue')}
               className="rounded p-1 text-neutral-500 opacity-0 transition hover:text-neutral-200 group-hover:opacity-100 active:scale-90"
             >
               {reveal ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
             <button
               onClick={() => removeLine(index)}
-              title="Remove variable"
+              title={t('dialogs.envEditor.removeVariable')}
               className="rounded p-1 text-neutral-500 opacity-0 transition hover:text-red-400 group-hover:opacity-100 active:scale-90"
             >
               <Trash2 size={13} />
@@ -109,7 +109,7 @@ export function EnvForm({
 
       {dupKeys.size > 0 && (
         <p className="mt-2 px-2 text-[11px] text-red-400">
-          Duplicate keys: {Array.from(dupKeys).join(', ')} — the last value wins.
+          {t('dialogs.envEditor.duplicateKeys', { keys: Array.from(dupKeys).join(', ') })}
         </p>
       )}
 
@@ -117,7 +117,7 @@ export function EnvForm({
         onClick={addVar}
         className="mt-2 flex w-fit items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-blue-400 transition hover:bg-blue-500/10 active:scale-[0.98]"
       >
-        <Plus size={14} /> Add variable
+        <Plus size={14} /> {t('dialogs.envEditor.addVariable')}
       </button>
     </div>
   );

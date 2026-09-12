@@ -4,6 +4,7 @@ import type { AnnotateMode } from '../../../shared/annotate-types';
 import { useAnnotationStore } from '../store/annotation-store';
 import { registerAnnotateModalOpener } from '../lib/annotate-modal-bridge';
 import { Overlay } from './Overlay';
+import { useTranslation } from '../lib/i18n';
 
 interface AnnotateModalProps {
   open: boolean;
@@ -16,6 +17,7 @@ function looksLikeUrl(text: string): boolean {
 }
 
 export function AnnotateModal({ open, onClose }: AnnotateModalProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [url, setUrl] = useState('');
   const [mode, setMode] = useState<AnnotateMode>('select');
   const [internalOpen, setInternalOpen] = useState(false);
@@ -73,7 +75,9 @@ export function AnnotateModal({ open, onClose }: AnnotateModalProps): React.JSX.
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Crosshair size={18} className="fleet-accent-text" />
-            <h2 className="text-base font-medium text-fleet-text">New Annotation</h2>
+            <h2 className="text-base font-medium text-fleet-text">
+              {t('panes.annotateModal.title')}
+            </h2>
           </div>
           <button
             onClick={handleClose}
@@ -85,7 +89,9 @@ export function AnnotateModal({ open, onClose }: AnnotateModalProps): React.JSX.
 
         {/* URL input */}
         <div className="mb-4">
-          <label className="block text-sm text-fleet-text-muted mb-1.5">URL</label>
+          <label className="block text-sm text-fleet-text-muted mb-1.5">
+            {t('panes.annotateModal.url')}
+          </label>
           <input
             ref={inputRef}
             type="text"
@@ -94,12 +100,14 @@ export function AnnotateModal({ open, onClose }: AnnotateModalProps): React.JSX.
             placeholder="https://example.com"
             className="w-full px-3 py-2 bg-fleet-surface-3 border border-fleet-border-strong rounded-md text-sm text-fleet-text placeholder:text-fleet-text-subtle focus-ring"
           />
-          <p className="mt-1 text-xs text-fleet-text-subtle">Leave empty to open a blank page</p>
+          <p className="mt-1 text-xs text-fleet-text-subtle">{t('panes.annotateModal.urlHint')}</p>
         </div>
 
         {/* Mode selection */}
         <div className="mb-4">
-          <label className="block text-sm text-fleet-text-muted mb-1.5">Mode</label>
+          <label className="block text-sm text-fleet-text-muted mb-1.5">
+            {t('panes.annotateModal.mode')}
+          </label>
           <div className="flex gap-2">
             <button
               onClick={() => setMode('select')}
@@ -110,7 +118,7 @@ export function AnnotateModal({ open, onClose }: AnnotateModalProps): React.JSX.
               }`}
             >
               <MousePointer size={16} />
-              Element Selection
+              {t('panes.annotateModal.select')}
             </button>
             <button
               onClick={() => setMode('draw')}
@@ -121,7 +129,7 @@ export function AnnotateModal({ open, onClose }: AnnotateModalProps): React.JSX.
               }`}
             >
               <Pencil size={16} />
-              Free Draw
+              {t('panes.annotateModal.draw')}
             </button>
           </div>
         </div>
@@ -132,13 +140,13 @@ export function AnnotateModal({ open, onClose }: AnnotateModalProps): React.JSX.
             onClick={handleClose}
             className="px-3 py-1.5 text-sm text-fleet-text-muted hover:text-fleet-text rounded-md transition hover:bg-fleet-surface-3 active:scale-[0.97]"
           >
-            Cancel
+            {t('panes.annotateModal.cancel')}
           </button>
           <button
             onClick={handleStart}
             className="px-3 py-1.5 text-sm fleet-accent-bg fleet-accent-bg-hover text-white rounded-md transition active:scale-[0.97]"
           >
-            Start
+            {t('panes.annotateModal.start')}
           </button>
         </div>
       </div>

@@ -76,7 +76,9 @@ export function AnnotateTab(): React.JSX.Element {
               {detail.url ?? t('annotate.unknownUrl')}
             </div>
             <div className="text-xs text-fleet-text-subtle">
-              {detail.elements?.length ?? 0} elements
+              {t(detail.elements?.length === 1 ? 'annotate.elementCount' : 'annotate.elements', {
+                count: detail.elements?.length ?? 0
+              })}
               {detail.viewport && ` \u00b7 ${detail.viewport.width}\u00d7${detail.viewport.height}`}
             </div>
           </div>
@@ -93,7 +95,7 @@ export function AnnotateTab(): React.JSX.Element {
               setSelectedId(null);
             }}
             className="p-1 text-fleet-text-muted hover:text-red-400 rounded hover:bg-fleet-surface-2 transition active:scale-90"
-            title="Delete"
+            title={t('panes.annotateTab.delete')}
           >
             <Trash2 size={14} />
           </button>
@@ -150,22 +152,36 @@ export function AnnotateTab(): React.JSX.Element {
                   )}
                   {el.text && (
                     <div className="text-xs text-fleet-text-muted">
-                      Text: <span className="text-fleet-text-secondary">{el.text}</span>
+                      {t('panes.annotateTab.textValue', { text: el.text })}
                     </div>
                   )}
                   {el.boxModel && (
                     <div className="text-xs text-fleet-text-muted">
-                      Box: {el.rect.width}&times;{el.rect.height}
-                      {' (pad: '}
-                      {el.boxModel.padding.top} {el.boxModel.padding.right}{' '}
-                      {el.boxModel.padding.bottom} {el.boxModel.padding.left})
+                      {t('panes.annotateTab.boxValue', {
+                        width: el.rect.width,
+                        height: el.rect.height,
+                        top: el.boxModel.padding.top,
+                        right: el.boxModel.padding.right,
+                        bottom: el.boxModel.padding.bottom,
+                        left: el.boxModel.padding.left
+                      })}
                     </div>
                   )}
                   {el.accessibility && (
                     <div className="text-xs text-fleet-text-muted">
-                      A11y: role={el.accessibility.role ?? 'none'}
-                      {el.accessibility.name && ` name="${el.accessibility.name}"`}
-                      {el.accessibility.focusable && ' focusable'}
+                      {t(
+                        el.accessibility.focusable
+                          ? el.accessibility.name
+                            ? 'panes.annotateTab.a11yRoleNameFocusable'
+                            : 'panes.annotateTab.a11yRoleFocusable'
+                          : el.accessibility.name
+                            ? 'panes.annotateTab.a11yRoleName'
+                            : 'panes.annotateTab.a11yRole',
+                        {
+                          role: el.accessibility.role ?? 'none',
+                          name: el.accessibility.name ?? undefined
+                        }
+                      )}
                     </div>
                   )}
                   {el.keyStyles && Object.keys(el.keyStyles).length > 0 && (
@@ -205,7 +221,7 @@ export function AnnotateTab(): React.JSX.Element {
           onClick={() => openAnnotateModal()}
           className="px-2.5 py-1 text-xs fleet-accent-bg fleet-accent-bg-hover text-white rounded-md transition active:scale-[0.97]"
         >
-          New
+          {t('panes.annotateTab.new')}
         </button>
       </div>
 
@@ -257,7 +273,7 @@ export function AnnotateTab(): React.JSX.Element {
                     handleCopyPath(ann.id);
                   }}
                   className="p-1 text-fleet-text-muted hover:text-fleet-text rounded hover:bg-fleet-surface-2 transition active:scale-90"
-                  title="Copy path"
+                  title={t('panes.annotateTab.copyPath')}
                 >
                   <ClipboardCopy size={14} />
                 </button>
@@ -268,7 +284,7 @@ export function AnnotateTab(): React.JSX.Element {
                     if (selectedId === ann.id) setSelectedId(null);
                   }}
                   className="p-1 text-fleet-text-muted hover:text-red-400 rounded hover:bg-fleet-surface-2 transition active:scale-90"
-                  title="Delete"
+                  title={t('panes.annotateTab.delete')}
                 >
                   <Trash2 size={14} />
                 </button>

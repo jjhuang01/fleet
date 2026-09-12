@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Terminal, Search, SearchX, Eye, EyeOff, Copy, Check, X } from 'lucide-react';
 import type { ShellEnvSnapshot, ShellEnvVar } from '../../../../shared/shell-env-types';
-import {
-  SECTIONS,
-  isSecret,
-  filterVars,
-  varsForSection,
-  formatSpawnTime,
-  clampSelection
-} from './shell-env-view';
+import { SECTIONS, isSecret, filterVars, varsForSection, clampSelection } from './shell-env-view';
+import { useLocale, useTranslation } from '../../lib/i18n';
+import { formatDateTime } from '../../lib/relative-time';
 
 export function ShellEnvModal({
   isOpen,
@@ -19,6 +14,8 @@ export function ShellEnvModal({
   onClose: () => void;
   paneId: string | null;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
+  const locale = useLocale();
   const [snapshot, setSnapshot] = useState<ShellEnvSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
@@ -126,7 +123,7 @@ export function ShellEnvModal({
           <div className="flex items-center gap-2 text-neutral-100">
             <Terminal size={16} className="text-neutral-400" />
             <h2 className="text-sm font-semibold">
-              {snapshot ? snapshot.shellName : 'Shell Environment'}
+              {snapshot ? snapshot.shellName : t('dialogs.shellEnv.title')}
             </h2>
           </div>
           {snapshot?.cwd && (
@@ -143,12 +140,12 @@ export function ShellEnvModal({
             className="ml-auto flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-neutral-300 transition hover:bg-neutral-800 active:scale-95"
           >
             {revealAll ? <EyeOff size={13} /> : <Eye size={13} />}
-            {revealAll ? 'Hide all' : 'Reveal all'}
+            {revealAll ? t('dialogs.shellEnv.hideAll') : t('dialogs.shellEnv.revealAll')}
           </button>
           <button
             onClick={onClose}
             className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-white active:scale-90"
-            aria-label="Close shell environment"
+            aria-label={t('dialogs.shellEnv.close')}
           >
             <X size={16} />
           </button>
@@ -164,8 +161,8 @@ export function ShellEnvModal({
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter variables…"
-            aria-label="Filter environment variables"
+            placeholder={t('dialogs.shellEnv.filterPlaceholder')}
+            aria-label={t('dialogs.shellEnv.filterLabel')}
             className="h-8 w-full rounded-md border border-white/10 bg-neutral-950 pl-8 pr-3 font-mono text-xs text-neutral-200 placeholder:font-sans placeholder:text-neutral-600 focus-visible:border-neutral-600 focus-visible:outline-none"
           />
         </div>
@@ -175,12 +172,12 @@ export function ShellEnvModal({
           {loading ? null : !snapshot ? (
             <div className="flex h-40 flex-col items-center justify-center gap-2 text-neutral-500">
               <Terminal size={24} className="text-neutral-600" />
-              <p className="text-sm">No shell in this pane</p>
+              <p className="text-sm">{t('dialogs.shellEnv.noShell')}</p>
             </div>
           ) : visible.length === 0 ? (
             <div className="flex h-40 flex-col items-center justify-center gap-2">
               <SearchX size={24} className="text-neutral-600" />
-              <p className="text-sm text-neutral-400">No variables match &lsquo;{query}&rsquo;</p>
+              <p className="text-sm text-neutral-400">{t('dialogs.shellEnv.noMatch', { query })}</p>
             </div>
           ) : (
             SECTIONS.map((section) => {
@@ -195,7 +192,7 @@ export function ShellEnvModal({
                   <div className="sticky top-0 z-10 flex items-center gap-2 bg-neutral-900/95 px-5 pb-2 pt-5 backdrop-blur-sm">
                     <span className={`h-2 w-2 rounded-full ${section.dotClass}`} />
                     <span className="text-[11px] font-medium uppercase tracking-wider text-neutral-500">
-                      {section.label}
+                      {t(section.label)}
                     </span>
                     <span className="text-[11px] text-neutral-600">· {rows.length}</span>
                   </div>
@@ -236,8 +233,16 @@ export function ShellEnvModal({
                             <button
                               onClick={() => toggleReveal(v.key)}
                               onMouseDown={(e) => e.preventDefault()}
-                              title={reveal ? 'Hide value' : 'Reveal value'}
-                              aria-label={reveal ? 'Hide value' : 'Reveal value'}
+                              title={
+                                reveal
+                                  ? t('dialogs.shellEnv.hideValue')
+                                  : t('dialogs.shellEnv.revealValue')
+                              }
+                              aria-label={
+                                reveal
+                                  ? t('dialogs.shellEnv.hideValue')
+                                  : t('dialogs.shellEnv.revealValue')
+                              }
                               aria-pressed={reveal}
                               className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-800 hover:text-neutral-300"
                             >
@@ -247,8 +252,8 @@ export function ShellEnvModal({
                           <button
                             onClick={() => copyValue(v)}
                             onMouseDown={(e) => e.preventDefault()}
-                            title="Copy value"
-                            aria-label="Copy value"
+                            title={t('dialogs.shellEnv.copyValue')}
+                            aria-label={t('dialogs.shellEnv.copyValue')}
                             className="flex h-6 w-6 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-800 hover:text-neutral-300"
                           >
                             {copiedKey === v.key ? (
@@ -271,10 +276,14 @@ export function ShellEnvModal({
         {snapshot && (
           <div className="flex items-center justify-between border-t border-neutral-800 px-5 py-2 text-[11px] text-neutral-500">
             <span>
-              Snapshot at shell launch ({formatSpawnTime(snapshot.spawnedAt)}) · variables exported
-              after launch aren&rsquo;t shown.
+              {t('dialogs.shellEnv.snapshot', {
+                time: formatDateTime(snapshot.spawnedAt, locale, {
+                  hour: 'numeric',
+                  minute: '2-digit'
+                })
+              })}
             </span>
-            <span>{snapshot.vars.length} variables</span>
+            <span>{t('dialogs.shellEnv.variableCount', { count: snapshot.vars.length })}</span>
           </div>
         )}
       </div>

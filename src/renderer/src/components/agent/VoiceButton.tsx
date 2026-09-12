@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import { Loader2, Mic, MicOff, TriangleAlert } from 'lucide-react';
 import { VOICE_TAP_MAX_MS } from '../../../../shared/agent-voice';
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
 import type { VoicePhase } from './voice-intent';
 import type { VoiceDictation } from './use-voice-dictation';
 
@@ -23,6 +25,7 @@ export function VoiceButton({
   /** No key or no model: nothing to transcribe with. */
   unavailable: boolean;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   const { state } = voice;
   const { phase } = state;
   // When the current press started, so a pointer that wanders off can be told a
@@ -41,8 +44,8 @@ export function VoiceButton({
   return (
     <button
       type="button"
-      aria-label="Voice dictate"
-      title={titleFor(phase)}
+      aria-label={t('agent.voice.dictate')}
+      title={t(titleFor(phase))}
       // Pointer events, not clicks: a click cannot tell a tap from a hold, and
       // that distinction is the whole of the interaction. `preventDefault`
       // keeps the press from also focusing and scrolling the composer.
@@ -117,21 +120,21 @@ function Glyph({ phase }: { phase: VoicePhase }): React.JSX.Element {
   return <Mic size={14} className="shrink-0" />;
 }
 
-function titleFor(phase: VoicePhase): string {
+function titleFor(phase: VoicePhase): MessageKey {
   switch (phase) {
     case 'requesting':
-      return 'Waiting for the microphone…';
+      return 'agent.voice.waiting';
     case 'recording':
-      return 'Recording - click to stop and insert';
+      return 'agent.voice.recording';
     case 'transcribing':
-      return 'Transcribing…';
+      return 'agent.voice.transcribing';
     case 'denied':
-      return 'Microphone blocked - grant it in System Settings';
+      return 'agent.voice.blocked';
     case 'error':
-      return 'Last attempt failed - click to retry';
+      return 'agent.voice.retry';
     case 'idle':
     case 'unavailable':
-      return 'Hold to talk, click to toggle';
+      return 'agent.voice.holdOrToggle';
   }
 }
 

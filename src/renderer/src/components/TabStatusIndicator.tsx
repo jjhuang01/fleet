@@ -1,6 +1,8 @@
 import type { ActivityState, NotificationLevel } from '../../../shared/types';
+import type { MessageKey } from '../../../shared/i18n';
 import { activityToBadge, PRIORITY } from '../store/notification-store';
 import { PaneStatusGlyph } from './PaneStatusGlyph';
+import { useTranslation } from '../lib/i18n';
 
 // Multi-signal badge config: color + size + shape + animation per severity level
 // so badge meaning is not conveyed by color alone (WCAG, Baymard, NNG)
@@ -12,6 +14,13 @@ const BADGE_CONFIG: Record<
   error: { color: 'bg-red-400', size: 'w-2.5 h-2.5', animate: '', label: '!' },
   info: { color: 'bg-blue-400', size: 'w-2 h-2', animate: '', label: '' },
   subtle: { color: 'bg-green-500', size: 'w-1.5 h-1.5', animate: '', label: '' }
+};
+
+const BADGE_ARIA: Record<NotificationLevel, MessageKey> = {
+  permission: 'panes.tabStatus.permissionNotification',
+  error: 'panes.tabStatus.errorNotification',
+  info: 'panes.tabStatus.infoNotification',
+  subtle: 'panes.tabStatus.subtleNotification'
 };
 
 type TabStatusIndicatorProps = {
@@ -38,6 +47,7 @@ export function TabStatusIndicator({
   isActive,
   className = ''
 }: TabStatusIndicatorProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const activityBadge = activity ? activityToBadge(activity.state) : null;
   const activityPriority = activityBadge ? PRIORITY[activityBadge] : -1;
   const badgePriority = badge ? PRIORITY[badge] : -1;
@@ -51,7 +61,7 @@ export function TabStatusIndicator({
   return (
     <span
       className={`rounded-full flex-shrink-0 flex items-center justify-center ${config.color} ${config.size} ${config.animate} ${className}`}
-      aria-label={`${badge} notification`}
+      aria-label={t(BADGE_ARIA[badge])}
     >
       {config.label && (
         <span className="text-[7px] font-bold text-black leading-none">{config.label}</span>

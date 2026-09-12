@@ -13,6 +13,7 @@ import { activityRingClass } from '../lib/activity-glyph';
 import { PANE_DRAG_MIME, hasPanePayload } from '../lib/pane-drag';
 import { neighbourInDirection, type PaneBox, type PaneDirection } from '../lib/pane-neighbour';
 import { createLogger } from '../logger';
+import { useTranslation } from '../lib/i18n';
 
 const log = createLogger('layout:panes');
 
@@ -791,6 +792,7 @@ function AbsoluteResizeHandle({
   ratio,
   gridRef
 }: AbsoluteResizeHandleProps): React.JSX.Element {
+  const { t } = useTranslation();
   const isH = direction === 'horizontal';
   const resizeSplit = useWorkspaceStore((s) => s.resizeSplit);
   // Grow the hit strip past the seam it draws, in the one axis that matters.
@@ -864,7 +866,7 @@ function AbsoluteResizeHandle({
       // A separator that moves left and right splits left from right, which
       // ARIA spells `vertical` - the axis it runs along, not the one it moves.
       aria-orientation={isH ? 'vertical' : 'horizontal'}
-      aria-label="Resize panes"
+      aria-label={t('panes.grid.resize')}
       aria-valuenow={Math.round(ratio * 100)}
       aria-valuemin={15}
       aria-valuemax={85}

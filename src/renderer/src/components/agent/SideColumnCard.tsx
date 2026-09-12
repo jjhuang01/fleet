@@ -1,3 +1,6 @@
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
+
 /**
  * A card in the column beside the conversation.
  *
@@ -22,20 +25,22 @@ export function SideColumnCard({
   children
 }: {
   /** The heading, as the user reads it. */
-  label: string;
+  label: MessageKey;
   /**
    * What the card is called to a screen reader, which needs more than the
    * heading does: `Tasks` is unambiguous under a heading in this column and
    * ambiguous as the name of a region of the whole window.
    */
-  name: string;
+  name: MessageKey;
   count: string;
   /** The list, which is the only part the two cards do differently. */
   children: React.ReactNode;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <aside
-      aria-label={name}
+      aria-label={t(name)}
       // `min-h-0` so it can shrink past its content and its list scrolls inside
       // it; without it a long list would push the card off the bottom.
       // `overflow-hidden` so that scrolling list stays inside the corners.
@@ -52,7 +57,7 @@ export function SideColumnCard({
     >
       <div className="flex shrink-0 items-baseline gap-2 px-3 pt-2.5 pb-1.5">
         <h2 className="text-[11px] font-medium tracking-wide text-fleet-text-secondary uppercase">
-          {label}
+          {t(label)}
         </h2>
         <span className="ml-auto font-mono text-[11px] text-fleet-text-subtle tabular-nums">
           {count}

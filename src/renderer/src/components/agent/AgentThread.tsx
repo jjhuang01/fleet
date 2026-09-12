@@ -22,6 +22,7 @@ import type {
   AgentPermissionOutcome,
   AgentToolMode
 } from '../../../../shared/agent-types';
+import type { MessageKey } from '../../../../shared/i18n';
 import {
   ATTACHMENT_ACCEPT,
   DEFAULT_AGENT_SETTINGS,
@@ -47,9 +48,10 @@ import { pendingTaskAsks, type PendingTaskAsk } from './task-permissions';
 import type { RunningSubagent } from './subagent-view';
 import { scheduleChip, type ScheduleRow } from './schedule-view';
 import { cancelSchedule } from '../../store/agent-schedule';
+import { useTranslation } from '../../lib/i18n';
 import { ToolModePicker } from './ToolModePicker';
 import { AgentAttachmentChip, AgentMessageAttachments } from './AgentAttachment';
-import { reasoningLabel } from './activity';
+import { formatElapsed } from './activity';
 import { AgentContextMeter } from './AgentContextMeter';
 import { AgentSpendMeter } from './AgentSpendMeter';
 import { AgentLocation } from './AgentLocation';
@@ -213,6 +215,7 @@ export function AgentThread({
   /** The same as `todosInPanel`, for the schedules. */
   schedulesInPanel: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const thread = useAgentStore((s) => s.threads[paneId]);
   const send = useAgentStore((s) => s.send);
   const cancel = useAgentStore((s) => s.cancel);
@@ -376,7 +379,11 @@ export function AgentThread({
           branch={gitHead?.branch ?? null}
         />
 
-        <AgentLocation cwd={cwd} head={gitHead} label={isScratchDir(cwd) ? 'Scratch' : undefined} />
+        <AgentLocation
+          cwd={cwd}
+          head={gitHead}
+          label={isScratchDir(cwd) ? t('agent.thread.scratch') : undefined}
+        />
       </div>
     </div>
   );
@@ -394,11 +401,13 @@ export function AgentThread({
  * thing that happens is still the user's own sentence.
  */
 function EmptyState({ scratch, paneId }: { scratch: boolean; paneId: string }): React.JSX.Element {
+  const { t } = useTranslation();
+
   if (!scratch) {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2">
         <span className="text-sm font-medium uppercase tracking-[0.3em] text-fleet-text-subtle">
-          Agent
+          {t('agent.thread.agent')}
         </span>
       </div>
     );
@@ -420,10 +429,10 @@ function EmptyState({ scratch, paneId }: { scratch: boolean; paneId: string }): 
             prose under it, and muted-on-glass is the pairing that disappears
             first over a background picture. */}
         <span className="text-sm font-medium uppercase tracking-[0.3em] text-fleet-text-secondary">
-          Scratch
+          {t('agent.thread.scratch')}
         </span>
         <span className="text-center text-xs text-fleet-text-muted">
-          A conversation with no project attached.
+          {t('agent.thread.scratchDescription')}
         </span>
       </div>
       <div className="flex max-w-md flex-wrap justify-center gap-1.5">
@@ -431,10 +440,10 @@ function EmptyState({ scratch, paneId }: { scratch: boolean; paneId: string }): 
           <button
             key={chip.label}
             type="button"
-            onClick={() => prefillComposer(paneId, chip.prompt)}
+            onClick={() => prefillComposer(paneId, chip.prompt ? t(chip.prompt) : '')}
             className="rounded-full border border-fleet-border bg-fleet-glass-surface px-3 py-1 text-xs text-fleet-text-secondary transition-colors hover:border-fleet-border-strong hover:bg-fleet-glass-surface-2 hover:text-fleet-text focus-ring"
           >
-            {chip.label}
+            {t(chip.label)}
           </button>
         ))}
       </div>
@@ -447,10 +456,15 @@ function EmptyState({ scratch, paneId }: { scratch: boolean; paneId: string }): 
  * each one leaves the caret in a sentence the user still has to finish, which is
  * the difference between a suggestion and a button that guesses what they meant.
  */
-const SCRATCH_CHIPS: ReadonlyArray<{ label: string; prompt: string }> = [
-  { label: 'Generate an image', prompt: 'Generate an image of ' },
-  { label: 'Ask a question', prompt: '' },
-  { label: 'Read a web page', prompt: 'Read this page and summarise it: ' }
+const SCRATCH_CHIPS: ReadonlyArray<{ label: MessageKey; prompt: MessageKey | null }> = [
+  {
+    label: 'agent.thread.chip.generateImage',
+    prompt: 'agent.thread.chip.generateImagePrompt'
+  },
+  // No opening text on purpose: the point of this chip is that the question is
+  // the user's, so the catalogue holds no half-sentence for it to prefill.
+  { label: 'agent.thread.chip.askQuestion', prompt: null },
+  { label: 'agent.thread.chip.readPage', prompt: 'agent.thread.chip.readPagePrompt' }
 ];
 
 function Transcript({
@@ -573,6 +587,8 @@ function TodoChip({
   progress: TodoProgress;
   items: AgentTodoItem[];
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <span
       className="flex min-w-0 items-center gap-1.5"
@@ -582,7 +598,14 @@ function TodoChip({
       title={renderTodoList(items)}
       // The list itself is not on screen in this layout, so the count and the
       // running item are all a screen reader has to go on too.
-      aria-label={`Tasks: ${progress.count} done${progress.doing === null ? '' : `, ${progress.doing}`}`}
+      aria-label={
+        progress.doing === null
+          ? t('agent.thread.todoSummary', { count: progress.count })
+          : t('agent.thread.todoSummaryDoing', {
+              count: progress.count,
+              doing: progress.doing
+            })
+      }
     >
       {/* A finished list rests here after every job, and `3/3` under a
           to-do icon reads as a list still waiting to be done. */}
@@ -611,14 +634,15 @@ function TodoChip({
  * is directly below this line.
  */
 function SubagentChip({ running }: { running: RunningSubagent[] }): React.JSX.Element {
+  const { t } = useTranslation();
   const asking = running.filter((subagent) => subagent.asking).length;
   const only = running.length === 1 ? running[0] : null;
   const label =
     asking > 0
-      ? `${asking} waiting on you`
+      ? t('agent.thread.subagentsWaiting', { count: asking })
       : only !== null
-        ? (only.activity ?? 'starting')
-        : `${running.length} subagents`;
+        ? (only.activity ?? t('agent.subagent.starting'))
+        : t('agent.thread.subagentsCount', { count: running.length });
 
   return (
     <span
@@ -626,7 +650,14 @@ function SubagentChip({ running }: { running: RunningSubagent[] }): React.JSX.El
       // What the collapse costs is which subagent is on what. A hover title is
       // the whole of the fix, the same one the task list's chip makes.
       title={running.map((subagent) => `${subagent.agent}: ${subagent.prompt}`).join('\n')}
-      aria-label={`Subagents: ${running.length} running${asking > 0 ? `, ${asking} waiting on you` : ''}`}
+      aria-label={
+        asking > 0
+          ? t('agent.thread.subagentsAriaWaiting', {
+              count: running.length,
+              asking
+            })
+          : t('agent.thread.subagentsAria', { count: running.length })
+      }
     >
       <Bot size={12} className="shrink-0" />
       <span className="font-mono tabular-nums">{running.length}</span>
@@ -648,20 +679,31 @@ function SubagentChip({ running }: { running: RunningSubagent[] }): React.JSX.El
  * asked for.
  */
 function ScheduleChip({ rows }: { rows: ScheduleRow[] }): React.JSX.Element {
-  const { label, title } = scheduleChip(rows);
+  const { t } = useTranslation();
   const only = rows.length === 1 ? rows[0] : null;
+  const { label, title } = scheduleChip(rows);
+  const localizedLabel = t(label.key, label.params);
+  const titleText = title
+    .map((row) =>
+      t('agent.schedule.titleLine', {
+        when: t(row.when.key, row.when.params),
+        cron: row.cron,
+        note: row.note
+      })
+    )
+    .join('\n');
 
   return (
     <span
       className="flex min-w-0 items-center gap-1.5"
       // What the collapse costs is which check-in is about what, the same thing
       // the subagent chip's title buys back.
-      title={title}
-      aria-label={`Schedules: ${rows.length} set, next ${label}`}
+      title={titleText}
+      aria-label={t('agent.schedule.chip', { count: rows.length, next: localizedLabel })}
     >
       <Clock size={12} className="shrink-0" />
       <span className="font-mono tabular-nums">{rows.length}</span>
-      <span className="truncate">{label}</span>
+      <span className="truncate">{localizedLabel}</span>
       {/* The stop button follows the one thing it could mean. With several set
           the chip says only how many, and an X beside a count is a button
           whose target the user cannot see - so cancelling one of several is
@@ -671,8 +713,8 @@ function ScheduleChip({ rows }: { rows: ScheduleRow[] }): React.JSX.Element {
         <button
           type="button"
           onClick={() => void cancelSchedule(only.id)}
-          aria-label={`Cancel the check-in ${only.when}`}
-          title="Cancel this check-in"
+          aria-label={t('agent.schedule.cancelNamed', { when: localizedLabel })}
+          title={t('agent.schedule.cancel')}
           className="focus-ring shrink-0 text-fleet-text-subtle transition-colors hover:text-fleet-text"
         >
           <X size={11} />
@@ -873,8 +915,13 @@ function ReasoningBlock({
   durationMs: number | null;
   live: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [override, setOverride] = useState<boolean | null>(null);
   const open = override ?? live;
+  const thought =
+    durationMs === null || durationMs < 1000
+      ? t('agent.thread.reasoningThought')
+      : t('agent.thread.reasoningThoughtFor', { duration: formatElapsed(durationMs) });
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -888,7 +935,7 @@ function ReasoningBlock({
           size={12}
           className={`shrink-0 transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
         />
-        {live ? 'Thinking…' : reasoningLabel(durationMs)}
+        {live ? t('agent.thread.reasoningThinking') : thought}
       </button>
       {open && (
         <div className="border-l-2 border-fleet-border pl-3 text-xs leading-relaxed whitespace-pre-wrap text-fleet-text-muted">
@@ -905,6 +952,7 @@ function ReasoningBlock({
  * past, but hiding it entirely would mean the transcript quietly lost turns.
  */
 function SummaryCard({ summary }: { summary: string }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   return (
@@ -916,8 +964,10 @@ function SummaryCard({ summary }: { summary: string }): React.JSX.Element {
         className="flex w-full items-center gap-1.5 text-left text-[11px] uppercase tracking-wider text-fleet-text-subtle transition-colors hover:text-fleet-text-muted focus-ring"
       >
         <FoldVertical size={12} className="shrink-0" />
-        Earlier conversation compacted
-        <span className="ml-auto normal-case tracking-normal">{open ? 'Hide' : 'Show'}</span>
+        {t('agent.thread.compacted')}
+        <span className="ml-auto normal-case tracking-normal">
+          {open ? t('agent.thread.hide') : t('agent.thread.show')}
+        </span>
       </button>
       {open && (
         <div className="mt-2">
@@ -1000,6 +1050,7 @@ function Composer({
   onStop: () => void;
   onClear: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [text, setText] = useState('');
   const [refused, setRefused] = useState(false);
   /** Whether an Escape is loaded, waiting on the second one that stops the turn. */
@@ -1402,33 +1453,22 @@ function Composer({
     >
       {refused && (
         <p role="status" className="px-1 pb-1.5 text-[11px] text-fleet-text-subtle">
-          {asking
-            ? 'Answer the question above first - your message is still here.'
-            : 'The agent is still working - your message is still here.'}
+          {asking ? t('agent.thread.refusedAsking') : t('agent.thread.refusedWorking')}
         </p>
       )}
       {/* Amber rather than subtle: this is the one line here that is about
           something the next keystroke will do, not something already done. */}
       {armed && (
         <p role="status" className="px-1 pb-1.5 text-[11px] text-amber-700 dark:text-amber-400/90">
-          Press Escape again to interrupt.
+          {t('agent.thread.escapeToInterrupt')}
         </p>
       )}
       {attachError !== null && <Notice>{attachError}</Notice>}
-      {blind && hasImage && (
-        <Notice>
-          This model cannot see images. It will be sent, but the model may ignore it - choose one
-          with vision in Settings to have it looked at.
-        </Notice>
-      )}
+      {blind && hasImage && <Notice>{t('agent.thread.blindImage')}</Notice>}
       {voice.state.phase === 'error' && voice.state.error !== null && (
         <Notice>{voice.state.error}</Notice>
       )}
-      {voice.state.phase === 'denied' && (
-        <Notice>
-          Microphone blocked. Grant it in System Settings, then click the mic to try again.
-        </Notice>
-      )}
+      {voice.state.phase === 'denied' && <Notice>{t('agent.thread.micDenied')}</Notice>}
       <div
         className={`relative flex flex-col gap-2 rounded-xl border bg-fleet-glass-surface p-2 backdrop-blur-md ${
           dragging
@@ -1436,18 +1476,24 @@ function Composer({
             : 'border-fleet-border focus-within:border-fleet-border-strong'
         }`}
       >
-        <ComposerMenu menu={mentionMenu} label="Files" itemKey={(match) => match.path}>
+        <ComposerMenu menu={mentionMenu} label="agent.thread.files" itemKey={(match) => match.path}>
           {(match) => (
             <span className="truncate font-mono text-xs text-fleet-text">{match.rel}</span>
           )}
         </ComposerMenu>
-        <ComposerMenu menu={commandMenu} label="Commands" itemKey={(command) => command.name}>
+        <ComposerMenu
+          menu={commandMenu}
+          label="agent.thread.commands"
+          itemKey={(command) => command.name}
+        >
           {(command) => (
             <>
               <command.Icon size={12} className="shrink-0 text-fleet-text-muted" />
               <span className="font-mono text-xs text-fleet-text">/{command.name}</span>
               <span className="ml-1 line-clamp-1 text-[11px] text-fleet-text-muted">
-                {command.description}
+                {command.kind === 'builtin'
+                  ? t('agent.thread.clearDescription')
+                  : command.description}
               </span>
             </>
           )}
@@ -1481,8 +1527,8 @@ function Composer({
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={disabled}
-            aria-label="Attach a file"
-            title="Attach an image or a PDF"
+            aria-label={t('agent.thread.attachFile')}
+            title={t('agent.thread.attachHint')}
             className="flex size-7 shrink-0 items-center justify-center rounded-lg text-fleet-text-muted transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text disabled:cursor-not-allowed disabled:opacity-40 focus-ring"
           >
             <Paperclip size={14} />
@@ -1504,9 +1550,15 @@ function Composer({
                   that starts by counting down from a minute reads as a deadline
                   on a sentence that will take five seconds. */}
               {remaining < VOICE_COUNTDOWN_MS ? (
-                <span className="text-amber-500">{(remaining / 1000).toFixed(1)}s left</span>
+                <span className="text-amber-500">
+                  {t('agent.thread.secondsRemaining', {
+                    seconds: (remaining / 1000).toFixed(1)
+                  })}
+                </span>
               ) : (
-                <span>{(voice.elapsed / 1000).toFixed(1)}s</span>
+                <span>
+                  {t('agent.thread.seconds', { seconds: (voice.elapsed / 1000).toFixed(1) })}
+                </span>
               )}
             </span>
           )}
@@ -1594,18 +1646,18 @@ function Composer({
             // is still worth sending after.
             placeholder={
               disabled
-                ? 'Choose a coding model in Settings first'
+                ? t('agent.thread.chooseModel')
                 : voice.state.phase === 'recording'
                   ? holding
-                    ? 'Release to insert · move away to discard'
-                    : 'Recording… tap the mic to stop'
+                    ? t('agent.thread.releaseToInsert')
+                    : t('agent.thread.recordingTap')
                   : voice.state.phase === 'transcribing'
-                    ? 'Transcribing…'
+                    ? t('agent.thread.transcribing')
                     : asking
-                      ? 'Press Enter to run it, or answer above'
-                      : 'Ask the agent…'
+                      ? t('agent.thread.pressEnterToRun')
+                      : t('agent.thread.askAgent')
             }
-            aria-label="Message the agent"
+            aria-label={t('agent.thread.messageAgent')}
             // The composer *is* the combobox while a menu is up: it keeps focus,
             // and points at the row the next Enter would take.
             role="combobox"
@@ -1620,8 +1672,8 @@ function Composer({
             <button
               type="button"
               onClick={onStop}
-              aria-label="Stop"
-              title="Stop"
+              aria-label={t('agent.thread.stop')}
+              title={t('agent.thread.stop')}
               className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-fleet-surface-3 text-fleet-text transition-colors hover:bg-fleet-surface-2 focus-ring"
             >
               <Square size={12} fill="currentColor" />
@@ -1631,8 +1683,8 @@ function Composer({
               type="button"
               onClick={submit}
               disabled={(text.trim() === '' && attachments.length === 0) || disabled}
-              aria-label="Send"
-              title="Send"
+              aria-label={t('agent.thread.send')}
+              title={t('agent.thread.send')}
               className="flex size-7 shrink-0 items-center justify-center rounded-lg fleet-accent-bg text-white transition-opacity disabled:opacity-30 focus-ring-offset"
             >
               <ArrowUp size={14} />

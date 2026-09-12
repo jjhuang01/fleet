@@ -3,6 +3,7 @@ import { DiffView, DiffModeEnum, DiffFile, type DiffHighlighter } from '@git-dif
 import '@git-diff-view/react/styles/diff-view.css';
 import { getLanguageForPath } from '../../../../shared/languages';
 import { parseUnifiedDiff } from './parse-unified-diff';
+import { useTranslation } from '../../lib/i18n';
 
 /**
  * Everything that touches `@git-diff-view` lives behind this module boundary.
@@ -82,6 +83,7 @@ export function DiffContent({
   rawDiff: string;
   mode: DiffViewMode;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const highlighter = useShikiHighlighter();
   const diffFiles = useMemo(() => parseDiffToFiles(rawDiff, highlighter), [rawDiff, highlighter]);
   const diffMode = mode === 'split' ? DiffModeEnum.Split : DiffModeEnum.Unified;
@@ -89,7 +91,7 @@ export function DiffContent({
   if (diffFiles.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-neutral-600 text-sm">
-        No diff content
+        {t('dialogs.gitDiff.noContent')}
       </div>
     );
   }

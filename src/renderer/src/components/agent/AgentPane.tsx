@@ -22,8 +22,10 @@ import { getGlassCssVars, paneGround, paneBackdrop, PANE_GLASS } from '../../lib
 import type { AgentTodoItem } from '../../../../shared/agent-todos';
 import type { AgentScheduleRecord } from '../../../../shared/agent-schedule';
 import type { AgentMessage, AgentPermissionAsk } from '../../../../shared/agent-types';
+import type { MessageKey } from '../../../../shared/i18n';
 import type { TerminalBackground } from '../../../../shared/types';
 import type { SlideshowFrame } from '../../hooks/use-slideshow';
+import { useLocale, useTranslation } from '../../lib/i18n';
 
 type AgentView = 'agent' | 'sessions' | 'images' | 'settings';
 
@@ -46,14 +48,14 @@ const EMPTY_SCHEDULES: AgentScheduleRecord[] = [];
 const RefocusDetail = z.object({ paneId: z.string() });
 
 const TABS = [
-  { value: 'agent', label: 'Agent', Icon: Bot },
-  { value: 'sessions', label: 'Sessions', Icon: History },
+  { value: 'agent', label: 'agent.pane.tab.agent', Icon: Bot },
+  { value: 'sessions', label: 'agent.pane.tab.sessions', Icon: History },
   // Between the conversations and the settings, because it is the same kind of
   // thing as the sessions list - something the pane has produced and can go
   // back to - rather than something that configures it.
-  { value: 'images', label: 'Images', Icon: Images },
-  { value: 'settings', label: 'Settings', Icon: SlidersHorizontal }
-] as const satisfies ReadonlyArray<{ value: AgentView; label: string; Icon: typeof Bot }>;
+  { value: 'images', label: 'agent.pane.tab.images', Icon: Images },
+  { value: 'settings', label: 'agent.pane.tab.settings', Icon: SlidersHorizontal }
+] as const satisfies ReadonlyArray<{ value: AgentView; label: MessageKey; Icon: typeof Bot }>;
 
 /**
  * Native agent pane: a thread rooted in one folder, plus the settings every
@@ -116,10 +118,11 @@ export function AgentPane({
     [messages, taskActivity, taskPermissions]
   );
   const records = useAgentStore((s) => s.threads[paneId]?.schedules ?? EMPTY_SCHEDULES);
+  const locale = useLocale();
   // `now` is read once per change of the list rather than on every render: the
   // labels are "today 9:00 AM" and "Sep 3", which do not move minute to minute,
   // and a fresh `new Date()` each render would make this memo pointless.
-  const schedules = useMemo(() => scheduleRows(records, new Date()), [records]);
+  const schedules = useMemo(() => scheduleRows(records, new Date(), locale), [records, locale]);
 
   // The pane rather than the window: this is one cell of a split the user
   // drags, so how much room there is here says nothing about how much there is
@@ -285,6 +288,7 @@ function AgentTabs({
   value: AgentView;
   onChange: (view: AgentView) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const move = (delta: number): void => {
     const next =
       TABS[(TABS.findIndex((t) => t.value === value) + delta + TABS.length) % TABS.length];
@@ -295,7 +299,7 @@ function AgentTabs({
     <div className="flex shrink-0 justify-center px-3 pt-2.5 pb-1.5">
       <div
         role="tablist"
-        aria-label="Agent pane view"
+        aria-label={t('agent.pane.view')}
         onKeyDown={(e) => {
           if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
           e.preventDefault();
@@ -325,7 +329,7 @@ function AgentTabs({
               }`}
             >
               <Icon size={13} />
-              {label}
+              {t(label)}
             </button>
           );
         })}

@@ -8,6 +8,8 @@ import { toFleetPdfUrl } from '../../../shared/path-platform';
 import type { PathContext } from '../../../shared/shell-profiles';
 import type { RemoteFileRef } from '../../../shared/remote-ssh-types';
 import { createCancellation } from '../lib/cancellation';
+import type { MessageKey } from '../../../shared/i18n';
+import { useTranslation } from '../lib/i18n';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -47,6 +49,7 @@ export function PdfViewerPane({
   pathContext,
   remote
 }: PdfViewerPaneProps): React.JSX.Element {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textLayerRef = useRef<HTMLDivElement>(null);
@@ -55,7 +58,7 @@ export function PdfViewerPane({
   const textLayerInstanceRef = useRef<pdfjs.TextLayer | null>(null);
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<MessageKey | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [pageNum, setPageNum] = useState(1);
   const [zoom, setZoom] = useState(1);
@@ -79,7 +82,7 @@ export function PdfViewerPane({
       const stat = await window.fleet.file.stat(filePath, pathContext);
       if (run.isCancelled()) return;
       if (!stat.success || !stat.data || stat.data.size === 0) {
-        setError('File not found or unreadable');
+        setError('panes.pdf.unreadable');
         setLoading(false);
         return;
       }
@@ -101,7 +104,7 @@ export function PdfViewerPane({
         setLoading(false);
       } catch {
         if (run.isCancelled()) return;
-        setError('Failed to load PDF');
+        setError('panes.pdf.loadFailed');
         setLoading(false);
       }
     };
@@ -211,13 +214,13 @@ export function PdfViewerPane({
       <div ref={containerRef} className="flex-1 overflow-auto relative flex justify-center">
         {error && (
           <div className="absolute inset-0 flex items-center justify-center text-neutral-400 text-sm">
-            {error}
+            {t(error)}
           </div>
         )}
         {!error && loading && (
           <div className="absolute inset-0 flex items-center justify-center gap-2 text-neutral-400 text-sm">
             <Loader2 className="animate-spin" size={16} />
-            Loading…
+            {t('panes.pdf.loading')}
           </div>
         )}
         {!error && (
@@ -234,26 +237,34 @@ export function PdfViewerPane({
         {fileSize !== null && <span className="text-neutral-500">{formatSize(fileSize)}</span>}
         {!error && numPages > 0 && (
           <div className="ml-auto flex items-center gap-0.5">
-            <ToolbarButton onClick={goPrev} title="Previous Page" disabled={pageNum <= 1}>
+            <ToolbarButton
+              onClick={goPrev}
+              title={t('panes.pdf.previousPage')}
+              disabled={pageNum <= 1}
+            >
               ‹
             </ToolbarButton>
             <span className="font-mono w-12 text-center text-neutral-400">
               {pageNum} / {numPages}
             </span>
-            <ToolbarButton onClick={goNext} title="Next Page" disabled={pageNum >= numPages}>
+            <ToolbarButton
+              onClick={goNext}
+              title={t('panes.pdf.nextPage')}
+              disabled={pageNum >= numPages}
+            >
               ›
             </ToolbarButton>
             <div className="w-px h-3.5 bg-neutral-700 mx-1" />
-            <ToolbarButton onClick={() => adjustZoom(-ZOOM_STEP)} title="Zoom Out">
+            <ToolbarButton onClick={() => adjustZoom(-ZOOM_STEP)} title={t('panes.pdf.zoomOut')}>
               −
             </ToolbarButton>
             <span className="font-mono w-10 text-center text-neutral-400">{zoomPercent}%</span>
-            <ToolbarButton onClick={() => adjustZoom(ZOOM_STEP)} title="Zoom In">
+            <ToolbarButton onClick={() => adjustZoom(ZOOM_STEP)} title={t('panes.pdf.zoomIn')}>
               +
             </ToolbarButton>
             <div className="w-px h-3.5 bg-neutral-700 mx-1" />
-            <ToolbarButton onClick={() => void fitToWidth()} title="Fit Width">
-              Fit
+            <ToolbarButton onClick={() => void fitToWidth()} title={t('panes.pdf.fitWidth')}>
+              {t('panes.pdf.fit')}
             </ToolbarButton>
           </div>
         )}

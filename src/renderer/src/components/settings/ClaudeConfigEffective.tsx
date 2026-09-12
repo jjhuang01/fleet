@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { ClaudeConfigScope } from '../../../../shared/claude-config';
-import { resolveEffective, PRECEDENCE_CAVEAT } from '../../../../shared/claude-settings-precedence';
+import { resolveEffective } from '../../../../shared/claude-settings-precedence';
 import type { EffectiveValue, ScopeValues } from '../../../../shared/claude-settings-precedence';
+import type { Locale, MessageKey } from '../../../../shared/i18n';
+import { useTranslation, type Translator } from '../../lib/i18n';
 import { SCALAR_FIELDS, LIST_FIELDS } from '../../lib/claude-settings-fields';
 
 /**
@@ -18,25 +20,56 @@ import { SCALAR_FIELDS, LIST_FIELDS } from '../../lib/claude-settings-fields';
  */
 
 /** Short forms, because a source line names up to three of them. */
-const SHORT: Record<ClaudeConfigScope, string> = {
-  user: 'User',
-  project: 'Project',
-  projectLocal: 'Project local'
+const SHORT: Record<ClaudeConfigScope, MessageKey> = {
+  user: 'settings.claudeConfig.scope.user.name',
+  project: 'settings.claudeConfig.scope.project.name',
+  projectLocal: 'settings.claudeConfig.scope.projectLocal.name'
 };
 
+const FIELD_LABELS: Record<string, MessageKey | undefined> = {
+  model: 'settings.claudeConfig.field.model.label',
+  outputStyle: 'settings.claudeConfig.field.outputStyle.label',
+  effortLevel: 'settings.claudeConfig.field.effortLevel.label',
+  'permissions.defaultMode': 'settings.claudeConfig.field.permissionMode.label',
+  alwaysThinkingEnabled: 'settings.claudeConfig.field.extendedThinking.label',
+  autoCompactEnabled: 'settings.claudeConfig.field.autoCompact.label',
+  includeCoAuthoredBy: 'settings.claudeConfig.field.coauthoredByline.label',
+  cleanupPeriodDays: 'settings.claudeConfig.field.keepSessions.label',
+  'permissions.allow': 'settings.claudeConfig.field.allow.label',
+  'permissions.ask': 'settings.claudeConfig.field.ask.label',
+  'permissions.deny': 'settings.claudeConfig.field.deny.label',
+  'permissions.additionalDirectories': 'settings.claudeConfig.field.extraDirectories.label'
+};
+
+function fieldLabel(path: string[]): MessageKey {
+  const label = FIELD_LABELS[path.join('.')];
+  if (!label) throw new Error(`Missing Claude config translation for ${path.join('.')}`);
+  return label;
+}
+
+function joinLabels(labels: string[], locale: Locale): string {
+  if (labels.length <= 1) return labels[0] ?? '';
+  if (locale === 'zh-Hans') return labels.join('、');
+  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+}
+
 /** One line of what a value is, short enough to sit at the end of a row. */
-function formatScalar(value: unknown): string {
-  if (typeof value === 'string') return value === '' ? '(empty)' : value;
+function formatScalar(value: unknown, t: Translator): string {
+  if (typeof value === 'string') {
+    return value === '' ? t('settings.claudeConfig.effective.empty') : value;
+  }
   // On/Off rather than true/false, so the strip and the form's own select say
   // the same word for the same state.
-  if (typeof value === 'boolean') return value ? 'On' : 'Off';
+  if (typeof value === 'boolean') {
+    return value ? t('settings.claudeConfig.form.on') : t('settings.claudeConfig.form.off');
+  }
   if (typeof value === 'number') return String(value);
   // Objects and arrays only reach here for a key the schema calls scalar, so a
   // one-line JSON rendering is the honest answer rather than a made-up label.
   return JSON.stringify(value);
 }
 
-type Resolved = { label: string; path: string[]; effective: EffectiveValue };
+type Resolved = { labelKey: MessageKey; path: string[]; effective: EffectiveValue };
 
 /**
  * The row's right-hand side: the value, in the shape its own rule produces.
@@ -46,20 +79,28 @@ type Resolved = { label: string; path: string[]; effective: EffectiveValue };
  * thirty permission rules here would bury the thing this strip exists to say.
  */
 function Value({ effective }: { effective: EffectiveValue }): React.JSX.Element {
+  const { t } = useTranslation();
+
   if (effective.kind === 'replaced') {
     return (
-      <span className="font-mono text-xs text-fleet-text">{formatScalar(effective.value)}</span>
+      <span className="font-mono text-xs text-fleet-text">{formatScalar(effective.value, t)}</span>
     );
   }
   if (effective.kind === 'combined') {
     const total = effective.parts.reduce((sum, part) => sum + part.entries.length, 0);
     return (
       <span className="text-xs text-fleet-text">
-        {total === 1 ? '1 entry' : `${total} entries`}
+        {total === 1
+          ? t('settings.claudeConfig.effective.entryOne')
+          : t('settings.claudeConfig.effective.entryOther', { count: total })}
       </span>
     );
   }
-  return <span className="text-xs text-fleet-text-subtle">Not compared</span>;
+  return (
+    <span className="text-xs text-fleet-text-subtle">
+      {t('settings.claudeConfig.effective.notCompared')}
+    </span>
+  );
 }
 
 /**
@@ -68,32 +109,58 @@ function Value({ effective }: { effective: EffectiveValue }): React.JSX.Element 
  * "replaces" and "adds to" rather than "precedence" and "union" - the whole
  * point is that the two rules read as different sentences.
  */
-function sourceLine(effective: EffectiveValue): string | null {
+function sourceLine(effective: EffectiveValue, t: Translator, locale: Locale): string | null {
   if (effective.kind === 'replaced') {
-    const from = `From ${SHORT[effective.winner]}`;
-    if (effective.losers.length === 0) return `${from}, the only file that sets it.`;
-    return `${from}, replacing ${effective.losers.map((s) => SHORT[s]).join(' and ')}.`;
+    const scope = t(SHORT[effective.winner]);
+    if (effective.losers.length === 0) {
+      return t('settings.claudeConfig.effective.source.only', { scope });
+    }
+    return t('settings.claudeConfig.effective.source.replaced', {
+      scope,
+      others: joinLabels(
+        effective.losers.map((loser) => t(SHORT[loser])),
+        locale
+      )
+    });
   }
   if (effective.kind === 'combined') {
     const parts = effective.parts.filter((part) => part.entries.length > 0);
     if (parts.length === 0) return null;
-    const named = parts.map((part) => `${SHORT[part.scope]} ${part.entries.length}`).join(' + ');
-    if (parts.length === 1) return `All from ${SHORT[parts[0].scope]}.`;
-    return `Combined: ${named}. Every file's entries apply.`;
+    if (parts.length === 1) {
+      return t('settings.claudeConfig.effective.source.allFrom', {
+        scope: t(SHORT[parts[0].scope])
+      });
+    }
+    return t('settings.claudeConfig.effective.source.combined', {
+      sources: parts
+        .map((part) =>
+          t('settings.claudeConfig.effective.source.part', {
+            scope: t(SHORT[part.scope]),
+            count: part.entries.length
+          })
+        )
+        .join(' + ')
+    });
   }
   if (effective.kind === 'special') {
-    return `Set in ${effective.scopes.map((s) => SHORT[s]).join(' and ')}. This key has its own rule.`;
+    return t('settings.claudeConfig.effective.source.special', {
+      scopes: joinLabels(
+        effective.scopes.map((scope) => t(SHORT[scope])),
+        locale
+      )
+    });
   }
   return null;
 }
 
 export function ClaudeConfigEffective({ values }: { values: ScopeValues }): React.JSX.Element {
+  const { t, locale } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const resolved = useMemo<Resolved[]>(() => {
     const fields = [
-      ...SCALAR_FIELDS.map((f) => ({ label: f.label, path: f.path })),
-      ...LIST_FIELDS.map((f) => ({ label: f.label, path: f.path }))
+      ...SCALAR_FIELDS.map((f) => ({ labelKey: fieldLabel(f.path), path: f.path })),
+      ...LIST_FIELDS.map((f) => ({ labelKey: fieldLabel(f.path), path: f.path }))
     ];
     return fields.map((field) => ({ ...field, effective: resolveEffective(field.path, values) }));
   }, [values]);
@@ -110,15 +177,18 @@ export function ClaudeConfigEffective({ values }: { values: ScopeValues }): Reac
   // install would only be one more thing to read past.
   if (set.length === 0) return <></>;
 
-  const summary = [
+  const settings =
     set.length === 1
-      ? '1 setting comes from these files'
-      : `${set.length} settings come from these files`,
-    replaced > 0 ? `${replaced} replaced` : null,
-    combined > 0 ? `${combined} combined` : null
-  ]
-    .filter((part) => part !== null)
-    .join(' · ');
+      ? t('settings.claudeConfig.effective.settingOne')
+      : t('settings.claudeConfig.effective.settingOther', { count: set.length });
+  const summary =
+    replaced > 0 && combined > 0
+      ? t('settings.claudeConfig.effective.summaryBoth', { settings, replaced, combined })
+      : replaced > 0
+        ? t('settings.claudeConfig.effective.summaryReplaced', { settings, replaced })
+        : combined > 0
+          ? t('settings.claudeConfig.effective.summaryCombined', { settings, combined })
+          : t('settings.claudeConfig.effective.summaryBasic', { settings });
 
   return (
     <section className="rounded border border-fleet-border bg-fleet-surface-2/40">
@@ -127,11 +197,15 @@ export function ClaudeConfigEffective({ values }: { values: ScopeValues }): Reac
         className="flex w-full items-center justify-between gap-4 px-3 py-2 text-left transition active:scale-[0.99]"
       >
         <span className="min-w-0">
-          <span className="block text-sm text-fleet-text">What Claude Code actually uses</span>
+          <span className="block text-sm text-fleet-text">
+            {t('settings.claudeConfig.effective.title')}
+          </span>
           <span className="block text-[11px] text-fleet-text-secondary">{summary}</span>
         </span>
         <span className="flex-none text-[11px] text-fleet-text-secondary">
-          {open ? 'Hide' : 'Show'}
+          {open
+            ? t('settings.claudeConfig.effective.hide')
+            : t('settings.claudeConfig.effective.show')}
         </span>
       </button>
 
@@ -139,14 +213,14 @@ export function ClaudeConfigEffective({ values }: { values: ScopeValues }): Reac
         <div className="border-t border-fleet-border px-3 pb-2">
           <div className="divide-y divide-fleet-border">
             {set.map((row) => {
-              const source = sourceLine(row.effective);
+              const source = sourceLine(row.effective, t, locale);
               return (
                 <div
                   key={row.path.join('.')}
                   className="flex items-start justify-between gap-6 py-2"
                 >
                   <div className="min-w-0">
-                    <div className="text-sm text-fleet-text">{row.label}</div>
+                    <div className="text-sm text-fleet-text">{t(row.labelKey)}</div>
                     {source ? (
                       <div className="text-[11px] text-fleet-text-secondary">{source}</div>
                     ) : null}
@@ -158,7 +232,9 @@ export function ClaudeConfigEffective({ values }: { values: ScopeValues }): Reac
               );
             })}
           </div>
-          <p className="pt-2 text-[11px] text-fleet-text-subtle">{PRECEDENCE_CAVEAT}</p>
+          <p className="pt-2 text-[11px] text-fleet-text-subtle">
+            {t('settings.claudeConfig.effective.caveat')}
+          </p>
         </div>
       ) : null}
     </section>

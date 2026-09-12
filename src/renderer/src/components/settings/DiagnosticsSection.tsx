@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { DiagnosticsInfo } from '../../../../shared/ipc-api';
+import { useTranslation } from '../../lib/i18n';
 
 const REPO = 'jjhuang01/fleet';
 // Keep the prefilled issue URL comfortably under browser/GitHub limits.
@@ -47,6 +48,7 @@ function buildIssueUrl(info: DiagnosticsInfo, logSnippet: string): string {
 }
 
 export function DiagnosticsSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const [info, setInfo] = useState<DiagnosticsInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +65,7 @@ export function DiagnosticsSection(): React.JSX.Element {
       const logTail = await window.fleet.diagnostics.getLogTail();
       await window.fleet.shell.openExternal(buildIssueUrl(current, logTail));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to open report');
+      setError(err instanceof Error ? err.message : t('diagnostics.failed'));
     } finally {
       setBusy(false);
     }
@@ -82,12 +84,7 @@ export function DiagnosticsSection(): React.JSX.Element {
         )}
       </div>
 
-      <p className="text-sm text-fleet-text-muted">
-        Hit a bug? Report a Problem opens a prefilled GitHub issue with your version, OS, and a
-        redacted snippet of recent logs. For the full logs, open the logs folder and attach the
-        latest <code className="text-fleet-text-secondary">fleet-*.log</code> file. Nothing is sent
-        anywhere until you submit the issue.
-      </p>
+      <p className="text-sm text-fleet-text-muted">{t('diagnostics.body')}</p>
 
       <div className="flex gap-2">
         <button
@@ -97,7 +94,7 @@ export function DiagnosticsSection(): React.JSX.Element {
           disabled={busy}
           className="px-3 py-1.5 text-sm fleet-accent-bg fleet-accent-bg-hover text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97] disabled:active:scale-100"
         >
-          {busy ? 'Opening…' : 'Report a Problem'}
+          {busy ? t('diagnostics.opening') : t('diagnostics.report')}
         </button>
         <button
           onClick={() => {
@@ -105,7 +102,7 @@ export function DiagnosticsSection(): React.JSX.Element {
           }}
           className="px-3 py-1.5 text-sm bg-fleet-surface-3 hover:bg-fleet-surface-3 text-fleet-text rounded-md transition-colors active:scale-[0.97]"
         >
-          Open Logs Folder
+          {t('diagnostics.openLogs')}
         </button>
       </div>
 

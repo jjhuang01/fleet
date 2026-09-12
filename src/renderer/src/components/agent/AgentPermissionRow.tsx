@@ -1,10 +1,6 @@
 import { CircleQuestionMark, Plug } from 'lucide-react';
 import type { AgentPermissionAsk, AgentPermissionOutcome } from '../../../../shared/agent-types';
-
-/** What the announcement says the agent is asking to run. */
-function spoken(ask: AgentPermissionAsk): string {
-  return ask.mcp === null ? ask.command : `${ask.mcp.tool} on the ${ask.mcp.server} server`;
-}
+import { useTranslation } from '../../lib/i18n';
 
 /**
  * The arguments, on one line, for the user to glance at before agreeing.
@@ -62,19 +58,28 @@ export function AgentPermissionRow({
    */
   onDecide: (outcome: AgentPermissionOutcome, requestId: string) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+  const target =
+    ask.mcp === null
+      ? ask.command
+      : t('agent.permission.mcpTarget', { tool: ask.mcp.tool, server: ask.mcp.server });
+  const asking =
+    by === null
+      ? t('agent.permission.agentAsking', { target })
+      : t('agent.permission.subagentAsking', { name: by, target });
+
   return (
     <div
       role="group"
-      aria-label="Permission needed"
+      aria-label={t('agent.permission.needed')}
       className="flex flex-col gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2.5"
     >
       {/* The card is not announced by being drawn, and a question nobody hears
           is a turn that looks hung. Said once, politely, in full: the command
           on its own is not a question. */}
       <p role="status" className="sr-only">
-        {`${by === null ? 'The agent' : `The ${by} subagent`} is asking to run ${spoken(ask)}.${
-          ask.reason === null ? '' : ` ${ask.reason}`
-        }`}
+        {asking}
+        {ask.reason === null ? '' : ` ${ask.reason}`}
       </p>
       <div className="flex items-start gap-1.5">
         {ask.mcp === null ? (
@@ -104,7 +109,10 @@ export function AgentPermissionRow({
               {/* The server is what the user actually chose to connect, so it
                   is named rather than left implicit in the tool's name - which
                   is often generic enough to belong to any of them. */}
-              <span className="text-fleet-text-subtle"> on {ask.mcp.server}</span>
+              <span className="text-fleet-text-subtle">
+                {' '}
+                {t('agent.permission.onServer', { server: ask.mcp.server })}
+              </span>
               {args(ask.mcp.args) !== '' && (
                 <span className="block text-fleet-text-subtle">{args(ask.mcp.args)}</span>
               )}
@@ -122,7 +130,7 @@ export function AgentPermissionRow({
           // makes it a ring rather than a slightly larger button.
           className="flex items-center gap-1.5 rounded-md fleet-accent-bg px-2.5 py-1 text-[11px] font-medium text-white transition-opacity hover:opacity-90 focus-ring-offset"
         >
-          Run once
+          {t('agent.permission.runOnce')}
           {/* The key that does this without reaching for the mouse. On the
               button rather than in a legend of its own, because the only place
               a shortcut is worth reading is next to what it does - and this is
@@ -137,20 +145,22 @@ export function AgentPermissionRow({
             onClick={() => onDecide('always', ask.requestId)}
             title={
               ask.mcp === null
-                ? `Always allow ${ask.rule}`
-                : `Always allow every tool on the ${ask.mcp.server} server`
+                ? t('agent.permission.alwaysAllowRule', { rule: ask.rule })
+                : t('agent.permission.alwaysAllowServer', { server: ask.mcp.server })
             }
             className="flex min-w-0 max-w-full items-baseline gap-1 rounded-md bg-fleet-surface-3 px-2.5 py-1 text-[11px] font-medium text-fleet-text transition-colors hover:bg-fleet-surface-2 focus-ring"
           >
             {/* The command above is never shortened; the rule is derived text,
                 and a rule long enough to break the row out of the card is one
                 the button cannot usefully spell out anyway. */}
-            <span className="shrink-0">Always allow</span>
+            <span className="shrink-0">{t('agent.permission.alwaysAllow')}</span>
             {/* A server's rule is a wire-name glob, which is Fleet's plumbing.
                 What the user agreed to is the server, so that is what the
                 button says. */}
             <span className={ask.mcp === null ? 'truncate font-mono' : 'truncate'}>
-              {ask.mcp === null ? ask.rule : `${ask.mcp.server} tools`}
+              {ask.mcp === null
+                ? ask.rule
+                : t('agent.permission.serverTools', { server: ask.mcp.server })}
             </span>
           </button>
         )}
@@ -159,7 +169,7 @@ export function AgentPermissionRow({
           onClick={() => onDecide('no', ask.requestId)}
           className="rounded-md px-2.5 py-1 text-[11px] font-medium text-fleet-text-subtle transition-colors hover:text-fleet-text focus-ring"
         >
-          Don&apos;t run
+          {t('agent.permission.dontRun')}
         </button>
       </div>
     </div>

@@ -1,8 +1,20 @@
 import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import type { AgentToolCall } from '../../../../shared/agent-tools';
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
 import { AgentToolRow } from './AgentToolRow';
-import { runLabel, runPreview, runRunning } from './tool-group';
+import { runPreview, runRunning } from './tool-group';
+
+function runLabelKey(name: string, running: boolean): MessageKey {
+  if (name === 'read') {
+    return running ? 'agent.toolGroup.readingFiles' : 'agent.toolGroup.readFiles';
+  }
+  if (name === 'glob') {
+    return running ? 'agent.toolGroup.findingPatterns' : 'agent.toolGroup.foundPatterns';
+  }
+  return running ? 'agent.toolGroup.searchingPatterns' : 'agent.toolGroup.searchedPatterns';
+}
 
 /**
  * A run of the same lookup, on one line, with the rows behind a disclosure.
@@ -26,6 +38,7 @@ export function AgentToolGroup({
   /** Calls whose result is no longer being sent to the model, by call id. */
   cleared: Set<string>;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const running = runRunning(calls);
 
@@ -50,7 +63,7 @@ export function AgentToolGroup({
         <span
           className={`flex min-w-0 items-center gap-1.5 ${running ? 'fleet-shimmer-text' : ''}`}
         >
-          <span className="shrink-0">{runLabel(name, calls.length, running)}</span>
+          <span className="shrink-0">{t(runLabelKey(name, running), { count: calls.length })}</span>
           <span className="truncate font-mono text-[11px]">{runPreview(name, calls)}</span>
         </span>
       </button>

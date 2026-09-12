@@ -5,15 +5,22 @@ import { SettingRow } from './SettingRow';
 import { SliderInput, NumberStepper, SegmentedControl } from './background-controls';
 import { BackgroundThumbnails } from './BackgroundThumbnails';
 import { BackgroundPreview } from './BackgroundPreview';
-import { backgroundLegibilityHint } from '../../lib/contrast';
+import { backgroundLegibilityIssues, type LegibilityIssue } from '../../lib/contrast';
 import { adoptImages, nextSlideshowFiles } from '../../lib/background-actions';
 import { TERMINAL_THEMES } from '../../../../shared/theme-presets';
 import { useTranslation } from '../../lib/i18n';
+import type { MessageKey } from '../../../../shared/i18n';
 import {
   DEFAULT_TERMINAL_BACKGROUND,
   type TerminalBackground,
   type TerminalBackgroundSlideshow
 } from '../../../../shared/types';
+
+const LEGIBILITY_ISSUE_KEY: Record<LegibilityIssue, MessageKey> = {
+  highOpacity: 'settings.background.legibility.highOpacity',
+  moderateOpacity: 'settings.background.legibility.moderateOpacity',
+  lowThemeContrast: 'settings.background.legibility.lowThemeContrast'
+};
 
 const IMAGE_FILTERS = [
   { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }
@@ -223,14 +230,14 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
   // explicit file-list case is suppressed.)
   const timingVisible = ss.source !== 'files' || ss.filePaths.length > 1;
 
-  const legibilityHint = appearanceVisible
-    ? backgroundLegibilityHint({
+  const legibilityIssues = appearanceVisible
+    ? backgroundLegibilityIssues({
         opacity: localOpacity,
         blur: localBlur,
         themeForeground,
         themeBackground
       })
-    : null;
+    : [];
 
   return (
     <div className="space-y-3 pt-3 border-t border-fleet-border">
@@ -264,10 +271,12 @@ export function TerminalBackgroundSettings(): React.JSX.Element | null {
             themeBackground={themeBackground}
             themeForeground={themeForeground}
           />
-          {legibilityHint && (
+          {legibilityIssues.length > 0 && (
             <div className="flex items-start gap-1.5 text-xs text-amber-400">
               <span aria-hidden>⚠</span>
-              <span>{legibilityHint}</span>
+              <span>
+                {legibilityIssues.map((issue) => t(LEGIBILITY_ISSUE_KEY[issue])).join(' ')}
+              </span>
             </div>
           )}
         </>

@@ -6,6 +6,7 @@ import type {
 } from '../../../../../../shared/agent-endpoints';
 import { FieldGroup } from '../primitives';
 import { statusOf, useAgentEndpointsStore } from '../../../../store/agent-endpoints-store';
+import { useTranslation } from '../../../../lib/i18n';
 import { EndpointRow } from './EndpointRow';
 import { EndpointDialog } from './EndpointDialog';
 import { EndpointScanDialog } from './EndpointScanDialog';
@@ -28,6 +29,7 @@ export function LocalEndpointsSection({
   endpoints: LocalEndpointConfig[];
   onChange: (next: LocalEndpointConfig[]) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const { statuses, busy, scanning, found } = useAgentEndpointsStore();
   const store = useAgentEndpointsStore;
   const [adding, setAdding] = useState(false);
@@ -108,14 +110,14 @@ export function LocalEndpointsSection({
   };
 
   return (
-    <FieldGroup title="Local models">
+    <FieldGroup title={t('agentSettings.endpoint.local.title')}>
       {list.length === 0 ? (
         <div className="rounded-lg border border-dashed border-fleet-border-strong px-4 py-6 text-center">
-          <p className="text-sm text-fleet-text-secondary">No local servers.</p>
+          <p className="text-sm text-fleet-text-secondary">
+            {t('agentSettings.endpoint.local.empty')}
+          </p>
           <p className="mx-auto mt-1 max-w-sm text-xs text-fleet-text-muted">
-            Point Fleet at a llama.cpp, Ollama, LM Studio or vLLM server on this machine and every
-            model it serves joins the pickers below. A plain llama-server serves one, so a second
-            model there means a second address.
+            {t('agentSettings.endpoint.local.emptyHint')}
           </p>
         </div>
       ) : (
@@ -145,7 +147,7 @@ export function LocalEndpointsSection({
           className="flex items-center gap-1.5 rounded-md border border-fleet-border-strong px-2.5 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 active:scale-[0.98] focus-ring"
         >
           <Plus size={13} />
-          Add server
+          {t('agentSettings.endpoint.local.add')}
         </button>
         <button
           type="button"
@@ -153,7 +155,7 @@ export function LocalEndpointsSection({
           className="flex items-center gap-1.5 rounded-md border border-fleet-border-strong px-2.5 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 active:scale-[0.98] focus-ring"
         >
           <Radar size={13} />
-          Look for servers
+          {t('agentSettings.endpoint.local.scan')}
         </button>
       </div>
 

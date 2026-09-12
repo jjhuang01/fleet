@@ -5,6 +5,7 @@ import { FieldGroup } from '../primitives';
 import { MenuItem, RowMenu } from '../RowMenu';
 import { newlyFound, useAgentSkillsStore } from '../../../../store/agent-skills-store';
 import { useWorkspaceStore } from '../../../../store/workspace-store';
+import { useTranslation } from '../../../../lib/i18n';
 import { SkillImportDialog } from './SkillImportDialog';
 import { SkillFetchDialog } from './SkillFetchDialog';
 
@@ -17,6 +18,7 @@ import { SkillFetchDialog } from './SkillFetchDialog';
  * same line is showing them the thing that actually matters.
  */
 export function SkillsSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const { installed, loaded, detected, scanning, installErrors } = useAgentSkillsStore();
   const store = useAgentSkillsStore;
   const recentFolders = useWorkspaceStore((s) => s.recentFolders);
@@ -38,14 +40,12 @@ export function SkillsSection(): React.JSX.Element {
   }, [store, cwd]);
 
   return (
-    <FieldGroup title="Skills">
+    <FieldGroup title={t('agentSettings.skills.title')}>
       {installed.length === 0 ? (
         <div className="rounded-lg border border-dashed border-fleet-border-strong px-4 py-6 text-center">
-          <p className="text-sm text-fleet-text-secondary">No skills installed.</p>
+          <p className="text-sm text-fleet-text-secondary">{t('agentSettings.skills.empty')}</p>
           <p className="mx-auto mt-1 max-w-sm text-xs text-fleet-text-muted">
-            {loaded
-              ? 'A skill is a folder of instructions the agent reads when it needs them - a house style, a release checklist, how to drive one awkward tool.'
-              : 'Loading…'}
+            {loaded ? t('agentSettings.skills.description') : t('agentSettings.common.loading')}
           </p>
         </div>
       ) : (
@@ -68,7 +68,7 @@ export function SkillsSection(): React.JSX.Element {
           className="flex items-center gap-1.5 rounded-md border border-fleet-border-strong px-2.5 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 active:scale-[0.98] focus-ring"
         >
           <Download size={13} />
-          Import
+          {t('agentSettings.skills.import')}
           {newlyFound(detected) > 0 && (
             <span className="rounded-full fleet-accent-bg px-1.5 text-[10px] font-medium text-white">
               {newlyFound(detected)}
@@ -81,7 +81,7 @@ export function SkillsSection(): React.JSX.Element {
           className="flex items-center gap-1.5 rounded-md border border-fleet-border-strong px-2.5 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 active:scale-[0.98] focus-ring"
         >
           <CloudDownload size={13} />
-          From a repository
+          {t('agentSettings.skills.fromRepository')}
         </button>
       </div>
 
@@ -89,7 +89,10 @@ export function SkillsSection(): React.JSX.Element {
         <div className="space-y-0.5">
           {installErrors.map((failure) => (
             <p key={failure.name} className="text-xs text-amber-400">
-              {failure.name} was not installed - {failure.reason}.
+              {t('agentSettings.skills.installError', {
+                name: failure.name,
+                reason: failure.reason
+              })}
             </p>
           ))}
         </div>
@@ -131,6 +134,8 @@ function SkillRow({
   onReveal: () => void;
   onRemove: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-start gap-3 rounded-lg border border-fleet-border px-3 py-2 transition-colors hover:bg-fleet-surface-2/50">
       <div className="min-w-0 flex-1">
@@ -143,10 +148,10 @@ function SkillRow({
         {(pick) => (
           <>
             <MenuItem icon={<FolderOpen size={13} />} onClick={pick(onReveal)}>
-              Show in Finder
+              {t('agentSettings.skills.showInFinder')}
             </MenuItem>
             <MenuItem icon={<Trash2 size={13} />} danger onClick={pick(onRemove)}>
-              Remove
+              {t('agentSettings.common.remove')}
             </MenuItem>
           </>
         )}

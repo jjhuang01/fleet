@@ -5,9 +5,19 @@ import type {
   GalleryImage,
   GalleryMetadata
 } from '../../../../shared/agent-gallery';
+import type { MessageKey } from '../../../../shared/i18n';
 import { toFleetImageUrl } from '../../../../shared/path-platform';
+import { useTranslation } from '../../lib/i18n';
 import { AgentImageOverlay } from './AgentImage';
-import { relativeTime } from './settings/format';
+
+function relativeTimeParts(epochMs: number): { key: MessageKey; count?: number } {
+  const minutes = Math.round((Date.now() - epochMs) / 60_000);
+  if (minutes < 1) return { key: 'agent.time.justNow' };
+  if (minutes < 60) return { key: 'agent.time.minutesAgo', count: minutes };
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return { key: 'agent.time.hoursAgo', count: hours };
+  return { key: 'agent.time.daysAgo', count: Math.round(hours / 24) };
+}
 
 /**
  * Every picture the agent has made, from every conversation.
@@ -78,18 +88,13 @@ export function AgentGalleryTab({
   }, [next, loadPage]);
 
   if (failed) {
-    return <Message text="The pictures could not be read." />;
+    return <Message text="agent.gallery.readFailed" />;
   }
   if (images === null) {
-    return <Message text="" />;
+    return <Message />;
   }
   if (images.length === 0) {
-    return (
-      <Message
-        text="Nothing generated yet. Images the agent makes appear here, from every conversation - and are deleted with the conversation that made them."
-        icon
-      />
-    );
+    return <Message text="agent.gallery.empty" icon />;
   }
 
   return (
@@ -133,12 +138,16 @@ function Thumbnail({
   image: GalleryImage;
   onOpen: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+  const time = relativeTimeParts(image.modifiedAt);
+  const generated = t(time.key, { count: time.count });
+
   return (
     <button
       type="button"
       onClick={onOpen}
-      title={`Generated ${relativeTime(image.modifiedAt)}`}
-      aria-label={`View image generated ${relativeTime(image.modifiedAt)}`}
+      title={t('agent.gallery.generatedAt', { time: generated })}
+      aria-label={t('agent.gallery.viewGeneratedAt', { time: generated })}
       className="group relative aspect-square overflow-hidden rounded-lg border border-fleet-border bg-fleet-surface-2/40 transition-colors hover:border-fleet-border-strong focus-ring"
     >
       <img
@@ -168,6 +177,7 @@ function OpenedImage({
   onClose: () => void;
   onUseAsReference: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [meta, setMeta] = useState<GalleryMetadata | null>(null);
 
   useEffect(() => {
@@ -191,15 +201,15 @@ function OpenedImage({
     <AgentImageOverlay
       open
       src={toFleetImageUrl(image.path)}
-      alt={prompt ?? 'Generated image'}
+      alt={prompt ?? t('agent.gallery.generatedImage')}
       path={image.path}
       onClose={onClose}
       extraActions={
         <button
           type="button"
           onClick={onUseAsReference}
-          aria-label="Use as reference"
-          title="Use as reference"
+          aria-label={t('agent.gallery.useAsReference')}
+          title={t('agent.gallery.useAsReference')}
           className="rounded p-1.5 text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-ring"
         >
           <Paperclip size={15} />
@@ -226,7 +236,9 @@ function OpenedImage({
  * user chose to look at, and the one thing this pane is about is that people
  * put pictures behind it.
  */
-function Message({ text, icon = false }: { text: string; icon?: boolean }): React.JSX.Element {
+function Message({ text, icon = false }: { text?: MessageKey; icon?: boolean }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center px-8">
       <div
@@ -234,7 +246,9 @@ function Message({ text, icon = false }: { text: string; icon?: boolean }): Reac
         style={{ background: 'var(--fleet-turn-scrim)', padding: 'var(--fleet-turn-pad)' }}
       >
         {icon && <ImageDown size={20} className="text-fleet-text-secondary" strokeWidth={1.5} />}
-        {text !== '' && <p className="text-xs leading-relaxed text-fleet-text-secondary">{text}</p>}
+        {text !== undefined && (
+          <p className="text-xs leading-relaxed text-fleet-text-secondary">{t(text)}</p>
+        )}
       </div>
     </div>
   );

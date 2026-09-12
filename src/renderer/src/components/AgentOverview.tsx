@@ -4,6 +4,7 @@ import type { ActivityState } from '../../../shared/types';
 import { useWorkspaceStore, collectPaneIds } from '../store/workspace-store';
 import { useNotificationStore } from '../store/notification-store';
 import { findLeaf, paneLabel } from '../lib/palette-items';
+import { useTranslation } from '../lib/i18n';
 import { getPaneTailText } from '../hooks/use-terminal';
 import { Overlay } from './Overlay';
 import { PaneStatusGlyph } from './PaneStatusGlyph';
@@ -46,6 +47,7 @@ export function AgentOverview({
   onClose,
   onPeek
 }: AgentOverviewProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showAllDone, setShowAllDone] = useState(false);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
@@ -181,21 +183,25 @@ export function AgentOverview({
       <div
         ref={listboxRef}
         role="listbox"
-        aria-label="Agents"
+        aria-label={t('agent.overview.agents')}
         tabIndex={0}
         onKeyDown={handleKeyDown}
         className="flex flex-col outline-none"
       >
         <div className="px-3 py-2 border-b border-fleet-border flex items-center justify-between">
           <span className="text-xs font-medium text-fleet-text-secondary uppercase tracking-wide">
-            Agents
+            {t('agent.overview.agents')}
           </span>
-          <span className="text-[10px] text-fleet-text-subtle">{rows.length} panes</span>
+          <span className="text-[10px] text-fleet-text-subtle">
+            {t(rows.length === 1 ? 'agent.overview.paneOne' : 'agent.overview.paneMany', {
+              count: rows.length
+            })}
+          </span>
         </div>
         <div ref={listRef} className="overflow-y-auto py-1">
           {rows.length === 0 ? (
             <div className="px-3 py-6 text-sm text-fleet-text-muted text-center">
-              No terminal panes open
+              {t('agent.overview.empty')}
             </div>
           ) : (
             visibleRows.map((row, i) => {
@@ -232,7 +238,7 @@ export function AgentOverview({
                   <button
                     type="button"
                     tabIndex={-1}
-                    aria-label="Peek without switching panes"
+                    aria-label={t('agent.overview.peek')}
                     onClick={(e) => {
                       e.stopPropagation();
                       peek(row);
@@ -250,15 +256,15 @@ export function AgentOverview({
               className="w-full px-3 py-1.5 text-xs text-fleet-text-subtle hover:text-fleet-text-secondary text-center"
               onClick={() => setShowAllDone(true)}
             >
-              … {hiddenDoneCount} more
+              {t('agent.overview.more', { count: hiddenDoneCount })}
             </button>
           )}
         </div>
         <div className="px-3 py-1.5 border-t border-fleet-border flex items-center gap-3 text-xs text-fleet-text-subtle">
-          <span>↑↓ navigate</span>
-          <span>↵ jump to pane</span>
-          <span>space peek</span>
-          <span>esc dismiss</span>
+          <span>{t('common.navigate')}</span>
+          <span>{t('agent.overview.jump')}</span>
+          <span>{t('agent.overview.spacePeek')}</span>
+          <span>{t('common.dismiss')}</span>
         </div>
       </div>
     </Overlay>

@@ -1,5 +1,6 @@
 import { Clock } from 'lucide-react';
 import { splitScheduleFire } from '../../../../shared/agent-schedule';
+import { useTranslation } from '../../lib/i18n';
 
 /**
  * A check-in the conversation set for itself, arriving.
@@ -15,6 +16,7 @@ import { splitScheduleFire } from '../../../../shared/agent-schedule';
  * whole of what the turn below was given to work from.
  */
 export function AgentScheduleFire({ text }: { text: string }): React.JSX.Element {
+  const { t } = useTranslation();
   const { opening, note } = splitScheduleFire(text);
 
   return (
@@ -27,7 +29,7 @@ export function AgentScheduleFire({ text }: { text: string }): React.JSX.Element
     <div className="rounded-lg border border-dashed border-fleet-border bg-fleet-glass-surface px-3 py-2 backdrop-blur-md">
       <div className="flex items-center gap-1.5 text-[11px] tracking-wider text-fleet-text-subtle uppercase">
         <Clock size={12} className="shrink-0" />
-        Scheduled check-in
+        {t('agent.schedule.fire')}
       </div>
       {/* How late it is, in the words the model was given: one place says it, so
           the user and the turn below cannot be told two different things. */}

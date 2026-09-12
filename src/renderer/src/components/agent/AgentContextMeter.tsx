@@ -1,5 +1,6 @@
 import { FoldVertical } from 'lucide-react';
 import { projectInstructionsNotice } from '../../../../shared/agent-project-instructions';
+import { useTranslation } from '../../lib/i18n';
 import { formatTokens } from './settings/format';
 
 /**
@@ -37,6 +38,7 @@ export function AgentContextMeter({
   /** The instructions file this folder has, if the last turn found one. */
   projectInstructions?: { filename: string; tokens: number } | null;
 }): React.JSX.Element {
+  const { t, locale } = useTranslation();
   const fraction = limit === null || limit <= 0 ? null : used / limit;
   const notice =
     projectInstructions === undefined || projectInstructions === null
@@ -69,26 +71,36 @@ export function AgentContextMeter({
         className={`tabular-nums ${high ? 'text-amber-400' : ''}`}
         title={[
           limit === null
-            ? 'The catalog does not list this model’s context window, so Fleet will not compact on its own.'
-            : `Tokens the next turn will send, out of the model's ${formatTokens(limit)} context window.`,
+            ? t('agent.context.noLimit')
+            : t('agent.context.tokensOfLimit', { limit: formatTokens(limit) }),
           // Always, not only when it is large: "why does this session start at
           // 6k" is worth answering at any size.
-          ...(notice === null ? [] : [notice.line])
+          ...(notice === null || projectInstructions == null
+            ? []
+            : [
+                t(
+                  notice.warn ? 'agent.context.instructionsWarning' : 'agent.context.instructions',
+                  {
+                    filename: projectInstructions.filename,
+                    tokens: projectInstructions.tokens.toLocaleString(locale)
+                  }
+                )
+              ])
         ].join('\n\n')}
       >
         {limit === null
-          ? `${formatTokens(used)} context`
+          ? t('agent.context.used', { tokens: formatTokens(used) })
           : `${formatTokens(used)} / ${formatTokens(limit)}`}
       </span>
       {canCompact && (
         <button
           type="button"
           onClick={onCompact}
-          title="Summarize the earlier messages to free context"
+          title={t('agent.context.summarize')}
           className="flex items-center gap-1 rounded px-1 py-0.5 text-fleet-text-subtle transition-colors hover:text-fleet-text-secondary focus-ring"
         >
           <FoldVertical size={11} />
-          Compact
+          {t('agent.context.compact')}
         </button>
       )}
     </span>

@@ -22,6 +22,8 @@ import { PathChromeHeader } from './PathChromeHeader';
 import { useToastStore } from '../store/toast-store';
 import type { PathContext } from '../../../shared/shell-profiles';
 import type { RemoteFileRef } from '../../../shared/remote-ssh-types';
+import type { MessageKey } from '../../../shared/i18n';
+import { useTranslation } from '../lib/i18n';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const AUTO_SAVE_DELAY = 3000; // 3 seconds
@@ -115,9 +117,8 @@ async function loadCodeMirrorLanguage(langId: string): Promise<LanguageSupport |
   }
 }
 
-function getLanguageName(filePath: string): string {
-  return getLanguageForPath(filePath)?.label ?? 'Plain Text';
-}
+type VisibleError = { key: MessageKey } | { raw: string };
+type WriteRemoteResult = { success: boolean; failure?: { key: MessageKey; error?: string } };
 
 /**
  * Save back over SSH. Refuses (rather than clobbers) when the remote file has
@@ -127,9 +128,8 @@ function getLanguageName(filePath: string): string {
 async function writeRemote(
   remote: RemoteFileRef,
   content: string,
-  mtimeRef: React.MutableRefObject<number | undefined>,
-  showToast: (message: string) => void
-): Promise<{ success: boolean }> {
+  mtimeRef: React.MutableRefObject<number | undefined>
+): Promise<WriteRemoteResult> {
   const result = await window.fleet.remoteSsh.writeText(
     remote.host,
     remote.path,
@@ -137,12 +137,10 @@ async function writeRemote(
     mtimeRef.current
   );
   if (!result.success) {
-    showToast(`Save failed: ${result.error}`);
-    return { success: false };
+    return { success: false, failure: { key: 'panes.fileEditor.saveFailed', error: result.error } };
   }
   if (!result.data.ok) {
-    showToast('Not saved - the file changed on the server since it was opened');
-    return { success: false };
+    return { success: false, failure: { key: 'panes.fileEditor.remoteConflict' } };
   }
   mtimeRef.current = result.data.mtimeMs;
   return { success: true };
@@ -171,9 +169,10 @@ export function FileEditorPane({
   showPathChrome = true,
   remote
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const showLoadingSkeleton = useDelayedFlag(loading);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<VisibleError | null>(null);
   const [tooLarge, setTooLarge] = useState(false);
   const [fileSize, setFileSize] = useState(0);
   const [isDirty, setIsDirty] = useState(false);
@@ -201,25 +200,30 @@ export function FileEditorPane({
     const content = viewRef.current?.state.doc.toString();
     if (content === undefined) return;
     setIsSaving(true);
-    const result = remote
-      ? await writeRemote(remote, content, remoteMtimeRef, showToast)
+    const result: WriteRemoteResult = remote
+      ? await writeRemote(remote, content, remoteMtimeRef)
       : await window.fleet.file.write(filePath, content, pathContext);
     setIsSaving(false);
-    if (result.success) {
-      savedContentRef.current = content;
-      // Re-check if editor content changed during the async write
-      const currentContent = viewRef.current?.state.doc.toString();
-      const stillDirty = currentContent !== undefined && currentContent !== content;
-      if (!stillDirty) {
-        setIsDirty(false);
-        setPaneDirty(paneId, false);
-        if (autoSaveTimerRef.current) {
-          clearTimeout(autoSaveTimerRef.current);
-          autoSaveTimerRef.current = null;
-        }
+    if (!result.success) {
+      if (result.failure) {
+        showToast(t(result.failure.key, { error: result.failure.error }));
+      }
+      return;
+    }
+
+    savedContentRef.current = content;
+    // Re-check if editor content changed during the async write
+    const currentContent = viewRef.current?.state.doc.toString();
+    const stillDirty = currentContent !== undefined && currentContent !== content;
+    if (!stillDirty) {
+      setIsDirty(false);
+      setPaneDirty(paneId, false);
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
       }
     }
-  }, [filePath, pathContext, paneId, setPaneDirty, remote, showToast]);
+  }, [filePath, pathContext, paneId, setPaneDirty, remote, showToast, t]);
 
   // Keep saveRef current so closures in EditorView always call the latest save
   const saveRef = useRef(save);
@@ -239,7 +243,8 @@ export function FileEditorPane({
           initialContentRef.current = result.data.content;
         }
       } else {
-        setError(('error' in result ? result.error : undefined) ?? 'Failed to read file');
+        const rawError = 'error' in result ? result.error : undefined;
+        setError(rawError ? { raw: rawError } : { key: 'panes.file.readFailed' });
       }
       setLoading(false);
     });
@@ -350,7 +355,7 @@ export function FileEditorPane({
     return (
       <div className="h-full w-full bg-[#282c34]">
         <span className="sr-only" role="status" aria-live="polite">
-          Loading file…
+          {t('panes.fileEditor.loading')}
         </span>
         {showLoadingSkeleton && (
           <div className="h-full w-full flex flex-col gap-2 p-4">
@@ -366,7 +371,7 @@ export function FileEditorPane({
   if (error) {
     return (
       <div className="h-full w-full flex items-center justify-center bg-[#282c34] text-red-400 text-sm">
-        Error: {error}
+        {t('panes.file.error', { error: 'key' in error ? t(error.key) : error.raw })}
       </div>
     );
   }
@@ -375,9 +380,9 @@ export function FileEditorPane({
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-[#282c34] text-neutral-400 text-sm gap-2">
         <div className="text-3xl text-neutral-500">⚠</div>
-        <div className="font-medium text-neutral-200">File too large to edit</div>
+        <div className="font-medium text-neutral-200">{t('panes.fileEditor.tooLarge')}</div>
         <div className="text-neutral-500">
-          {(fileSize / 1024 / 1024).toFixed(1)} MB — limit is 10 MB
+          {t('panes.file.sizeLimit', { size: (fileSize / 1024 / 1024).toFixed(1) })}
         </div>
       </div>
     );
@@ -385,12 +390,12 @@ export function FileEditorPane({
 
   // Users think in terms of the remote path, not the cache copy backing it.
   const displayPath = remote ? `${remote.host.label}:${remote.path}` : filePath;
-  const langLabel = getLanguageName(filePath);
-  const saveStatus = isSaving
-    ? { label: 'Saving...', className: 'text-neutral-500' }
+  const langLabel = getLanguageForPath(filePath)?.label ?? t('panes.fileEditor.plainText');
+  const saveStatus: { key: MessageKey; className: string } = isSaving
+    ? { key: 'panes.fileEditor.saving', className: 'text-neutral-500' }
     : isDirty
-      ? { label: 'Modified', className: 'text-amber-400' }
-      : { label: 'Saved', className: 'text-emerald-500' };
+      ? { key: 'panes.fileEditor.modified', className: 'text-amber-400' }
+      : { key: 'panes.fileEditor.saved', className: 'text-emerald-500' };
 
   return (
     <div ref={wrapperRef} className="relative h-full w-full flex flex-col overflow-hidden">
@@ -399,7 +404,7 @@ export function FileEditorPane({
       <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-neutral-950/80 border-t border-neutral-800 text-xs text-neutral-400">
         <span className="text-neutral-300 shrink-0">{langLabel}</span>
         <span className="text-neutral-500 shrink-0">
-          Ln {cursorPos.line}, Col {cursorPos.col}
+          {t('panes.fileEditor.cursor', { line: cursorPos.line, col: cursorPos.col })}
         </span>
         {showPathChrome && (
           <span className="text-neutral-500 font-mono truncate min-w-0 flex-1" title={displayPath}>
@@ -409,10 +414,10 @@ export function FileEditorPane({
         <span
           className={`flex items-center gap-1.5 shrink-0 ${showPathChrome ? '' : 'ml-auto'} ${saveStatus.className}`}
         >
-          {saveStatus.label === 'Modified' && (
+          {saveStatus.key === 'panes.fileEditor.modified' && (
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400" />
           )}
-          {saveStatus.label}
+          {t(saveStatus.key)}
         </span>
       </div>
     </div>

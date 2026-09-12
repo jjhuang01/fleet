@@ -2,6 +2,7 @@ import { ArrowUp } from 'lucide-react';
 import { Overlay } from './Overlay';
 import { AgentMarkdown } from './agent/AgentMarkdown';
 import { useUpdateStore } from '../store/update-store';
+import { useTranslation } from '../lib/i18n';
 
 /**
  * What the staged update contains, and the button that takes it.
@@ -15,6 +16,7 @@ import { useUpdateStore } from '../store/update-store';
  * hands should not read a stray keypress as consent to that.
  */
 export function WhatsNewDialog(): React.JSX.Element | null {
+  const { t } = useTranslation();
   const update = useUpdateStore((s) => s.staged);
   const open = useUpdateStore((s) => s.whatsNewOpen);
   const setWhatsNewOpen = useUpdateStore((s) => s.setWhatsNewOpen);
@@ -27,10 +29,10 @@ export function WhatsNewDialog(): React.JSX.Element | null {
         <div className="flex items-start gap-2.5">
           <ArrowUp size={16} className="mt-0.5 shrink-0 fleet-accent-text" />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-fleet-text">Fleet {update.version}</h3>
-            <p className="mt-1 text-xs text-fleet-text-muted">
-              Downloaded and ready. Restarting takes a few seconds.
-            </p>
+            <h3 className="text-sm font-semibold text-fleet-text">
+              {t('panes.whatsNew.title', { version: update.version })}
+            </h3>
+            <p className="mt-1 text-xs text-fleet-text-muted">{t('panes.whatsNew.ready')}</p>
           </div>
         </div>
 
@@ -48,7 +50,7 @@ export function WhatsNewDialog(): React.JSX.Element | null {
             className="focus-ring rounded px-3 py-1 text-xs text-fleet-text-muted transition hover:bg-fleet-surface-3 hover:text-fleet-text active:scale-[0.97]"
             onClick={() => setWhatsNewOpen(false)}
           >
-            Later
+            {t('panes.whatsNew.later')}
           </button>
           <button
             className="fleet-accent-bg fleet-accent-bg-hover rounded px-3 py-1 text-xs text-white transition active:scale-[0.97]"
@@ -57,7 +59,7 @@ export function WhatsNewDialog(): React.JSX.Element | null {
               window.fleet.updates.installUpdate();
             }}
           >
-            Restart to Update
+            {t('panes.whatsNew.restart')}
           </button>
         </div>
       </div>

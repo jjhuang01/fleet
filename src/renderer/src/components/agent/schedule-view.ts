@@ -1,4 +1,4 @@
-import type { AgentScheduleRecord } from '../../../../shared/agent-schedule';
+import type { AgentScheduleRecord, NextFireLabel } from '../../../../shared/agent-schedule';
 import { nextFireLabel } from '../../../../shared/agent-schedule';
 import { fitsSideColumn } from './side-column';
 
@@ -27,8 +27,8 @@ export type ScheduleRow = {
   /** The note, on one line and cut short. See `SCHEDULE_NOTE_PREVIEW_CHARS`. */
   note: string;
   cron: string;
-  /** When it fires next, as a person would say it. */
-  when: string;
+  /** When it fires next, in the catalogue's words rather than in English's. */
+  when: NextFireLabel;
   /** Its moment has been claimed and a pane is about to be handed it. */
   due: boolean;
   recurring: boolean;
@@ -43,14 +43,21 @@ export type ScheduleRow = {
  * on screen at all while the pane is busy, which is exactly when the user is
  * most entitled to know what is queued behind what they are watching.
  */
-export function scheduleRows(records: AgentScheduleRecord[], now: Date): ScheduleRow[] {
+export function scheduleRows(
+  records: AgentScheduleRecord[],
+  now: Date,
+  locale: string
+): ScheduleRow[] {
   return [...records]
     .sort((a, b) => rank(a) - rank(b) || fireAt(a) - fireAt(b))
     .map((record) => ({
       id: record.id,
       note: preview(record.note),
       cron: record.cron,
-      when: record.state === 'due' ? 'due now' : nextFireLabel(record, now),
+      when:
+        record.state === 'due'
+          ? { key: 'agent.schedule.dueNow', params: {} }
+          : nextFireLabel(record, now, locale),
       due: record.state === 'due',
       recurring: record.recurring
     }));
@@ -100,10 +107,14 @@ export function showSchedulePanel(
  * this width the useful fact is when the pane is going to start working on its
  * own, and with three set the only honest short answer is how many.
  */
-export function scheduleChip(rows: ScheduleRow[]): { label: string; title: string } {
+export function scheduleChip(rows: ScheduleRow[]): {
+  label: NextFireLabel;
+  title: Array<{ when: NextFireLabel; cron: string; note: string }>;
+} {
   const only = rows.length === 1 ? rows[0] : null;
   return {
-    label: only !== null ? only.when : `${rows.length} schedules`,
-    title: rows.map((row) => `${row.when} (${row.cron}): ${row.note}`).join('\n')
+    label:
+      only !== null ? only.when : { key: 'agent.schedule.count', params: { count: rows.length } },
+    title: rows.map((row) => ({ when: row.when, cron: row.cron, note: row.note }))
   };
 }

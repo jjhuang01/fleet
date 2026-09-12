@@ -52,7 +52,7 @@ export function Dashboard({
         </pre>
 
         {/* Tagline */}
-        <p className="text-neutral-600 text-xs tracking-wide">terminal multiplexer for ai agents</p>
+        <p className="text-neutral-600 text-xs tracking-wide">{t('panes.dashboard.tagline')}</p>
 
         {/* New Terminal Action */}
         <button

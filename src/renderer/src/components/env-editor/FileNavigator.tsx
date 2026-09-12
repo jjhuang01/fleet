@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { Search, FilePlus2, Pencil, Trash2 } from 'lucide-react';
 import type { EnvFileEntry } from '../../../../shared/env-editor-types';
+import { useTranslation } from '../../lib/i18n';
 
 type Props = {
   files: EnvFileEntry[];
@@ -21,6 +22,7 @@ export function FileNavigator({
   onRename,
   onDelete
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState('');
   const [renaming, setRenaming] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -48,7 +50,7 @@ export function FileNavigator({
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter files…"
+            placeholder={t('dialogs.envEditor.filterPlaceholder')}
             className="w-full rounded-md border border-neutral-700 bg-neutral-800 py-1.5 pl-7 pr-2 text-xs text-neutral-200 transition-colors focus:border-neutral-500 focus:outline-none"
           />
         </div>
@@ -57,13 +59,13 @@ export function FileNavigator({
       <div className="flex-1 overflow-y-auto py-1">
         {groups.length === 0 ? (
           <p className="px-3 py-4 text-xs text-neutral-500">
-            {filter ? 'No files match the filter.' : 'No .env files found.'}
+            {filter ? t('dialogs.envEditor.noMatch') : t('dialogs.envEditor.noEnvFiles')}
           </p>
         ) : (
           groups.map(([group, entries]) => (
             <Fragment key={group}>
               <div className="px-3 pb-1 pt-3 text-[9px] font-medium uppercase tracking-wider text-neutral-600">
-                {group === '·root' ? '· root' : group}
+                {group === '·root' ? t('dialogs.envEditor.root') : group}
               </div>
               {entries.map((f) => {
                 const selected = f.absPath === selectedPath;
@@ -73,7 +75,7 @@ export function FileNavigator({
                     key={f.absPath}
                     onClick={() => onSelect(f)}
                     disabled={!f.readable}
-                    title={f.readable ? f.relPath : 'Cannot read this file'}
+                    title={f.readable ? f.relPath : t('dialogs.envEditor.cannotRead')}
                     className={`group flex w-full items-center gap-2 px-3 py-1.5 text-left font-mono text-xs transition-colors active:scale-[0.98] ${
                       selected
                         ? 'bg-blue-950/50 font-semibold text-white shadow-[inset_3px_0_0_0_#3b82f6]'
@@ -104,7 +106,7 @@ export function FileNavigator({
                         {dirty && (
                           <span
                             className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.6)]"
-                            aria-label="unsaved changes"
+                            aria-label={t('dialogs.envEditor.unsavedChanges')}
                           />
                         )}
                         <span className="ml-auto flex items-center gap-1">
@@ -128,7 +130,7 @@ export function FileNavigator({
                                   setRenaming(f.absPath);
                                 }
                               }}
-                              title="Rename"
+                              title={t('common.rename')}
                               className="rounded p-0.5 text-neutral-500 transition hover:text-neutral-200 active:scale-90"
                             >
                               <Pencil size={11} />
@@ -147,7 +149,7 @@ export function FileNavigator({
                                   onDelete(f);
                                 }
                               }}
-                              title="Delete"
+                              title={t('common.delete')}
                               className="rounded p-0.5 text-neutral-500 transition hover:text-red-400 active:scale-90"
                             >
                               <Trash2 size={11} />
@@ -169,7 +171,7 @@ export function FileNavigator({
           onClick={onNewFile}
           className="flex w-full items-center justify-center gap-1.5 rounded-md bg-neutral-800 py-1.5 text-xs text-neutral-200 transition hover:bg-neutral-700 active:scale-[0.98]"
         >
-          <FilePlus2 size={13} /> New .env file
+          <FilePlus2 size={13} /> {t('dialogs.envEditor.newFileTitle')}
         </button>
       </div>
     </div>

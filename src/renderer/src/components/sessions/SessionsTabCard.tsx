@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { History } from 'lucide-react';
 import { useSessionsStore } from '../../store/sessions-store';
+import { useTranslation } from '../../lib/i18n';
 
 export function SessionsTabCard({
   isActive,
@@ -9,6 +10,7 @@ export function SessionsTabCard({
   isActive: boolean;
   onClick: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const { sessions, isLoaded, load } = useSessionsStore();
 
   useEffect(() => {
@@ -42,10 +44,12 @@ export function SessionsTabCard({
               isActive ? 'text-fleet-text' : 'text-fleet-text-secondary'
             }`}
           >
-            Sessions
+            {t('dialogs.sessions.card.title')}
           </div>
           <span className="text-[11px] leading-tight text-fleet-text-muted tabular-nums">
-            {sessions.length > 0 ? `${sessions.length} saved` : 'none yet'}
+            {sessions.length > 0
+              ? t('dialogs.sessions.card.savedCount', { count: sessions.length })
+              : t('dialogs.sessions.card.noneYet')}
           </span>
         </div>
       </div>

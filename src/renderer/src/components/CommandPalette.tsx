@@ -302,7 +302,7 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps): React.
         }
         onClose();
       }}
-      label="Command palette"
+      label={t('palette.aria.commands')}
       commandProps={{
         loop: true,
         value: highlighted,

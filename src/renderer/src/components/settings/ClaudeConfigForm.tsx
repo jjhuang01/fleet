@@ -6,12 +6,11 @@ import { enumAtPath } from '../../../../shared/claude-settings-schema';
 import {
   describePrecedence,
   isIneffectiveDefaultMode,
-  SCOPE_LABELS,
-  SCOPE_PRECEDENCE,
-  PRECEDENCE_CAVEAT,
-  DENY_FIRST_NOTE
+  SCOPE_PRECEDENCE
 } from '../../../../shared/claude-settings-precedence';
 import type { PrecedenceResult } from '../../../../shared/claude-settings-precedence';
+import type { Locale, MessageKey } from '../../../../shared/i18n';
+import { useTranslation, type Translator } from '../../lib/i18n';
 import {
   parseSettings,
   valueAtPath,
@@ -40,6 +39,91 @@ const inputCls = `w-full ${fieldCls}`;
 /** Scalars share one width; a ragged right edge is what a settings page must not have. */
 const SCALAR_WIDTH = 'max-w-[280px]';
 
+const SCOPE_LABEL_KEYS: Record<ClaudeConfigScope, MessageKey> = {
+  user: 'settings.claudeConfig.scope.user.settings',
+  project: 'settings.claudeConfig.scope.project.settings',
+  projectLocal: 'settings.claudeConfig.scope.projectLocal.settings'
+};
+
+type FieldText = { label: MessageKey; note: MessageKey; empty?: MessageKey };
+type ListFieldText = FieldText & { empty: MessageKey };
+
+const SCALAR_FIELD_TEXT: Record<string, FieldText | undefined> = {
+  model: {
+    label: 'settings.claudeConfig.field.model.label',
+    note: 'settings.claudeConfig.field.model.note'
+  },
+  outputStyle: {
+    label: 'settings.claudeConfig.field.outputStyle.label',
+    note: 'settings.claudeConfig.field.outputStyle.note'
+  },
+  effortLevel: {
+    label: 'settings.claudeConfig.field.effortLevel.label',
+    note: 'settings.claudeConfig.field.effortLevel.note'
+  },
+  'permissions.defaultMode': {
+    label: 'settings.claudeConfig.field.permissionMode.label',
+    note: 'settings.claudeConfig.field.permissionMode.note'
+  },
+  alwaysThinkingEnabled: {
+    label: 'settings.claudeConfig.field.extendedThinking.label',
+    note: 'settings.claudeConfig.field.extendedThinking.note'
+  },
+  autoCompactEnabled: {
+    label: 'settings.claudeConfig.field.autoCompact.label',
+    note: 'settings.claudeConfig.field.autoCompact.note'
+  },
+  includeCoAuthoredBy: {
+    label: 'settings.claudeConfig.field.coauthoredByline.label',
+    note: 'settings.claudeConfig.field.coauthoredByline.note'
+  },
+  cleanupPeriodDays: {
+    label: 'settings.claudeConfig.field.keepSessions.label',
+    note: 'settings.claudeConfig.field.keepSessions.note'
+  }
+};
+
+const LIST_FIELD_TEXT: Record<string, ListFieldText | undefined> = {
+  'permissions.allow': {
+    label: 'settings.claudeConfig.field.allow.label',
+    note: 'settings.claudeConfig.field.allow.note',
+    empty: 'settings.claudeConfig.field.allow.empty'
+  },
+  'permissions.ask': {
+    label: 'settings.claudeConfig.field.ask.label',
+    note: 'settings.claudeConfig.field.ask.note',
+    empty: 'settings.claudeConfig.field.ask.empty'
+  },
+  'permissions.deny': {
+    label: 'settings.claudeConfig.field.deny.label',
+    note: 'settings.claudeConfig.field.deny.note',
+    empty: 'settings.claudeConfig.field.deny.empty'
+  },
+  'permissions.additionalDirectories': {
+    label: 'settings.claudeConfig.field.extraDirectories.label',
+    note: 'settings.claudeConfig.field.extraDirectories.note',
+    empty: 'settings.claudeConfig.field.extraDirectories.empty'
+  }
+};
+
+function fieldText(fields: Record<string, FieldText | undefined>, path: string[]): FieldText {
+  const text = fields[path.join('.')];
+  if (!text) throw new Error(`Missing Claude config translation for ${path.join('.')}`);
+  return text;
+}
+
+function listFieldText(path: string[]): ListFieldText {
+  const text = LIST_FIELD_TEXT[path.join('.')];
+  if (!text) throw new Error(`Missing Claude config translation for ${path.join('.')}`);
+  return text;
+}
+
+function joinLabels(labels: string[], locale: Locale): string {
+  if (labels.length <= 1) return labels[0] ?? '';
+  if (locale === 'zh-Hans') return labels.join('、');
+  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+}
+
 /**
  * The three precedence states do not deserve equal weight.
  *
@@ -50,30 +134,60 @@ const SCALAR_WIDTH = 'max-w-[280px]';
  */
 type Notice = { text: string; surprising: boolean };
 
-function noticeFor(result: PrecedenceResult, current: ClaudeConfigScope): Notice | null {
+function noticeFor(
+  result: PrecedenceResult,
+  current: ClaudeConfigScope,
+  t: Translator,
+  locale: Locale
+): Notice | null {
   const plain = (text: string): Notice => ({ text, surprising: false });
 
   switch (result.kind) {
     case 'unset':
       return null;
     case 'only':
-      return result.scope === current ? null : plain(`Set in ${SCOPE_LABELS[result.scope]} only.`);
+      return result.scope === current
+        ? null
+        : plain(
+            t('settings.claudeConfig.form.notice.only', {
+              scope: t(SCOPE_LABEL_KEYS[result.scope])
+            })
+          );
     case 'overridden':
       return result.winner === current
-        ? plain(`Wins over ${result.losers.map((s) => SCOPE_LABELS[s]).join(' and ')}.`)
-        : { text: `${SCOPE_LABELS[result.winner]} overrides this value.`, surprising: true };
+        ? plain(
+            t('settings.claudeConfig.form.notice.wins', {
+              scopes: joinLabels(
+                result.losers.map((scope) => t(SCOPE_LABEL_KEYS[scope])),
+                locale
+              )
+            })
+          )
+        : {
+            text: t('settings.claudeConfig.form.notice.overrides', {
+              scope: t(SCOPE_LABEL_KEYS[result.winner])
+            }),
+            surprising: true
+          };
     case 'combined':
       return plain(
-        `Combined with ${result.contributors
-          .filter((s) => s !== current)
-          .map((s) => SCOPE_LABELS[s])
-          .join(' and ')}.`
+        t('settings.claudeConfig.form.notice.combined', {
+          scopes: joinLabels(
+            result.contributors
+              .filter((scope) => scope !== current)
+              .map((scope) => t(SCOPE_LABEL_KEYS[scope])),
+            locale
+          )
+        })
       );
     case 'special':
       return plain(
-        `Claude Code merges this key across ${result.scopes
-          .map((s) => SCOPE_LABELS[s])
-          .join(', ')} with its own rule.`
+        t('settings.claudeConfig.form.notice.special', {
+          scopes: joinLabels(
+            result.scopes.map((scope) => t(SCOPE_LABEL_KEYS[scope])),
+            locale
+          )
+        })
       );
   }
 }
@@ -93,17 +207,18 @@ function FieldNote({
   scope: ClaudeConfigScope;
   values: Partial<Record<ClaudeConfigScope, Record<string, unknown>>>;
   /** What the row says when there is nothing to report about precedence. */
-  fallback: string;
+  fallback: MessageKey;
 }): React.JSX.Element {
-  const notice = noticeFor(describePrecedence(path, values), scope);
+  const { t, locale } = useTranslation();
+  const notice = noticeFor(describePrecedence(path, values), scope, t, locale);
   // Secondary, not subtle: the fix for too many notices is fewer of them, not
   // fainter ones.
   return (
     <div
       className={`text-[11px] ${notice?.surprising ? 'text-amber-400' : 'text-fleet-text-secondary'}`}
-      title={notice ? PRECEDENCE_CAVEAT : undefined}
+      title={notice ? t('settings.claudeConfig.effective.caveat') : undefined}
     >
-      {notice ? notice.text : fallback}
+      {notice ? notice.text : t(fallback)}
     </div>
   );
 }
@@ -116,18 +231,20 @@ function FieldNote({
  * heavier than the whitespace that would have separated the groups anyway.
  */
 function Group({
-  title,
-  note,
+  titleKey,
+  noteKey,
   children
 }: {
-  title: string;
-  note?: string;
+  titleKey: MessageKey;
+  noteKey?: MessageKey;
   children: React.ReactNode;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <section className="space-y-1">
-      <h3 className="text-sm text-fleet-text">{title}</h3>
-      {note ? <p className="pb-1 text-[11px] text-fleet-text-secondary">{note}</p> : null}
+      <h3 className="text-sm text-fleet-text">{t(titleKey)}</h3>
+      {noteKey ? <p className="pb-1 text-[11px] text-fleet-text-secondary">{t(noteKey)}</p> : null}
       <div className="divide-y divide-fleet-border border-t border-fleet-border">{children}</div>
     </section>
   );
@@ -141,22 +258,24 @@ function Group({
  * an orphaned scrap of small text between two controls.
  */
 function Row({
-  label,
+  labelKey,
   note,
   control,
   full
 }: {
-  label: string;
+  labelKey: MessageKey;
   note: React.ReactNode;
   control: React.ReactNode;
   /** Wide controls take their own line rather than stretching the row. */
   full?: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="py-2.5">
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <div className="text-sm text-fleet-text">{label}</div>
+          <div className="text-sm text-fleet-text">{t(labelKey)}</div>
           {note ? <div className="mt-0.5 space-y-0.5">{note}</div> : null}
         </div>
         {full ? null : <div className="flex-none">{control}</div>}
@@ -168,14 +287,16 @@ function Row({
 
 function StringList({
   values,
-  empty,
+  emptyKey,
   onChange
 }: {
   values: string[];
   /** What an unset list means, so a bare Add button is never the whole answer. */
-  empty: string;
+  emptyKey: MessageKey;
   onChange: (next: string[] | undefined) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   const replace = (index: number, value: string): void => {
     const next = [...values];
     next[index] = value;
@@ -189,7 +310,7 @@ function StringList({
   return (
     <div className="w-full space-y-1">
       {values.length === 0 ? (
-        <div className="text-xs text-fleet-text-subtle">{empty}</div>
+        <div className="text-xs text-fleet-text-subtle">{t(emptyKey)}</div>
       ) : (
         values.map((entry, index) => (
           <div key={index} className="flex items-center gap-2">
@@ -202,7 +323,7 @@ function StringList({
               onClick={() => remove(index)}
               className="shrink-0 text-xs text-red-400 transition active:scale-[0.97]"
             >
-              Remove
+              {t('settings.claudeConfig.form.remove')}
             </button>
           </div>
         ))
@@ -211,7 +332,7 @@ function StringList({
         onClick={() => onChange([...values, ''])}
         className="rounded border border-fleet-border-strong px-2 py-0.5 text-xs text-fleet-text-secondary transition hover:text-fleet-text active:scale-[0.97]"
       >
-        Add
+        {t('settings.claudeConfig.form.add')}
       </button>
     </div>
   );
@@ -232,11 +353,12 @@ function KeyValueRowFields({
   onRemove
 }: {
   row: KeyValueRow;
-  valuePlaceholder: string;
+  valuePlaceholder: MessageKey;
   autoFocus: boolean;
   onChange: (next: KeyValueRow) => void;
   onRemove: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [key, value] = row;
   // Anything that is not text or a switch has no honest control here.
   const editable = typeof value === 'string' || typeof value === 'boolean';
@@ -246,7 +368,7 @@ function KeyValueRowFields({
       <input
         className={`${inputCls} flex-1 font-mono text-xs`}
         value={key}
-        placeholder="Name"
+        placeholder={t('settings.claudeConfig.form.namePlaceholder')}
         autoFocus={autoFocus}
         onChange={(e) => onChange([e.target.value, value])}
       />
@@ -256,16 +378,16 @@ function KeyValueRowFields({
           value={value ? 'true' : 'false'}
           onChange={(e) => onChange([key, e.target.value === 'true'])}
         >
-          <option value="true">on</option>
-          <option value="false">off</option>
+          <option value="true">{t('settings.claudeConfig.form.on')}</option>
+          <option value="false">{t('settings.claudeConfig.form.off')}</option>
         </select>
       ) : (
         <input
           className={`${inputCls} flex-1 font-mono text-xs disabled:opacity-50`}
           value={typeof value === 'string' ? value : JSON.stringify(value)}
-          placeholder={valuePlaceholder}
+          placeholder={t(valuePlaceholder)}
           disabled={!editable}
-          title={editable ? undefined : 'This value is not plain text. Edit it in the Raw view.'}
+          title={editable ? undefined : t('settings.claudeConfig.form.nonPlainTextTitle')}
           onChange={(e) => onChange([key, e.target.value])}
         />
       )}
@@ -273,7 +395,7 @@ function KeyValueRowFields({
         onClick={onRemove}
         className="shrink-0 text-xs text-red-400 transition active:scale-[0.97]"
       >
-        Remove
+        {t('settings.claudeConfig.form.remove')}
       </button>
     </div>
   );
@@ -286,8 +408,10 @@ function KeyValueList({
 }: {
   entries: KeyValueRow[];
   onChange: (next: Record<string, unknown> | undefined) => void;
-  valuePlaceholder: string;
+  valuePlaceholder: MessageKey;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   // Rows, not the object. A row the user has just added has no name yet, and a
   // nameless key cannot exist in the document, so deriving rows from the object
   // would delete every new row before it could be typed into.
@@ -303,7 +427,10 @@ function KeyValueList({
     if (!rowsMatchDocument(next, entries)) onChange(commitRows(next));
   };
 
-  const blankRow: KeyValueRow = ['', valuePlaceholder === 'on / off' ? true : ''];
+  const blankRow: KeyValueRow = [
+    '',
+    valuePlaceholder === 'settings.claudeConfig.form.onOffPlaceholder' ? true : ''
+  ];
 
   return (
     <div className="w-full space-y-1">
@@ -321,7 +448,7 @@ function KeyValueList({
         onClick={() => update([...rows, blankRow])}
         className="rounded border border-fleet-border-strong px-2 py-0.5 text-xs text-fleet-text-secondary transition hover:text-fleet-text active:scale-[0.97]"
       >
-        Add
+        {t('settings.claudeConfig.form.add')}
       </button>
     </div>
   );
@@ -336,6 +463,7 @@ export function ClaudeConfigForm({
   path: string;
   dirs: ClaudeConfigDirs;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const text = useClaudeConfigStore((s) => s.documents[path]?.text ?? '{}');
   const documents = useClaudeConfigStore((s) => s.documents);
   const edit = useClaudeConfigStore((s) => s.edit);
@@ -363,8 +491,7 @@ export function ClaudeConfigForm({
   if (!document) {
     return (
       <div className="rounded border border-fleet-border-strong bg-fleet-surface-2 px-3 py-6 text-center text-sm text-fleet-text-secondary">
-        This file is not valid JSON, so the form cannot show it. Switch to Raw to fix the text -
-        your edits are kept.
+        {t('settings.claudeConfig.form.invalidJson')}
       </div>
     );
   }
@@ -373,9 +500,10 @@ export function ClaudeConfigForm({
     <div className="space-y-8">
       <ClaudeConfigEffective values={perScope} />
 
-      <Group title="Model and behaviour">
+      <Group titleKey="settings.claudeConfig.form.group.modelAndBehaviour">
         {SCALAR_FIELDS.map((field) => {
           const key = field.path.join('.');
+          const text = fieldText(SCALAR_FIELD_TEXT, field.path);
           const value = valueAtPath(document, field.path);
           const options = field.control === 'enum' ? enumAtPath(field.path) : [];
           const ineffective =
@@ -385,7 +513,7 @@ export function ClaudeConfigForm({
           return (
             <Row
               key={key}
-              label={field.label}
+              labelKey={text.label}
               note={
                 <>
                   {/* The notice takes the slot when there is one; the standing
@@ -394,12 +522,13 @@ export function ClaudeConfigForm({
                     path={field.path}
                     scope={scope}
                     values={perScope}
-                    fallback={field.note}
+                    fallback={text.note}
                   />
                   {ineffective ? (
                     <div className="text-[11px] text-amber-400">
-                      Claude Code ignores &quot;{String(value)}&quot; in this file. Only the user
-                      settings file can set it.
+                      {t('settings.claudeConfig.form.ineffectiveDefaultMode', {
+                        value: String(value)
+                      })}
                     </div>
                   ) : null}
                 </>
@@ -416,9 +545,9 @@ export function ClaudeConfigForm({
                       )
                     }
                   >
-                    <option value="">Not set</option>
-                    <option value="true">On</option>
-                    <option value="false">Off</option>
+                    <option value="">{t('settings.claudeConfig.form.notSet')}</option>
+                    <option value="true">{t('settings.claudeConfig.form.on')}</option>
+                    <option value="false">{t('settings.claudeConfig.form.off')}</option>
                   </select>
                 ) : field.control === 'enum' ? (
                   <select
@@ -428,7 +557,7 @@ export function ClaudeConfigForm({
                       write(field.path, e.target.value === '' ? undefined : e.target.value)
                     }
                   >
-                    <option value="">Not set</option>
+                    <option value="">{t('settings.claudeConfig.form.notSet')}</option>
                     {options.map((option) => (
                       <option key={option} value={option}>
                         {option}
@@ -441,7 +570,7 @@ export function ClaudeConfigForm({
                     min={1}
                     className={`${fieldCls} ${SCALAR_WIDTH} w-[200px]`}
                     value={typeof value === 'number' ? String(value) : ''}
-                    placeholder="Not set"
+                    placeholder={t('settings.claudeConfig.form.notSet')}
                     onChange={(e) =>
                       write(field.path, e.target.value === '' ? undefined : Number(e.target.value))
                     }
@@ -450,7 +579,7 @@ export function ClaudeConfigForm({
                   <input
                     className={`${fieldCls} ${SCALAR_WIDTH} w-[200px]`}
                     value={typeof value === 'string' ? value : ''}
-                    placeholder="Not set"
+                    placeholder={t('settings.claudeConfig.form.notSet')}
                     onChange={(e) =>
                       write(field.path, e.target.value === '' ? undefined : e.target.value)
                     }
@@ -462,27 +591,26 @@ export function ClaudeConfigForm({
         })}
       </Group>
 
-      <Group title="Permissions" note={DENY_FIRST_NOTE}>
+      <Group
+        titleKey="settings.claudeConfig.form.group.permissions"
+        noteKey="settings.claudeConfig.form.permissionsDenyNote"
+      >
         {LIST_FIELDS.map((field) => {
+          const text = listFieldText(field.path);
           const raw = valueAtPath(document, field.path);
           const list = Array.isArray(raw) ? raw.map((v) => String(v)) : [];
           return (
             <Row
               key={field.path.join('.')}
               full
-              label={field.label}
+              labelKey={text.label}
               note={
-                <FieldNote
-                  path={field.path}
-                  scope={scope}
-                  values={perScope}
-                  fallback={field.note}
-                />
+                <FieldNote path={field.path} scope={scope} values={perScope} fallback={text.note} />
               }
               control={
                 <StringList
                   values={list}
-                  empty={field.empty}
+                  emptyKey={text.empty}
                   onChange={(next) => write(field.path, next)}
                 />
               }
@@ -491,41 +619,41 @@ export function ClaudeConfigForm({
         })}
       </Group>
 
-      <Group title="Environment and plugins">
+      <Group titleKey="settings.claudeConfig.form.group.environmentAndPlugins">
         <Row
           full
-          label="Environment"
+          labelKey="settings.claudeConfig.field.environment.label"
           note={
             <FieldNote
               path={['env']}
               scope={scope}
               values={perScope}
-              fallback="Variables every session starts with."
+              fallback="settings.claudeConfig.field.environment.note"
             />
           }
           control={
             <KeyValueList
               entries={Object.entries(recordAtPath(document, ['env']))}
-              valuePlaceholder="Value"
+              valuePlaceholder="settings.claudeConfig.form.valuePlaceholder"
               onChange={(next) => write(['env'], next)}
             />
           }
         />
         <Row
           full
-          label="Enabled plugins"
+          labelKey="settings.claudeConfig.field.enabledPlugins.label"
           note={
             <FieldNote
               path={['enabledPlugins']}
               scope={scope}
               values={perScope}
-              fallback="Plugins turned on or off for this scope."
+              fallback="settings.claudeConfig.field.enabledPlugins.note"
             />
           }
           control={
             <KeyValueList
               entries={Object.entries(recordAtPath(document, ['enabledPlugins']))}
-              valuePlaceholder="on / off"
+              valuePlaceholder="settings.claudeConfig.form.onOffPlaceholder"
               onChange={(next) => write(['enabledPlugins'], next)}
             />
           }

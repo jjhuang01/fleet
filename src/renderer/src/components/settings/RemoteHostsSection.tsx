@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Check, FolderOpen, Loader2, Plus, Server, Trash2, X } from 'lucide-react';
 import type { RemoteHost } from '../../../../shared/remote-ssh-types';
+import { useTranslation } from '../../lib/i18n';
 import { useSettingsStore } from '../../store/settings-store';
 import { useWorkspaceStore } from '../../store/workspace-store';
 import { useToastStore } from '../../store/toast-store';
@@ -15,6 +16,7 @@ function emptyHost(): RemoteHost {
 }
 
 export function RemoteHostsSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const settings = useSettingsStore((s) => s.settings);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
   const openSshBrowser = useWorkspaceStore((s) => s.openSshBrowser);
@@ -54,20 +56,20 @@ export function RemoteHostsSection(): React.JSX.Element {
       setTests((t) => ({ ...t, [host.id]: ok ? 'ok' : 'failed' }));
       if (!ok) {
         const message = result.success ? result.data.error : result.error;
-        showToast(message ?? `Could not connect to ${host.label}`);
+        showToast(message ?? t('settings.remoteHosts.connectionFailed', { host: host.label }));
       }
     },
-    [showToast]
+    [showToast, t]
   );
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-medium text-fleet-text mb-1">Remote Hosts</h2>
+        <h2 className="text-lg font-medium text-fleet-text mb-1">
+          {t('settings.remoteHosts.title')}
+        </h2>
         <p className="text-sm text-fleet-text-muted">
-          SSH targets you can browse as a file pane. Fleet stores only the connection coordinates -
-          authentication uses your existing OpenSSH setup (<code>~/.ssh/config</code>, agent keys),
-          and no passwords or key material are ever saved here.
+          {t('settings.remoteHosts.description', { configPath: '~/.ssh/config' })}
         </p>
       </div>
 
@@ -75,7 +77,7 @@ export function RemoteHostsSection(): React.JSX.Element {
         {hosts.length === 0 && draft === null && (
           <div className="flex flex-col items-center gap-2 py-8 text-sm text-fleet-text-subtle border border-dashed border-fleet-border rounded-md">
             <Server size={22} className="text-fleet-text-subtle" />
-            No hosts saved yet
+            {t('settings.remoteHosts.empty')}
           </div>
         )}
 
@@ -97,7 +99,7 @@ export function RemoteHostsSection(): React.JSX.Element {
               <button
                 className="flex-1 min-w-0 text-left"
                 onClick={() => setDraft(host)}
-                title="Edit host"
+                title={t('settings.remoteHosts.edit')}
               >
                 <div className="text-sm text-fleet-text truncate">{host.label}</div>
                 <div className="text-xs text-fleet-text-subtle font-mono truncate">
@@ -110,16 +112,16 @@ export function RemoteHostsSection(): React.JSX.Element {
               <TestBadge state={tests[host.id] ?? 'idle'} onTest={() => void testHost(host)} />
               <button
                 className="p-1.5 rounded text-fleet-text-muted hover:text-fleet-text hover:bg-white/10 transition-colors active:scale-[0.97]"
-                title="Browse files"
-                aria-label={`Browse ${host.label}`}
+                title={t('settings.remoteHosts.browseFiles')}
+                aria-label={t('settings.remoteHosts.browseHostAria', { host: host.label })}
                 onClick={() => openSshBrowser(host)}
               >
                 <FolderOpen size={14} />
               </button>
               <button
                 className="p-1.5 rounded text-fleet-text-muted hover:text-red-400 hover:bg-white/10 transition-colors active:scale-[0.97]"
-                title="Remove host"
-                aria-label={`Remove ${host.label}`}
+                title={t('settings.remoteHosts.removeHost')}
+                aria-label={t('settings.remoteHosts.removeHostAria', { host: host.label })}
                 onClick={() => void persist(hosts.filter((h) => h.id !== host.id))}
               >
                 <Trash2 size={14} />
@@ -143,7 +145,7 @@ export function RemoteHostsSection(): React.JSX.Element {
             onClick={() => setDraft(emptyHost())}
           >
             <Plus size={14} />
-            Add host
+            {t('settings.remoteHosts.add')}
           </button>
         )}
       </div>
@@ -152,11 +154,13 @@ export function RemoteHostsSection(): React.JSX.Element {
 }
 
 function TestBadge({ state, onTest }: { state: TestState; onTest: () => void }): React.JSX.Element {
+  const { t } = useTranslation();
+
   if (state === 'testing') {
     return (
       <span className="flex items-center gap-1 text-xs text-fleet-text-subtle px-1.5">
         <Loader2 size={12} className="animate-spin" />
-        Testing
+        {t('settings.remoteHosts.testing')}
       </span>
     );
   }
@@ -170,9 +174,13 @@ function TestBadge({ state, onTest }: { state: TestState; onTest: () => void }):
             : 'text-fleet-text-subtle'
       }`}
       onClick={onTest}
-      title="Test connection"
+      title={t('settings.remoteHosts.testConnection')}
     >
-      {state === 'ok' ? 'Reachable' : state === 'failed' ? 'Unreachable' : 'Test'}
+      {state === 'ok'
+        ? t('settings.remoteHosts.reachable')
+        : state === 'failed'
+          ? t('settings.remoteHosts.unreachable')
+          : t('settings.remoteHosts.test')}
     </button>
   );
 }
@@ -188,38 +196,40 @@ function HostForm({
   onSave: () => void;
   onCancel: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="p-3 bg-fleet-surface-2 border border-fleet-border-strong rounded-md space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Name">
+        <Field label={t('settings.remoteHosts.name')}>
           <input
             autoFocus
             className={inputClass}
-            placeholder="khang-linux"
+            placeholder={t('settings.remoteHosts.namePlaceholder')}
             value={draft.label}
             onChange={(e) => onChange({ ...draft, label: e.target.value })}
           />
         </Field>
-        <Field label="Hostname or SSH alias">
+        <Field label={t('settings.remoteHosts.hostname')}>
           <input
             className={inputClass}
-            placeholder="khang-linux.example.ts.net"
+            placeholder={t('settings.remoteHosts.hostnamePlaceholder')}
             value={draft.host}
             onChange={(e) => onChange({ ...draft, host: e.target.value })}
           />
         </Field>
-        <Field label="User">
+        <Field label={t('settings.remoteHosts.user')}>
           <input
             className={inputClass}
-            placeholder="(from ~/.ssh/config)"
+            placeholder={t('settings.remoteHosts.userPlaceholder')}
             value={draft.user ?? ''}
             onChange={(e) => onChange({ ...draft, user: e.target.value || undefined })}
           />
         </Field>
-        <Field label="Port">
+        <Field label={t('settings.remoteHosts.port')}>
           <input
             className={inputClass}
-            placeholder="22"
+            placeholder={t('settings.remoteHosts.portPlaceholder')}
             inputMode="numeric"
             value={draft.port?.toString() ?? ''}
             onChange={(e) =>
@@ -227,18 +237,18 @@ function HostForm({
             }
           />
         </Field>
-        <Field label="Identity file">
+        <Field label={t('settings.remoteHosts.identityFile')}>
           <input
             className={inputClass}
-            placeholder="~/.ssh/id_ed25519"
+            placeholder={t('settings.remoteHosts.identityFilePlaceholder')}
             value={draft.identityFile ?? ''}
             onChange={(e) => onChange({ ...draft, identityFile: e.target.value || undefined })}
           />
         </Field>
-        <Field label="Start folder">
+        <Field label={t('settings.remoteHosts.startFolder')}>
           <input
             className={inputClass}
-            placeholder="(login home)"
+            placeholder={t('settings.remoteHosts.startFolderPlaceholder')}
             value={draft.defaultPath ?? ''}
             onChange={(e) => onChange({ ...draft, defaultPath: e.target.value || undefined })}
           />
@@ -250,7 +260,7 @@ function HostForm({
           onClick={onCancel}
         >
           <X size={12} />
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           className="flex items-center gap-1 px-2 py-1 text-xs text-fleet-text rounded bg-fleet-surface-3 hover:bg-fleet-surface-3 transition-colors active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
@@ -258,7 +268,7 @@ function HostForm({
           onClick={onSave}
         >
           <Check size={12} />
-          Save
+          {t('common.save')}
         </button>
       </div>
     </div>

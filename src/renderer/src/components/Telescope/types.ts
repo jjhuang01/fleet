@@ -1,6 +1,7 @@
 // src/renderer/src/components/Telescope/types.ts
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import type { MessageKey } from '../../../../shared/i18n';
 
 export type TelescopeItem = {
   id: string;
@@ -14,9 +15,9 @@ export type TelescopeItem = {
 
 export type TelescopeMode = {
   id: string;
-  label: string;
+  label: MessageKey;
   icon: LucideIcon;
-  placeholder: string;
+  placeholder: MessageKey;
   onSearch: (query: string) => Promise<TelescopeItem[]> | TelescopeItem[];
   renderPreview: (item: TelescopeItem) => ReactNode;
   onSelect: (item: TelescopeItem) => void;

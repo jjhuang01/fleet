@@ -1,4 +1,5 @@
 import type { AgentPermissionOutcome } from '../../../../shared/agent-types';
+import { useTranslation } from '../../lib/i18n';
 import { AgentPermissionRow } from './AgentPermissionRow';
 import type { PendingTaskAsk } from './task-permissions';
 
@@ -24,12 +25,15 @@ export function AgentTaskPermissions({
   pending: PendingTaskAsk[];
   onDecide: (taskId: string, outcome: AgentPermissionOutcome) => void;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   if (pending.length === 0) return null;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-1.5 px-4 pb-2">
       <span className="text-[10px] tracking-wide text-fleet-text-subtle uppercase">
-        {pending.length === 1 ? '1 subagent needs you' : `${pending.length} subagents need you`}
+        {pending.length === 1
+          ? t('agent.taskPermissions.needsOne')
+          : t('agent.taskPermissions.needMany', { count: pending.length })}
       </span>
       {/* Capped, because five of these is most of a pane. The count above says
           how many there are when the strip cannot show them all at once. */}

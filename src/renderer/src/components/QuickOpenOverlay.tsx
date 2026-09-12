@@ -3,6 +3,7 @@ import { Overlay } from './Overlay';
 import { useWorkspaceStore, getActivePaneContext } from '../store/workspace-store';
 import { fuzzyMatch } from '../lib/commands';
 import { getFileIcon } from '../lib/file-icons';
+import { useTranslation } from '../lib/i18n';
 
 type FileEntry = {
   path: string;
@@ -47,6 +48,7 @@ export function QuickOpenOverlay({
   onClose,
   rootDir
 }: QuickOpenOverlayProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [allFiles, setAllFiles] = useState<FileEntry[]>([]);
@@ -151,17 +153,19 @@ export function QuickOpenOverlay({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Search files..."
+          placeholder={t('panes.quickOpen.placeholder')}
           className="flex-1 bg-transparent text-sm text-white outline-none placeholder-neutral-500"
         />
-        {isLoading && <span className="text-xs text-neutral-500">Loading...</span>}
+        {isLoading && (
+          <span className="text-xs text-neutral-500">{t('panes.quickOpen.loading')}</span>
+        )}
       </div>
 
       {/* Results */}
       <div ref={listRef} className="overflow-y-auto py-1">
         {results.length === 0 && !isLoading ? (
           <div className="px-3 py-4 text-sm text-neutral-500 text-center">
-            {query ? 'No matching files' : 'No recent files'}
+            {t(query ? 'panes.quickOpen.noMatches' : 'panes.quickOpen.noRecent')}
           </div>
         ) : (
           results.map((file, i) => (
@@ -196,9 +200,9 @@ export function QuickOpenOverlay({
       {/* Footer hint */}
       {results.length > 0 && (
         <div className="px-3 py-1.5 border-t border-neutral-800 flex items-center gap-3 text-xs text-neutral-600">
-          <span>↑↓ navigate</span>
-          <span>↵ open</span>
-          <span>esc dismiss</span>
+          <span>{t('panes.quickOpen.navigate')}</span>
+          <span>{t('panes.quickOpen.open')}</span>
+          <span>{t('panes.quickOpen.dismiss')}</span>
         </div>
       )}
     </Overlay>

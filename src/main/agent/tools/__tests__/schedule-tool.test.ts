@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { translate } from '../../../../shared/i18n';
 import type { AgentScheduleCapability, AgentToolContext } from '../../../../shared/agent-tools';
 import {
   MAX_SCHEDULES_PER_SESSION,
@@ -74,7 +75,8 @@ describe('schedule_create', () => {
     const [made] = store.list(SESSION);
     expect(result.text).toContain(made.id);
     // When it fires, not the expression: the row already shows the expression.
-    expect(result.summary).toBe(nextFireLabel(made, new Date()));
+    const label = nextFireLabel(made, new Date(), 'en-US');
+    expect(result.summary).toBe(translate('en', label.key, label.params));
   });
 
   // The last point at which the model can still fix a note that will not stand

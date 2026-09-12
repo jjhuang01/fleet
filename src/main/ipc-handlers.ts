@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, Menu, dialog, safeStorage, clipboard } from 'electron';
+import { ipcMain, BrowserWindow, Menu, dialog, safeStorage, clipboard, app } from 'electron';
 import type { MenuItemConstructorOptions } from 'electron';
 import { safeOpenExternal } from './safe-external';
 import { collectDiagnosticsInfo, readRedactedLogTail, openLogsFolder } from './diagnostics';
@@ -12,6 +12,7 @@ import { homedir } from 'node:os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { execInContext } from './run-in-context';
+import { resolveLocale, translate, type MessageKey } from '../shared/i18n';
 
 const execAsync = promisify(exec);
 
@@ -532,12 +533,16 @@ export function registerIpcHandlers(
           resolved = true;
           resolve({ action });
         };
+        // Native menu, so the renderer's catalogue cannot reach it: the main
+        // process resolves the same preference the renderer does.
+        const t = (key: MessageKey): string =>
+          translate(resolveLocale(settingsStore.get().general.language, app.getLocale()), key);
         const template: MenuItemConstructorOptions[] = [
-          { label: 'Copy', enabled: hasSelection, click: () => done('copy') },
-          { label: 'Paste', click: () => done('paste') },
+          { label: t('main.contextMenu.copy'), enabled: hasSelection, click: () => done('copy') },
+          { label: t('main.contextMenu.paste'), click: () => done('paste') },
           { type: 'separator' },
-          { label: 'Select All', click: () => done('selectAll') },
-          { label: 'Clear', click: () => done('clear') }
+          { label: t('main.contextMenu.selectAll'), click: () => done('selectAll') },
+          { label: t('main.contextMenu.clear'), click: () => done('clear') }
         ];
         const window = BrowserWindow.fromWebContents(event.sender);
         if (!window) {

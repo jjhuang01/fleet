@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { RotateCcw } from 'lucide-react';
+import { useTranslation } from '../../../lib/i18n';
 import { commitNumber, shownNumber } from './bounded-number';
 import { commitLines, shownLines } from './line-list';
 
@@ -24,7 +25,7 @@ export function ParamSlider({
   hint,
   value,
   defaultValue,
-  defaultNote = 'default',
+  defaultNote,
   onChange,
   min,
   max,
@@ -44,6 +45,7 @@ export function ParamSlider({
   step: number;
   format?: (v: number) => string;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   // Dragging emits a change per pixel, so the slider tracks locally and only
   // persists when the user lets go.
   const [dragging, setDragging] = useState<number | null>(null);
@@ -67,7 +69,7 @@ export function ParamSlider({
           <span className="text-sm tabular-nums text-fleet-text">{format(shown)}</span>
           {isDefault ? (
             <span className="text-[10px] uppercase tracking-wider text-fleet-text-subtle">
-              {defaultNote}
+              {defaultNote ?? t('agentSettings.common.default')}
             </span>
           ) : (
             <button
@@ -76,8 +78,8 @@ export function ParamSlider({
                 setDragging(null);
                 onChange(null);
               }}
-              title={`Reset to ${format(defaultValue)}`}
-              aria-label={`Reset ${label}`}
+              title={t('agentSettings.controls.resetTo', { value: format(defaultValue) })}
+              aria-label={t('agentSettings.controls.reset', { label })}
               className="rounded p-0.5 text-fleet-text-subtle transition-colors hover:text-fleet-text-secondary focus-ring"
             >
               <RotateCcw size={12} />
@@ -124,6 +126,8 @@ export function OptionPills<T extends string>({
   value: T | null;
   onChange: (next: T | null) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
@@ -150,7 +154,7 @@ export function OptionPills<T extends string>({
                   : 'text-fleet-text-muted hover:text-fleet-text-secondary'
               }`}
             >
-              {option ?? 'default'}
+              {option ?? t('agentSettings.common.default')}
             </button>
           );
         })}

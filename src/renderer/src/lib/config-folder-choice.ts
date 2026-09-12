@@ -12,8 +12,13 @@ export type ConfigFolderChoiceDeps = {
   reload: () => Promise<void>;
   /** Tell the user the change applies to new terminals. Only for a real change. */
   announce: () => void;
-  /** Report a folder that could not be created. */
-  onError: (message: string) => void;
+  /**
+   * Report a folder that could not be created.
+   *
+   * Parts, not a sentence: this module has no business picking the user's
+   * language, and it is the caller that can reach the catalogue.
+   */
+  onError: (failure: { dir: string; detail: string }) => void;
 };
 
 export type ConfigFolderChoice = {
@@ -51,7 +56,7 @@ export function createConfigFolderChoice(deps: ConfigFolderChoiceDeps): ConfigFo
         const created = await deps.ensureConfigDir(dir);
         if (superseded()) return;
         if (!created.ok) {
-          deps.onError(`Could not create ${dir}: ${created.error}`);
+          deps.onError({ dir, detail: created.error });
           return;
         }
       }

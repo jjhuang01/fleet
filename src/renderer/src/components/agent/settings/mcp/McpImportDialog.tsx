@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import type { McpDetectedServer } from '../../../../../../shared/agent-mcp';
 import { transportOf } from '../../../../../../shared/agent-mcp';
+import type { MessageKey } from '../../../../../../shared/i18n';
+import { useTranslation } from '../../../../lib/i18n';
 import { Overlay } from '../../../Overlay';
 import { shortenPath } from '../../../../lib/shorten-path';
 
@@ -15,15 +17,24 @@ import { shortenPath } from '../../../../lib/shorten-path';
  * where they came from.
  */
 
-const SOURCE_LABEL: Record<McpDetectedServer['origin']['source'], string> = {
-  'claude-code': 'Claude Code',
-  opencode: 'OpenCode'
+const SOURCE_LABEL: Record<
+  McpDetectedServer['origin']['source'],
+  { allProjects: MessageKey; thisProject: MessageKey }
+> = {
+  'claude-code': {
+    allProjects: 'agentSettings.mcp.import.group.claudeCode.allProjects',
+    thisProject: 'agentSettings.mcp.import.group.claudeCode.thisProject'
+  },
+  opencode: {
+    allProjects: 'agentSettings.mcp.import.group.openCode.allProjects',
+    thisProject: 'agentSettings.mcp.import.group.openCode.thisProject'
+  }
 };
 
 /** One config file's worth of findings. */
 type Group = {
   key: string;
-  label: string;
+  labelKey: MessageKey;
   path: string;
   found: McpDetectedServer[];
 };
@@ -41,6 +52,7 @@ export function McpImportDialog({
   onCancel: () => void;
   onImport: (picked: Array<{ name: string; path: string }>) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   // Keyed by source name and path, which is what the import call takes and what
   // makes two servers with the same name from different files distinct.
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -88,9 +100,11 @@ export function McpImportDialog({
           <Download size={17} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-fleet-text">Import MCP servers</h2>
+          <h2 className="text-sm font-semibold text-fleet-text">
+            {t('agentSettings.mcp.import.title')}
+          </h2>
           <p className="text-xs text-fleet-text-muted">
-            Fleet keeps its own copy, so editing one here changes nothing over there.
+            {t('agentSettings.mcp.import.description')}
           </p>
         </div>
       </div>
@@ -99,15 +113,13 @@ export function McpImportDialog({
         {scanning ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-fleet-text-muted">
             <Loader2 size={15} className="animate-spin" />
-            Looking for servers…
+            {t('agentSettings.mcp.import.looking')}
           </div>
         ) : groups.length === 0 ? (
           <div className="px-5 py-16 text-center">
-            <p className="text-sm text-fleet-text-muted">
-              No servers found in Claude Code or OpenCode.
-            </p>
+            <p className="text-sm text-fleet-text-muted">{t('agentSettings.mcp.import.empty')}</p>
             <p className="mt-1 text-xs text-fleet-text-subtle">
-              Fleet looks in their user configs and in this project&rsquo;s folder.
+              {t('agentSettings.mcp.import.emptyHint')}
             </p>
           </div>
         ) : (
@@ -118,7 +130,7 @@ export function McpImportDialog({
                 <div className="flex items-center justify-between gap-3 px-5 pt-3 pb-1">
                   <div className="min-w-0">
                     <p className="text-[10px] font-medium uppercase tracking-wider text-fleet-text-subtle">
-                      {group.label}
+                      {t(group.labelKey)}
                     </p>
                     <p
                       className="truncate text-[11px] text-fleet-text-subtle/80"
@@ -132,7 +144,7 @@ export function McpImportDialog({
                     onClick={() => setGroup(group, !allOn)}
                     className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-fleet-text-muted transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text focus-ring"
                   >
-                    {allOn ? 'None' : 'All'}
+                    {allOn ? t('agentSettings.common.none') : t('agentSettings.common.all')}
                   </button>
                 </div>
                 {group.found.map((found) => (
@@ -151,7 +163,7 @@ export function McpImportDialog({
 
       <div className="flex items-center justify-between gap-3 border-t border-fleet-border px-5 py-3">
         <span className="text-[11px] text-fleet-text-subtle">
-          Credentials come across too, into this device&rsquo;s keychain.
+          {t('agentSettings.mcp.import.credentials')}
         </span>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -159,7 +171,7 @@ export function McpImportDialog({
             onClick={onCancel}
             className="rounded-md border border-fleet-border-strong px-3 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 focus-ring"
           >
-            Cancel
+            {t('agentSettings.common.cancel')}
           </button>
           <button
             type="button"
@@ -169,7 +181,9 @@ export function McpImportDialog({
             }
             className="rounded-md fleet-accent-bg px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-40 focus-ring-offset"
           >
-            {chosen.length === 1 ? 'Import 1 server' : `Import ${chosen.length} servers`}
+            {chosen.length === 1
+              ? t('agentSettings.mcp.import.submit.one')
+              : t('agentSettings.mcp.import.submit.many', { count: chosen.length })}
           </button>
         </div>
       </div>
@@ -210,9 +224,13 @@ function FoundRow({
  * badge that appears on nearly every row stops being read.
  */
 function Marker({ status }: { status: McpDetectedServer['status'] }): React.JSX.Element | null {
+  const { t } = useTranslation();
+
   if (status === 'known') {
     return (
-      <span className="w-14 shrink-0 text-right text-[10px] text-fleet-text-subtle">have</span>
+      <span className="w-14 shrink-0 text-right text-[10px] text-fleet-text-subtle">
+        {t('agentSettings.mcp.status.known')}
+      </span>
     );
   }
   const look =
@@ -223,7 +241,7 @@ function Marker({ status }: { status: McpDetectedServer['status'] }): React.JSX.
     <span
       className={`w-14 shrink-0 rounded border px-1.5 py-px text-center text-[10px] font-medium ${look}`}
     >
-      {status}
+      {status === 'new' ? t('agentSettings.mcp.status.new') : t('agentSettings.mcp.status.changed')}
     </span>
   );
 }
@@ -241,7 +259,8 @@ function groupByFile(detected: McpDetectedServer[]): Group[] {
     if (existing === undefined) {
       groups.set(path, {
         key: path,
-        label: `${SOURCE_LABEL[source]} · ${scope === 'user' ? 'all projects' : 'this project'}`,
+        labelKey:
+          scope === 'user' ? SOURCE_LABEL[source].allProjects : SOURCE_LABEL[source].thisProject,
         path,
         found: [found]
       });

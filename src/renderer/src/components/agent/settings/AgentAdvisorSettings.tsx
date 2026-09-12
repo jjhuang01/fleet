@@ -6,6 +6,7 @@ import {
   type AgentAdvisorConfig
 } from '../../../../../shared/agent-advisor';
 import type { AgentCatalogModel } from '../../../../../shared/agent-types';
+import { useTranslation } from '../../../lib/i18n';
 import { BoundedNumber, RoleCard, inputCls } from './controls';
 import { ModelSelect } from './ModelSelect';
 import { Toggle } from './Toggle';
@@ -31,16 +32,18 @@ export function AgentAdvisorSettings({
   config: AgentAdvisorConfig;
   onChange: (patch: Partial<AgentAdvisorConfig>) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <RoleCard
-      title="Advisor"
-      description="Lets the coding model consult a stronger one mid-turn - before committing to an approach, when it is stuck, before calling a task done. OpenRouter runs the consultation and bills per question."
+      title={t('agentSettings.advisor.title')}
+      description={t('agentSettings.advisor.description')}
       icon={<Lightbulb size={16} />}
     >
       <Row
         id="agent-advisor-enabled"
-        label="Consult a stronger model"
-        hint="The advisor cannot see this folder or this conversation. It answers the question it is given, and nothing else."
+        label={t('agentSettings.advisor.enabled.label')}
+        hint={t('agentSettings.advisor.enabled.hint')}
       >
         <Toggle
           id="agent-advisor-enabled"
@@ -52,18 +55,17 @@ export function AgentAdvisorSettings({
       {config.enabled && (
         <>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm text-fleet-text-secondary">Advisor model</label>
-            <p className="text-xs text-fleet-text-muted">
-              Worth being dearer than the coding model - a cheaper second opinion is the first
-              opinion again. Until one is chosen the tool is not offered at all.
-            </p>
+            <label className="text-sm text-fleet-text-secondary">
+              {t('agentSettings.advisor.model.label')}
+            </label>
+            <p className="text-xs text-fleet-text-muted">{t('agentSettings.advisor.model.hint')}</p>
             <ModelSelect
               models={models}
               value={config.model}
               onChange={(model) => onChange({ model })}
               allowNone
-              noneLabel="No advisor"
-              placeholder="Choose a model"
+              noneLabel={t('agentSettings.advisor.model.none')}
+              placeholder={t('agentSettings.advisor.model.placeholder')}
             />
           </div>
 
@@ -72,17 +74,16 @@ export function AgentAdvisorSettings({
               htmlFor="agent-advisor-instructions"
               className="text-sm text-fleet-text-secondary"
             >
-              Instructions
+              {t('agentSettings.advisor.instructions.label')}
             </label>
             <p className="text-xs text-fleet-text-muted">
-              Optional. Who the advisor should be - &ldquo;a staff engineer who has maintained this
-              kind of system for ten years, and is decisive&rdquo;.
+              {t('agentSettings.advisor.instructions.hint')}
             </p>
             <textarea
               id="agent-advisor-instructions"
               rows={3}
               value={config.instructions}
-              placeholder="Left blank, the advisor answers as itself."
+              placeholder={t('agentSettings.advisor.instructions.placeholder')}
               onChange={(e) => onChange({ instructions: e.target.value })}
               className={`${inputCls} resize-y font-sans`}
             />
@@ -138,11 +139,13 @@ function MaxTokensField({
   value: number;
   onChange: (next: number) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <Row
       id="agent-advisor-max-tokens"
-      label="Advice length"
-      hint="Tokens for one consultation, thinking included. Paid for twice: once to write, and again every round it stays in the transcript."
+      label={t('agentSettings.advisor.maxTokens.label')}
+      hint={t('agentSettings.advisor.maxTokens.hint')}
     >
       <BoundedNumber
         id="agent-advisor-max-tokens"

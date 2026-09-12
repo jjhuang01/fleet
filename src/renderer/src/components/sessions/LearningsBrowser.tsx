@@ -143,7 +143,9 @@ export function LearningsBrowser({
 
   async function remove(): Promise<void> {
     if (!selected) return;
-    if (!window.confirm(`Delete learning "${selected.title}"?`)) return;
+    if (!window.confirm(t('dialogs.sessions.deleteLearningConfirm', { title: selected.title }))) {
+      return;
+    }
     await window.fleet.learnings.delete(selected.id);
     setSelected(null);
     await refresh(query);

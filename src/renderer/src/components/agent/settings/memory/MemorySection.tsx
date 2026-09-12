@@ -3,6 +3,7 @@ import { FolderOpen, Trash2 } from 'lucide-react';
 import type { MemoryDescriptor } from '../../../../../../shared/agent-memory';
 import { FieldGroup } from '../primitives';
 import { MenuItem, RowMenu } from '../RowMenu';
+import { useTranslation } from '../../../../lib/i18n';
 import { useAgentMemoryStore } from '../../../../store/agent-memory-store';
 
 /**
@@ -26,6 +27,7 @@ import { useAgentMemoryStore } from '../../../../store/agent-memory-store';
  * the wrong folder would be missing entries with nothing to say it was.
  */
 export function MemorySection({ cwd }: { cwd: string }): React.JSX.Element {
+  const { t } = useTranslation();
   const { entries, loaded } = useAgentMemoryStore();
   const store = useAgentMemoryStore;
 
@@ -34,14 +36,12 @@ export function MemorySection({ cwd }: { cwd: string }): React.JSX.Element {
   }, [store, cwd]);
 
   return (
-    <FieldGroup title="Memory">
+    <FieldGroup title={t('agentSettings.memory.title')}>
       {entries.length === 0 ? (
         <div className="rounded-lg border border-dashed border-fleet-border-strong px-4 py-6 text-center">
-          <p className="text-sm text-fleet-text-secondary">Nothing recorded yet.</p>
+          <p className="text-sm text-fleet-text-secondary">{t('agentSettings.memory.empty')}</p>
           <p className="mx-auto mt-1 max-w-sm text-xs text-fleet-text-muted">
-            {loaded
-              ? 'The agent writes a note here when a session teaches it something the next one would otherwise work out again. Run /refine to ask it to look back over a conversation.'
-              : 'Loading…'}
+            {loaded ? t('agentSettings.memory.description') : t('agentSettings.common.loading')}
           </p>
         </div>
       ) : (
@@ -69,13 +69,17 @@ function MemoryRow({
   onReveal: () => void;
   onRemove: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-start gap-3 rounded-lg border border-fleet-border px-3 py-2 transition-colors hover:bg-fleet-surface-2/50">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate font-mono text-xs text-fleet-text">{entry.name}</p>
           <span className="shrink-0 rounded border border-fleet-border-strong px-1.5 py-px text-[10px] leading-tight text-fleet-text-muted">
-            {entry.source === 'project' ? 'This project' : 'Everywhere'}
+            {entry.source === 'project'
+              ? t('agentSettings.memory.thisProject')
+              : t('agentSettings.memory.everywhere')}
           </span>
         </div>
         <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-fleet-text-muted">
@@ -86,10 +90,10 @@ function MemoryRow({
         {(pick) => (
           <>
             <MenuItem icon={<FolderOpen size={13} />} onClick={pick(onReveal)}>
-              Show in Finder
+              {t('agentSettings.memory.showInFinder')}
             </MenuItem>
             <MenuItem icon={<Trash2 size={13} />} danger onClick={pick(onRemove)}>
-              Remove
+              {t('agentSettings.common.remove')}
             </MenuItem>
           </>
         )}

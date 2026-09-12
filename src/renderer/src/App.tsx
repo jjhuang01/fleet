@@ -41,7 +41,7 @@ import { isWslContext } from '../../shared/shell-profiles';
 import { useHomesStore } from './store/homes-store';
 import { injectLiveCwd } from './lib/workspace-utils';
 import { ShortcutsHint } from './components/ShortcutsHint';
-import { useDocumentLanguage } from './lib/i18n';
+import { useDocumentLanguage, useTranslation } from './lib/i18n';
 import { ShortcutsPanel } from './components/ShortcutsPanel';
 import { CommandPalette } from './components/CommandPalette';
 import { GitChangesModal } from './components/GitChangesModal';
@@ -218,6 +218,7 @@ function killClosedTabPtys(paneIds: string[]): void {
 
 export function App(): React.JSX.Element {
   useDocumentLanguage();
+  const { t } = useTranslation();
   usePaneNavigation();
   useNotifications();
   const { loadSettings } = useSettingsStore();
@@ -383,7 +384,7 @@ export function App(): React.JSX.Element {
         const leaf = { type: 'leaf' as const, id: crypto.randomUUID(), cwd: '/' };
         const tab = {
           id: crypto.randomUUID(),
-          label: 'Settings',
+          label: t('panes.app.settings'),
           labelIsCustom: true,
           cwd: '/',
           type: 'settings' as const,
@@ -399,7 +400,7 @@ export function App(): React.JSX.Element {
     };
     document.addEventListener('fleet:toggle-settings', handler);
     return () => document.removeEventListener('fleet:toggle-settings', handler);
-  }, []);
+  }, [t]);
 
   // Shortcuts panel toggle
   useEffect(() => {
@@ -854,7 +855,7 @@ export function App(): React.JSX.Element {
             style={{ WebkitAppRegion: 'no-drag' }}
           >
             {/* Expand sidebar button */}
-            <MiniSidebarTooltip label="Show sidebar">
+            <MiniSidebarTooltip label={t('panes.app.showSidebar')}>
               <button
                 onClick={() => setSidebarCollapsed(false)}
                 className="p-2 text-fleet-text-subtle hover:text-fleet-text-secondary hover:bg-fleet-surface-2 rounded transition-colors active:scale-90"
@@ -886,10 +887,10 @@ export function App(): React.JSX.Element {
             <div className="flex-1" />
             {/* Pinned agents section (mirrors expanded sidebar: agents above tools) */}
             <RailDivider />
-            <MiniSidebarTooltip label="New scratch chat">
+            <MiniSidebarTooltip label={t('panes.app.newScratch')}>
               <button
                 type="button"
-                aria-label="New scratch chat"
+                aria-label={t('panes.app.newScratch')}
                 onClick={() => useWorkspaceStore.getState().openScratch()}
                 className="p-1.5 rounded text-fleet-text-subtle hover:text-violet-300 hover:bg-fleet-surface-2 transition-colors active:scale-90"
               >
@@ -914,7 +915,7 @@ export function App(): React.JSX.Element {
               .map((tab) => {
                 const isAnnotateActive = tab.id === activeTabId;
                 return (
-                  <MiniSidebarTooltip label="Annotate" key={tab.id}>
+                  <MiniSidebarTooltip label={t('panes.app.annotate')} key={tab.id}>
                     <button
                       onClick={() => setActiveTab(tab.id)}
                       className={`p-1.5 rounded transition-colors active:scale-90 ${
@@ -937,7 +938,7 @@ export function App(): React.JSX.Element {
               .map((tab) => {
                 const isSessionsActive = tab.id === activeTabId;
                 return (
-                  <MiniSidebarTooltip label="Sessions" key={tab.id}>
+                  <MiniSidebarTooltip label={t('panes.app.sessions')} key={tab.id}>
                     <button
                       onClick={() => setActiveTab(tab.id)}
                       className={`p-1.5 rounded transition-colors active:scale-90 ${
@@ -956,7 +957,7 @@ export function App(): React.JSX.Element {
               })}
             <RailDivider />
             {/* Configure tools */}
-            <MiniSidebarTooltip label="Configure tools">
+            <MiniSidebarTooltip label={t('panes.app.configureTools')}>
               <button
                 onClick={() => setToolsConfigOpen(true)}
                 className="p-1.5 rounded text-fleet-text-subtle hover:text-fleet-text hover:bg-fleet-surface-2 transition-colors active:scale-90"
@@ -993,7 +994,7 @@ export function App(): React.JSX.Element {
                   className={`min-w-[180px] bg-fleet-surface-2 border border-fleet-border-strong rounded-md shadow-lg py-1 z-50 ${popperAnim}`}
                 >
                   <div className="px-3 py-1.5 text-[10px] text-fleet-text-subtle uppercase tracking-wider">
-                    Current: {workspace.label}
+                    {t('panes.app.currentWorkspace', { label: workspace.label })}
                   </div>
                   <div className="h-px bg-fleet-border-strong my-1" />
                   {miniWsList.length > 0 ? (
@@ -1005,13 +1006,16 @@ export function App(): React.JSX.Element {
                       >
                         <span className="truncate">{ws.label}</span>
                         <span className="text-[10px] text-fleet-text-subtle ml-2">
-                          {ws.tabCount} tab{ws.tabCount !== 1 ? 's' : ''}
+                          {t(
+                            ws.tabCount === 1 ? 'panes.app.tabCountOne' : 'panes.app.tabCountMany',
+                            { count: ws.tabCount }
+                          )}
                         </span>
                       </button>
                     ))
                   ) : (
                     <div className="px-3 py-1.5 text-xs text-fleet-text-subtle italic">
-                      No other workspaces
+                      {t('panes.app.noOtherWorkspaces')}
                     </div>
                   )}
                   <Popover.Arrow className="fill-fleet-surface-2" />
@@ -1024,7 +1028,7 @@ export function App(): React.JSX.Element {
                 (t) => t.type === 'settings' && t.id === activeTabId
               );
               return (
-                <MiniSidebarTooltip label="Settings">
+                <MiniSidebarTooltip label={t('panes.app.settings')}>
                   <button
                     onClick={() => document.dispatchEvent(new CustomEvent('fleet:toggle-settings'))}
                     className={`p-2 rounded transition-colors active:scale-90 ${
@@ -1119,15 +1123,18 @@ export function App(): React.JSX.Element {
             {showUndoToast && lastClosedTab && (
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 px-4 py-2 bg-fleet-surface-2 border border-fleet-border-strong rounded-lg shadow-lg text-sm duration-150 animate-in fade-in-0 slide-in-from-bottom-2">
                 <span className="text-fleet-text-secondary">
-                  {lastClosedTab.tab.worktreePath ? 'Removing worktree' : 'Closed'} {'"'}
-                  {lastClosedTab.tab.label}
-                  {'"'}
+                  {t(
+                    lastClosedTab.tab.worktreePath
+                      ? 'panes.app.removingWorktree'
+                      : 'panes.app.closed',
+                    { label: lastClosedTab.tab.label }
+                  )}
                 </span>
                 <button
                   className="text-blue-400 hover:text-blue-300 font-medium transition active:scale-95"
                   onClick={handleUndo}
                 >
-                  Undo
+                  {t('panes.app.undo')}
                 </button>
                 <button
                   className="text-fleet-text-subtle hover:text-fleet-text-secondary transition active:scale-90"

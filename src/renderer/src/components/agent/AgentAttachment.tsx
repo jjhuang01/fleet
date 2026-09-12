@@ -2,6 +2,7 @@ import { FileText, FileCode, X } from 'lucide-react';
 import type { AgentAttachment } from '../../../../shared/agent-types';
 import { toFleetImageUrl } from '../../../../shared/path-platform';
 import { basename } from '../../lib/path-utils';
+import { useTranslation } from '../../lib/i18n';
 import { AgentImage } from './AgentImage';
 
 /**
@@ -16,24 +17,30 @@ import { AgentImage } from './AgentImage';
  * matters about a PDF here is that it was read, and how much of it there was.
  */
 
-function pillLabel(attachment: AgentAttachment): { name: string; detail: string; title: string } {
-  if (attachment.kind === 'pdf') {
-    const pages = `${attachment.pages} page${attachment.pages === 1 ? '' : 's'}`;
-    return {
-      name: attachment.name,
-      detail: attachment.scanned ? 'no text found' : pages,
-      title: attachment.scanned
-        ? `${attachment.name} - ${pages}, but no text in it to read`
-        : `${attachment.name} - ${pages}`
-    };
-  }
-  return { name: basename(attachment.path), detail: '', title: attachment.path };
-}
-
 /** A document or a mentioned file, named rather than shown. */
 function Pill({ attachment }: { attachment: AgentAttachment }): React.JSX.Element {
-  const { name, detail, title } = pillLabel(attachment);
+  const { t } = useTranslation();
   const Icon = attachment.kind === 'pdf' ? FileText : FileCode;
+  const name = attachment.kind === 'pdf' ? attachment.name : basename(attachment.path);
+  const pages =
+    attachment.kind === 'pdf'
+      ? t(attachment.pages === 1 ? 'agent.attachment.pageOne' : 'agent.attachment.pageMany', {
+          count: attachment.pages
+        })
+      : null;
+  const detail =
+    attachment.kind === 'pdf'
+      ? attachment.scanned
+        ? t('agent.attachment.noTextFound')
+        : pages
+      : null;
+  const title =
+    attachment.kind === 'pdf'
+      ? t(attachment.scanned ? 'agent.attachment.scannedTitle' : 'agent.attachment.pdfTitle', {
+          name: attachment.name,
+          pages: pages ?? ''
+        })
+      : attachment.path;
 
   return (
     <span
@@ -42,7 +49,7 @@ function Pill({ attachment }: { attachment: AgentAttachment }): React.JSX.Elemen
     >
       <Icon size={13} className="shrink-0 text-fleet-text-muted" />
       <span className="truncate">{name}</span>
-      {detail !== '' && <span className="shrink-0 text-fleet-text-subtle">{detail}</span>}
+      {detail !== null && <span className="shrink-0 text-fleet-text-subtle">{detail}</span>}
     </span>
   );
 }
@@ -62,6 +69,7 @@ export function AgentAttachmentChip({
   attachment: AgentAttachment;
   onRemove: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const name = attachment.kind === 'mention' ? basename(attachment.path) : attachment.name;
 
   return (
@@ -79,8 +87,8 @@ export function AgentAttachmentChip({
       <button
         type="button"
         onClick={onRemove}
-        aria-label={`Remove ${name}`}
-        title="Remove"
+        aria-label={t('agent.attachment.removeNamed', { name })}
+        title={t('common.remove')}
         className="absolute -right-1.5 -top-1.5 flex size-4 items-center justify-center rounded-full border border-fleet-border bg-fleet-surface-3 text-fleet-text-muted transition-colors hover:text-fleet-text focus-ring"
       >
         <X size={9} strokeWidth={3} />

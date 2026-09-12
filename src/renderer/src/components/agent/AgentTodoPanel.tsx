@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, ChevronRight, Circle, CircleDot, LoaderCircle, Minus } from 'lucide-react';
 import type { AgentTodoItem, AgentTodoStatus } from '../../../../shared/agent-todos';
+import { useTranslation } from '../../lib/i18n';
 import { splitTodos, todoProgress, TODO_DONE_COLLAPSE_AT } from './todo-view';
 import { SideColumnCard } from './SideColumnCard';
 
@@ -32,6 +33,7 @@ export function AgentTodoPanel({
   /** Whether a turn is running, which decides whether a started item is live or stalled. */
   streaming: boolean;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   const progress = todoProgress(items);
   const { open, done } = splitTodos(items);
   // Per pane and per session, and it only ever opens: someone who asked to see
@@ -42,7 +44,11 @@ export function AgentTodoPanel({
   const collapsed = done.length > TODO_DONE_COLLAPSE_AT && !showDone;
 
   return (
-    <SideColumnCard label="Tasks" name="Agent tasks" count={progress.count}>
+    <SideColumnCard
+      label="agent.todo.panelLabel"
+      name="agent.todo.panelName"
+      count={progress.count}
+    >
       {/* Work still to do first, so the top of the card is the answer to
           "what now" and the scroll position it starts at is the right one. The
           finished pile grows downwards, which is the direction it should push. */}
@@ -59,7 +65,7 @@ export function AgentTodoPanel({
               className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-xs text-fleet-text-subtle transition-colors hover:text-fleet-text-secondary focus-ring"
             >
               <Check size={12} className="shrink-0 text-emerald-400/90" />
-              <span>{done.length} finished</span>
+              <span>{t('agent.todo.finished', { count: done.length })}</span>
               <ChevronRight size={12} className="ml-auto shrink-0" />
             </button>
           </li>

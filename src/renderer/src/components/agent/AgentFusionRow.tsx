@@ -1,14 +1,34 @@
 import { memo, useState } from 'react';
 import { ChevronRight, Users } from 'lucide-react';
 import {
-  fusionFailureMessage,
   parseFusionResult,
   type FusionAnalysis,
   type FusionFailedModel,
   type FusionPanelResponse
 } from '../../../../shared/agent-fusion';
 import type { ServerToolRecord } from '../../../../shared/agent-server-tools';
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
 import { AgentMarkdown } from './AgentMarkdown';
+
+function fusionFailureKey(reason: string | null): MessageKey | null {
+  switch (reason) {
+    case 'all_panels_failed':
+      return 'agent.fusion.failure.allPanels';
+    case 'insufficient_credits':
+      return 'agent.fusion.failure.credits';
+    case 'rate_limited':
+      return 'agent.fusion.failure.rateLimited';
+    case 'fusion_invocation_capped':
+      return 'agent.fusion.failure.capped';
+    case 'unexpected_error':
+      return 'agent.fusion.failure.unexpected';
+    case null:
+      return 'agent.fusion.failure.incomplete';
+    default:
+      return null;
+  }
+}
 
 /**
  * A panel of models reviewing one change.
@@ -30,10 +50,12 @@ export const AgentFusionRow = memo(function AgentFusionRow({
 }: {
   call: ServerToolRecord;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const result = parseFusionResult(call.result);
   const answered = result?.status === 'ok' ? result.responses.length : 0;
   const failed = result?.failed ?? [];
+  const failureKey = result?.status === 'error' ? fusionFailureKey(result.failureReason) : null;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -48,10 +70,12 @@ export const AgentFusionRow = memo(function AgentFusionRow({
           className={`shrink-0 transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
         />
         <Users size={12} className="shrink-0 opacity-70" />
-        <span className="shrink-0">Panel review</span>
+        <span className="shrink-0">{t('agent.fusion.panelReview')}</span>
         {answered > 0 && (
           <span className="shrink-0 text-fleet-text-subtle">
-            {answered} {answered === 1 ? 'model' : 'models'}
+            {t(answered === 1 ? 'agent.fusion.modelOne' : 'agent.fusion.modelMany', {
+              count: answered
+            })}
           </span>
         )}
         {/*
@@ -61,10 +85,12 @@ export const AgentFusionRow = memo(function AgentFusionRow({
          * is worth, and that should not need a click to find out.
          */}
         {failed.length > 0 && (
-          <span className="shrink-0 text-fleet-text-subtle">{failed.length} did not answer</span>
+          <span className="shrink-0 text-fleet-text-subtle">
+            {t('agent.fusion.didNotAnswer', { count: failed.length })}
+          </span>
         )}
         {result?.status === 'error' && (
-          <span className="shrink-0 text-fleet-text-subtle">failed</span>
+          <span className="shrink-0 text-fleet-text-subtle">{t('agent.fusion.failed')}</span>
         )}
       </button>
       {open && (
@@ -76,7 +102,7 @@ export const AgentFusionRow = memo(function AgentFusionRow({
           ) : result.status === 'error' ? (
             <>
               <p className="text-[11px] leading-relaxed text-fleet-text-muted">
-                {fusionFailureMessage(result.failureReason)}
+                {failureKey === null ? result.failureReason : t(failureKey)}
               </p>
               {result.error !== null && (
                 <p className="text-[11px] leading-relaxed text-fleet-text-subtle">{result.error}</p>
@@ -87,7 +113,7 @@ export const AgentFusionRow = memo(function AgentFusionRow({
             <>
               {result.analysis === null ? (
                 <p className="text-[11px] leading-relaxed text-fleet-text-subtle">
-                  The panel answered but the analyst did not. The replies are below, unreconciled.
+                  {t('agent.fusion.analystMissing')}
                 </p>
               ) : (
                 <Analysis analysis={result.analysis} />
@@ -117,7 +143,7 @@ function Analysis({ analysis }: { analysis: FusionAnalysis }): React.JSX.Element
   return (
     <div className="flex flex-col gap-3">
       {analysis.contradictions.length > 0 && (
-        <Section title="Disagreed">
+        <Section title="agent.fusion.disagreed">
           <ul className="flex flex-col gap-2">
             {analysis.contradictions.map((row) => (
               <li key={row.topic} className="flex flex-col gap-1">
@@ -140,7 +166,7 @@ function Analysis({ analysis }: { analysis: FusionAnalysis }): React.JSX.Element
       )}
 
       {analysis.uniqueInsights.length > 0 && (
-        <Section title="Only one model saw">
+        <Section title="agent.fusion.onlyOneSaw">
           <ul className="flex flex-col gap-1">
             {analysis.uniqueInsights.map((row) => (
               <li key={`${row.model}:${row.insight}`} className="text-[11px] leading-relaxed">
@@ -153,7 +179,7 @@ function Analysis({ analysis }: { analysis: FusionAnalysis }): React.JSX.Element
       )}
 
       {analysis.partialCoverage.length > 0 && (
-        <Section title="Some models raised">
+        <Section title="agent.fusion.someRaised">
           <ul className="flex flex-col gap-1">
             {analysis.partialCoverage.map((row) => (
               <li key={row.point} className="text-[11px] leading-relaxed text-fleet-text-muted">
@@ -168,13 +194,13 @@ function Analysis({ analysis }: { analysis: FusionAnalysis }): React.JSX.Element
       )}
 
       {analysis.blindSpots.length > 0 && (
-        <Section title="Nobody looked at">
+        <Section title="agent.fusion.nobodyLooked">
           <Bullets items={analysis.blindSpots} />
         </Section>
       )}
 
       {analysis.consensus.length > 0 && (
-        <Section title="Agreed">
+        <Section title="agent.fusion.agreed">
           <Bullets items={analysis.consensus} />
         </Section>
       )}
@@ -198,12 +224,14 @@ function Section({
   title,
   children
 }: {
-  title: string;
+  title: MessageKey;
   children: React.ReactNode;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] tracking-wide text-fleet-text-subtle uppercase">{title}</span>
+      <span className="text-[10px] tracking-wide text-fleet-text-subtle uppercase">{t(title)}</span>
       {children}
     </div>
   );
@@ -218,10 +246,13 @@ function Section({
  * nowhere else to look.
  */
 function PanelResponses({ responses }: { responses: FusionPanelResponse[] }): React.JSX.Element {
+  const { t } = useTranslation();
   if (responses.length === 0) return <></>;
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] tracking-wide text-fleet-text-subtle uppercase">Replies</span>
+      <span className="text-[10px] tracking-wide text-fleet-text-subtle uppercase">
+        {t('agent.fusion.replies')}
+      </span>
       {responses.map((response) => (
         <PanelResponse key={response.model} response={response} />
       ))}
@@ -263,10 +294,13 @@ function PanelResponse({ response }: { response: FusionPanelResponse }): React.J
  * review is short of a perspective or short of a duplicate.
  */
 function FailedModels({ failed }: { failed: FusionFailedModel[] }): React.JSX.Element {
+  const { t } = useTranslation();
   if (failed.length === 0) return <></>;
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] tracking-wide text-fleet-text-subtle uppercase">No answer</span>
+      <span className="text-[10px] tracking-wide text-fleet-text-subtle uppercase">
+        {t('agent.fusion.noAnswer')}
+      </span>
       <ul className="flex flex-col gap-0.5">
         {failed.map((row) => (
           <li key={row.model} className="text-[11px] leading-relaxed text-fleet-text-subtle">

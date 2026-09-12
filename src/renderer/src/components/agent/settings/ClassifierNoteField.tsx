@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronRight, RotateCcw } from 'lucide-react';
 import { classifierSystemPrompt } from '../../../../../shared/agent-classifier';
+import { useTranslation } from '../../../lib/i18n';
 import { Field } from './primitives';
 
 /**
@@ -26,6 +27,7 @@ export function ClassifierNoteField({
   value: string | null;
   onChange: (value: string | null) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState(value ?? '');
   const custom = (value ?? '').trim() !== '';
 
@@ -40,8 +42,8 @@ export function ClassifierNoteField({
 
   return (
     <Field
-      label="Auto-approval notes"
-      description="Added to the instructions below, for what only you know: a disposable container where installs are fine, a folder whose scripts are never ordinary."
+      label={t('agentSettings.classifier.label')}
+      description={t('agentSettings.classifier.description')}
       layout="stack"
       htmlFor="agent-classifier-note"
     >
@@ -51,13 +53,13 @@ export function ClassifierNoteField({
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
-        placeholder="e.g. This repo runs in a throwaway container, so installing packages is fine. Never wave through anything under ./deploy."
+        placeholder={t('agentSettings.classifier.placeholder')}
         spellCheck={false}
         className="w-full resize-y rounded-md border border-fleet-border bg-fleet-surface-2 px-2.5 py-2 font-mono text-xs leading-relaxed text-fleet-text outline-none transition-colors placeholder:text-fleet-text-subtle focus:border-fleet-border-strong focus-ring"
       />
       <div className="flex items-center justify-between gap-3 text-xs text-fleet-text-muted">
         <span>
-          {custom ? 'Your notes are being sent.' : 'Using the built-in instructions alone.'}
+          {custom ? t('agentSettings.classifier.custom') : t('agentSettings.classifier.default')}
         </span>
         {custom && (
           <button
@@ -69,7 +71,7 @@ export function ClassifierNoteField({
             className="flex shrink-0 items-center gap-1.5 rounded-md border border-fleet-border-strong px-2 py-1 text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 focus-ring"
           >
             <RotateCcw size={12} />
-            Clear notes
+            {t('agentSettings.classifier.clear')}
           </button>
         )}
       </div>
@@ -86,6 +88,8 @@ export function ClassifierNoteField({
  * been applied twice.
  */
 function BuiltIn(): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <details className="group rounded-md border border-fleet-border bg-fleet-surface">
       <summary className="flex cursor-pointer list-none items-center gap-1.5 px-2.5 py-1.5 text-xs text-fleet-text-muted transition-colors hover:text-fleet-text-secondary focus-ring">
@@ -93,7 +97,7 @@ function BuiltIn(): React.JSX.Element {
           size={12}
           className="shrink-0 transition-transform duration-150 group-open:rotate-90"
         />
-        What the model is always told
+        {t('agentSettings.classifier.builtIn')}
       </summary>
       <p className="border-t border-fleet-border px-2.5 py-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-fleet-text-muted">
         {classifierSystemPrompt(null)}

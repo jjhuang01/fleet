@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { translate } from '../i18n';
+import type { NextFireLabel } from '../agent-schedule';
 import {
   nextFireLabel,
   overdueLabel,
@@ -164,28 +166,57 @@ describe('renderScheduleBlock', () => {
   });
 });
 
+/** The English words, so the assertions read the way the code reads. */
+const say = (label: NextFireLabel): string => translate('en', label.key, label.params);
+
 describe('nextFireLabel', () => {
   it('says today and tomorrow by name', () => {
-    expect(nextFireLabel(record({ nextDueAt: new Date(2026, 5, 1, 17, 30).toISOString() }), NOW)) //
-      .toMatch(/^today /);
-    expect(nextFireLabel(record({ nextDueAt: new Date(2026, 5, 2, 9, 0).toISOString() }), NOW)) //
-      .toMatch(/^tomorrow /);
+    const today = nextFireLabel(
+      record({ nextDueAt: new Date(2026, 5, 1, 17, 30).toISOString() }),
+      NOW,
+      'en-US'
+    );
+    const tomorrow = nextFireLabel(
+      record({ nextDueAt: new Date(2026, 5, 2, 9, 0).toISOString() }),
+      NOW,
+      'en-US'
+    );
+
+    expect(say(today)).toMatch(/^today /);
+    expect(say(tomorrow)).toMatch(/^tomorrow /);
   });
 
   it('gives a date for anything further out', () => {
     const label = nextFireLabel(
       record({ nextDueAt: new Date(2026, 5, 9, 9, 0).toISOString() }),
-      NOW
+      NOW,
+      'en-US'
     );
 
-    expect(label).not.toMatch(/^(today|tomorrow) /);
-    expect(label).toContain('9');
+    expect(label.key).toBe('agent.schedule.onDate');
+    expect(say(label)).not.toMatch(/^(today|tomorrow) /);
+    expect(say(label)).toContain('9');
+  });
+
+  it('speaks the panel\u2019s language when the panel asks for one', () => {
+    const label = nextFireLabel(
+      record({ nextDueAt: new Date(2026, 5, 1, 17, 30).toISOString() }),
+      NOW,
+      'zh-Hans'
+    );
+
+    expect(translate('zh-Hans', label.key, label.params)).toMatch(/^\u4eca\u5929 /);
   });
 
   // Earlier today rather than later: a due record's next time is in the past
   // until it is recycled, and "today" is still the honest word for it.
   it('does not mistake earlier today for a past date', () => {
-    expect(nextFireLabel(record({ nextDueAt: new Date(2026, 5, 1, 9, 0).toISOString() }), NOW)) //
-      .toMatch(/^today /);
+    const label = nextFireLabel(
+      record({ nextDueAt: new Date(2026, 5, 1, 9, 0).toISOString() }),
+      NOW,
+      'en-US'
+    );
+
+    expect(say(label)).toMatch(/^today /);
   });
 });

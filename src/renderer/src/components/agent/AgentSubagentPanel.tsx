@@ -1,4 +1,5 @@
 import { Bot, X } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n';
 import type { RunningSubagent } from './subagent-view';
 import { SideColumnCard } from './SideColumnCard';
 
@@ -34,7 +35,11 @@ export function AgentSubagentPanel({
   if (running.length === 0) return null;
 
   return (
-    <SideColumnCard label="Subagents" name="Running subagents" count={String(running.length)}>
+    <SideColumnCard
+      label="agent.subagent.panelLabel"
+      name="agent.subagent.panelName"
+      count={String(running.length)}
+    >
       {/* A wider gap than the task list's, because a row here is three lines
           rather than one: at the list's spacing the last line of one subagent
           and the name of the next are closer together than the lines within
@@ -64,6 +69,7 @@ function Row({
   subagent: RunningSubagent;
   onStop: (taskId: string) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const { agent, prompt, activity, asking } = subagent;
 
   return (
@@ -78,8 +84,8 @@ function Row({
         <button
           type="button"
           onClick={() => onStop(subagent.taskId)}
-          aria-label={`Stop the ${agent} subagent`}
-          title="Stop this subagent"
+          aria-label={t('agent.subagent.stopNamed', { name: agent })}
+          title={t('agent.subagent.stop')}
           className="ml-auto shrink-0 text-fleet-text-subtle transition-colors hover:text-fleet-text focus-ring"
         >
           <X size={12} />
@@ -97,9 +103,11 @@ function Row({
       )}
       <span className="truncate pl-[18px] font-mono text-[11px] text-fleet-text-muted">
         {asking ? (
-          <span className="font-sans text-amber-700 dark:text-amber-400/90">waiting on you</span>
+          <span className="font-sans text-amber-700 dark:text-amber-400/90">
+            {t('agent.subagent.waitingOnYou')}
+          </span>
         ) : (
-          <span className="fleet-shimmer-text">{activity ?? 'starting'}</span>
+          <span className="fleet-shimmer-text">{activity ?? t('agent.subagent.starting')}</span>
         )}
       </span>
     </li>

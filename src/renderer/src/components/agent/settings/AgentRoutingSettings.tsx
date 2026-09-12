@@ -9,6 +9,8 @@ import {
   type ProviderSort
 } from '../../../../../shared/agent-routing';
 import type { AgentCatalogModel } from '../../../../../shared/agent-types';
+import type { MessageKey } from '../../../../../shared/i18n';
+import { useTranslation } from '../../../lib/i18n';
 import { LineList, RoleCard, inputCls, selectCls } from './controls';
 import { commitPrice } from './bounded-number';
 import { Toggle } from './Toggle';
@@ -33,16 +35,18 @@ export function AgentCacheSettings({
   config: AgentCacheConfig;
   onChange: (patch: Partial<AgentCacheConfig>) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <RoleCard
-      title="Prompt caching"
-      description="Marks the part of a request that repeats - the instructions, and the rounds already finished - so a provider can charge for it once instead of on every round. Some providers do this on their own; Anthropic and Qwen only do it when asked."
+      title={t('agentSettings.cache.title')}
+      description={t('agentSettings.cache.description')}
       icon={<Database size={16} />}
     >
       <Row
         id="agent-cache-enabled"
-        label="Ask for a cached prefix"
-        hint="Read back at about a tenth of the price on the providers that support it, and ignored by the ones that do not."
+        label={t('agentSettings.cache.enabled.label')}
+        hint={t('agentSettings.cache.enabled.hint')}
       >
         <Toggle
           id="agent-cache-enabled"
@@ -54,8 +58,8 @@ export function AgentCacheSettings({
       {config.enabled && (
         <Row
           id="agent-cache-long-ttl"
-          label="Keep it for an hour"
-          hint="Five minutes otherwise. The hour costs more to write, so it pays off on a conversation you come back to rather than on one long turn."
+          label={t('agentSettings.cache.longTtl.label')}
+          hint={t('agentSettings.cache.longTtl.hint')}
         >
           <Toggle
             id="agent-cache-long-ttl"
@@ -87,16 +91,18 @@ export function AgentProviderSettings({
   config: AgentProviderConfig;
   onChange: (patch: Partial<AgentProviderConfig>) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <RoleCard
-      title="Provider routing"
-      description="One model is served by several companies at different prices and speeds. Left alone, OpenRouter picks. Only affects OpenRouter - a server on this machine is its own provider."
+      title={t('agentSettings.routing.title')}
+      description={t('agentSettings.routing.description')}
       icon={<Route size={16} />}
     >
       <Row
         id="agent-routing-sort"
-        label="Pick by"
-        hint="Cheapest, fastest to finish, or quickest to start. Left on balanced, OpenRouter weighs price against how reliable a provider has been."
+        label={t('agentSettings.routing.sort.label')}
+        hint={t('agentSettings.routing.sort.hint')}
       >
         <select
           id="agent-routing-sort"
@@ -106,7 +112,7 @@ export function AgentProviderSettings({
         >
           {PROVIDER_SORTS.map((sort) => (
             <option key={sort} value={sort}>
-              {SORT_LABELS[sort]}
+              {t(SORT_LABEL_KEYS[sort])}
             </option>
           ))}
         </select>
@@ -114,32 +120,32 @@ export function AgentProviderSettings({
 
       <ListRow
         id="agent-routing-order"
-        label="Try first"
-        hint="Provider slugs, one per line, in the order you want them tried. Anything not listed still gets a turn after these."
+        label={t('agentSettings.routing.order.label')}
+        hint={t('agentSettings.routing.order.hint')}
         value={config.order}
         onChange={(order) => onChange({ order })}
       />
 
       <ListRow
         id="agent-routing-only"
-        label="Only these"
-        hint="A wall rather than a preference: nothing outside this list may serve the request. Leave empty for anyone."
+        label={t('agentSettings.routing.only.label')}
+        hint={t('agentSettings.routing.only.hint')}
         value={config.only}
         onChange={(only) => onChange({ only })}
       />
 
       <ListRow
         id="agent-routing-ignore"
-        label="Never these"
-        hint="Providers that must not serve the request, whatever else is set."
+        label={t('agentSettings.routing.ignore.label')}
+        hint={t('agentSettings.routing.ignore.hint')}
         value={config.ignore}
         onChange={(ignore) => onChange({ ignore })}
       />
 
       <Row
         id="agent-routing-require-parameters"
-        label="Must support every setting"
-        hint="Off, a provider that cannot honour a setting answers anyway and ignores it - a model asked to think that did not, which reads as a worse model rather than as a dropped setting."
+        label={t('agentSettings.routing.requireParameters.label')}
+        hint={t('agentSettings.routing.requireParameters.hint')}
       >
         <Toggle
           id="agent-routing-require-parameters"
@@ -150,8 +156,8 @@ export function AgentProviderSettings({
 
       <Row
         id="agent-routing-allow-fallbacks"
-        label="Fall through to anyone else"
-        hint="On, the lists above are a preference. Off, they are a requirement, and a turn nobody on them can serve fails instead."
+        label={t('agentSettings.routing.allowFallbacks.label')}
+        hint={t('agentSettings.routing.allowFallbacks.hint')}
       >
         <Toggle
           id="agent-routing-allow-fallbacks"
@@ -162,14 +168,14 @@ export function AgentProviderSettings({
 
       <PriceRow
         id="agent-routing-max-prompt-price"
-        label="Most per million input tokens"
+        label={t('agentSettings.routing.maxPromptPrice.label')}
         value={config.maxPromptPrice}
         onChange={(maxPromptPrice) => onChange({ maxPromptPrice })}
       />
 
       <PriceRow
         id="agent-routing-max-completion-price"
-        label="Most per million output tokens"
+        label={t('agentSettings.routing.maxCompletionPrice.label')}
         value={config.maxCompletionPrice}
         onChange={(maxCompletionPrice) => onChange({ maxCompletionPrice })}
       />
@@ -194,11 +200,12 @@ export function AgentFallbackSettings({
   config: AgentFallbackConfig;
   onChange: (patch: Partial<AgentFallbackConfig>) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const chosen = config.models.slice(0, FALLBACK_MAX_MODELS);
   return (
     <RoleCard
-      title="Fallback models"
-      description="Tried in order when the coding model is down or refuses the request. Only the one that answers is billed, so an unused fallback costs nothing. The pane names whichever model served each turn."
+      title={t('agentSettings.fallback.title')}
+      description={t('agentSettings.fallback.description')}
       icon={<Shuffle size={16} />}
     >
       {chosen.map((model, index) => (
@@ -218,7 +225,7 @@ export function AgentFallbackSettings({
                 })
               }
               allowNone
-              noneLabel="Remove"
+              noneLabel={t('agentSettings.common.remove')}
             />
           </div>
         </div>
@@ -233,18 +240,22 @@ export function AgentFallbackSettings({
             onChange({ models: [...chosen, next] });
           }}
           allowNone
-          noneLabel={chosen.length === 0 ? 'No fallback' : 'Add another'}
+          noneLabel={
+            chosen.length === 0
+              ? t('agentSettings.fallback.none')
+              : t('agentSettings.fallback.addAnother')
+          }
         />
       )}
     </RoleCard>
   );
 }
 
-const SORT_LABELS: Record<ProviderSort, string> = {
-  default: 'Balanced',
-  price: 'Cheapest',
-  throughput: 'Fastest',
-  latency: 'Quickest to start'
+const SORT_LABEL_KEYS: Record<ProviderSort, MessageKey> = {
+  default: 'agentSettings.routing.sort.balanced',
+  price: 'agentSettings.routing.sort.cheapest',
+  throughput: 'agentSettings.routing.sort.fastest',
+  latency: 'agentSettings.routing.sort.quickest'
 };
 
 /** A `<select>` hands back a plain string. Narrowed by lookup, never asserted. */
@@ -295,12 +306,10 @@ function PriceRow({
   value: number | null;
   onChange: (next: number | null) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
-    <Row
-      id={id}
-      label={label}
-      hint="A rate, not a budget: it rules out expensive providers and says nothing about what a turn will spend. Empty for no ceiling."
-    >
+    <Row id={id} label={label} hint={t('agentSettings.routing.price.hint')}>
       <div className="flex items-center gap-1">
         <span className="text-sm text-fleet-text-muted">$</span>
         <PriceInput id={id} value={value} onChange={onChange} />
@@ -326,6 +335,7 @@ function PriceInput({
   onChange: (next: number | null) => void;
 }): React.JSX.Element {
   const [draft, setDraft] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   const commit = (): void => {
     if (draft === null) return;
@@ -340,7 +350,7 @@ function PriceInput({
       inputMode="decimal"
       min={0}
       step={0.1}
-      placeholder="any"
+      placeholder={t('agentSettings.routing.price.placeholder')}
       value={draft ?? (value === null ? '' : String(value))}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}

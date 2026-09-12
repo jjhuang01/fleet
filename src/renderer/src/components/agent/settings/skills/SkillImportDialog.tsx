@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Download, Loader2 } from 'lucide-react';
 import type { FoundSkill } from '../../../../../../shared/agent-skill-install';
 import { Overlay } from '../../../Overlay';
+import { useTranslation } from '../../../../lib/i18n';
 import { defaultPicks } from '../../../../store/agent-skills-store';
 import { SkillPickList } from './SkillPickList';
 
@@ -25,6 +26,7 @@ export function SkillImportDialog({
   onCancel: () => void;
   onImport: (picked: Array<{ name: string; path: string }>) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
   // Everything not already held starts ticked: the common case is "yes, all of
@@ -48,9 +50,11 @@ export function SkillImportDialog({
           <Download size={17} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-fleet-text">Import skills</h2>
+          <h2 className="text-sm font-semibold text-fleet-text">
+            {t('agentSettings.skills.importDialog.title')}
+          </h2>
           <p className="text-xs text-fleet-text-muted">
-            Fleet copies the whole folder, so editing one here changes nothing over there.
+            {t('agentSettings.skills.importDialog.description')}
           </p>
         </div>
       </div>
@@ -59,14 +63,15 @@ export function SkillImportDialog({
         {scanning ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-fleet-text-muted">
             <Loader2 size={15} className="animate-spin" />
-            Looking for skills…
+            {t('agentSettings.skills.importDialog.looking')}
           </div>
         ) : found.length === 0 ? (
           <div className="px-5 py-16 text-center">
-            <p className="text-sm text-fleet-text-muted">No skills found on this machine.</p>
+            <p className="text-sm text-fleet-text-muted">
+              {t('agentSettings.skills.importDialog.empty')}
+            </p>
             <p className="mt-1 text-xs text-fleet-text-subtle">
-              Fleet looks in Claude Code, OpenCode and <code>~/.agents</code>, for the user and for
-              this project.
+              {t('agentSettings.skills.importDialog.emptyHint')}
             </p>
           </div>
         ) : (
@@ -76,7 +81,7 @@ export function SkillImportDialog({
 
       <div className="flex items-center justify-between gap-3 border-t border-fleet-border px-5 py-3">
         <span className="text-[11px] text-fleet-text-subtle">
-          Scripts and reference files come across too.
+          {t('agentSettings.skills.importDialog.scripts')}
         </span>
         <div className="flex shrink-0 items-center gap-2">
           <button
@@ -84,7 +89,7 @@ export function SkillImportDialog({
             onClick={onCancel}
             className="rounded-md border border-fleet-border-strong px-3 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 focus-ring"
           >
-            Cancel
+            {t('agentSettings.common.cancel')}
           </button>
           <button
             type="button"
@@ -92,7 +97,9 @@ export function SkillImportDialog({
             onClick={() => onImport(chosen.map((f) => ({ name: f.name, path: f.origin.path })))}
             className="rounded-md fleet-accent-bg px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-40 focus-ring-offset"
           >
-            {chosen.length === 1 ? 'Import 1 skill' : `Import ${chosen.length} skills`}
+            {chosen.length === 1
+              ? t('agentSettings.skills.importDialog.submit.one')
+              : t('agentSettings.skills.importDialog.submit.many', { count: chosen.length })}
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from '../../lib/i18n';
 
 // ── shared helpers ────────────────────────────────────────────────────────────
 
@@ -119,6 +120,7 @@ export function NumberStepper(props: {
     ariaLabel
   } = props;
 
+  const { t } = useTranslation();
   const [fieldText, setFieldText] = useState<string | null>(null);
   const focused = fieldText !== null;
 
@@ -154,7 +156,7 @@ export function NumberStepper(props: {
         className={BUTTON_CLASS}
         onClick={() => step_(-step)}
         disabled={value <= min}
-        aria-label={`Decrease ${ariaLabel}`}
+        aria-label={t('common.decrease', { label: ariaLabel })}
       >
         −
       </button>
@@ -174,7 +176,7 @@ export function NumberStepper(props: {
         className={BUTTON_CLASS}
         onClick={() => step_(step)}
         disabled={value >= max}
-        aria-label={`Increase ${ariaLabel}`}
+        aria-label={t('common.increase', { label: ariaLabel })}
       >
         +
       </button>

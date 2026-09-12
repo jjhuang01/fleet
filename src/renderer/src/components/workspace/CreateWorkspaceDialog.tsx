@@ -4,6 +4,7 @@ import { Overlay } from '../Overlay';
 import { useSettingsStore } from '../../store/settings-store';
 import { useWorkspaceListStore } from '../../store/workspace-list-store';
 import { persistNewWorkspace } from '../../lib/create-workspace';
+import { useTranslation } from '../../lib/i18n';
 import { resolveClaudeConfig, suggestClaudeConfigDir } from '../../../../shared/claude-config';
 import type { Workspace } from '../../../../shared/types';
 
@@ -28,6 +29,7 @@ export function CreateWorkspaceDialog({
   onClose: () => void;
   onCreated: (workspace: Workspace) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const settings = useSettingsStore((s) => s.settings);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
   const refreshList = useWorkspaceListStore((s) => s.refresh);
@@ -111,8 +113,8 @@ export function CreateWorkspaceDialog({
     if (!result.ok) {
       setError(
         result.savedLayout
-          ? `Workspace saved, but its config folder was not: ${result.error}. Try again to finish it.`
-          : `Could not create the workspace: ${result.error}`
+          ? t('settings.workspaces.savedPartialError', { error: result.error })
+          : t('settings.workspaces.createError', { error: result.error })
       );
       setSubmitting(false);
       return;
@@ -139,11 +141,13 @@ export function CreateWorkspaceDialog({
       closeOnBackdrop={!submitting}
       panelClassName="w-[440px] max-w-[90vw] bg-fleet-surface border border-fleet-border-strong rounded-lg shadow-xl p-4"
     >
-      <h2 className="text-sm font-medium text-fleet-text mb-3">New workspace</h2>
+      <h2 className="text-sm font-medium text-fleet-text mb-3">{t('settings.workspaces.new')}</h2>
 
       <div className="space-y-3">
         <div>
-          <label className="text-xs text-fleet-text-muted block mb-1">Name</label>
+          <label className="text-xs text-fleet-text-muted block mb-1">
+            {t('settings.workspaces.name')}
+          </label>
           <input
             ref={nameRef}
             type="text"
@@ -152,13 +156,15 @@ export function CreateWorkspaceDialog({
             onKeyDown={(e) => {
               if (e.key === 'Enter') void handleCreate();
             }}
-            placeholder="Workspace name"
+            placeholder={t('settings.workspaces.namePlaceholder')}
             className="w-full bg-fleet-surface-2 text-sm text-fleet-text rounded px-2 py-1 border border-fleet-border-strong placeholder:text-fleet-text-subtle focus-ring"
           />
         </div>
 
         <div>
-          <label className="text-xs text-fleet-text-muted block mb-1">Claude config folder</label>
+          <label className="text-xs text-fleet-text-muted block mb-1">
+            {t('settings.workspaces.claudeConfigFolder')}
+          </label>
           <label className="flex items-start gap-2 text-xs text-fleet-text-secondary py-0.5">
             <input
               type="radio"
@@ -167,7 +173,7 @@ export function CreateWorkspaceDialog({
               className="fleet-accent-input mt-0.5"
             />
             <span className="min-w-0">
-              Use default
+              {t('settings.workspaces.useDefault')}
               <span className="text-fleet-text-subtle block break-all">{defaultConfig.path}</span>
             </span>
           </label>
@@ -178,7 +184,7 @@ export function CreateWorkspaceDialog({
               onChange={() => setUseCustom(true)}
               className="fleet-accent-input"
             />
-            Use custom folder
+            {t('settings.workspaces.useCustomFolder')}
           </label>
           {useCustom && (
             <div className="flex gap-2 mt-1.5">
@@ -197,16 +203,16 @@ export function CreateWorkspaceDialog({
                 className="flex items-center gap-1.5 px-2 py-1 text-xs bg-fleet-surface-3 hover:bg-fleet-surface-3 rounded border border-fleet-border-strong text-fleet-text-secondary transition active:scale-[0.97] shrink-0"
               >
                 <FolderOpen size={12} />
-                Browse
+                {t('settings.workspaces.browse')}
               </button>
             </div>
           )}
           <p className="text-xs text-fleet-text-subtle mt-2">
             {!useCustom
-              ? 'The workspace uses the default folder. You can give it its own folder later.'
+              ? t('settings.workspaces.defaultHint')
               : customIsEmpty
-                ? 'Enter a folder for this workspace, or choose Use default.'
-                : 'Fleet creates this folder if it does not exist yet. You can add Fleet hooks later.'}
+                ? t('settings.workspaces.customEmptyHint')
+                : t('settings.workspaces.customHint')}
           </p>
         </div>
 
@@ -219,14 +225,14 @@ export function CreateWorkspaceDialog({
           onClick={onClose}
           className="px-3 py-1 text-xs bg-fleet-surface-3 hover:bg-fleet-surface-3 rounded border border-fleet-border-strong text-fleet-text-secondary transition active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           disabled={!canSubmit}
           onClick={() => void handleCreate()}
           className="px-3 py-1 text-xs fleet-accent-bg text-white rounded transition active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {submitting ? 'Creating…' : 'Create workspace'}
+          {submitting ? t('settings.workspaces.creating') : t('settings.workspaces.create')}
         </button>
       </div>
     </Overlay>

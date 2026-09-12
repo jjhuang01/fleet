@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { AgentScheduleRecord } from '../../../../../shared/agent-schedule';
+import type { AgentScheduleRecord, NextFireLabel } from '../../../../../shared/agent-schedule';
 import {
   SCHEDULE_NOTE_PREVIEW_CHARS,
   scheduleChip,
@@ -7,6 +7,7 @@ import {
   showSchedulePanel
 } from '../schedule-view';
 import { SIDE_COLUMN_KEEP_PX, SIDE_COLUMN_MIN_PANE_PX } from '../side-column';
+import { translate } from '../../../../../shared/i18n';
 
 /**
  * What the two places showing this list are handed. The rules live here rather
@@ -35,14 +36,19 @@ function record(over: Partial<AgentScheduleRecord> = {}): AgentScheduleRecord {
   };
 }
 
+/** English words, so the assertions read the way the code reads. */
+const say = (when: NextFireLabel): string => translate('en', when.key, when.params);
+const buildRows = (records: AgentScheduleRecord[], now = NOW): ReturnType<typeof scheduleRows> =>
+  scheduleRows(records, now, 'en-US');
+
 describe('scheduleRows', () => {
   it('says when, in the words a person would use', () => {
-    const [row] = scheduleRows([record({ nextDueAt: '2026-08-08T15:30:00' })], NOW);
-    expect(row.when).toMatch(/^today 3:30/);
+    const [row] = buildRows([record({ nextDueAt: '2026-08-08T15:30:00' })], NOW);
+    expect(say(row.when)).toMatch(/^today 3:30/);
   });
 
   it('puts a claimed one first, however far off the others fire', () => {
-    const rows = scheduleRows(
+    const rows = buildRows(
       [
         record({ id: 'sch_soon', nextDueAt: '2026-08-08T12:30:00' }),
         record({ id: 'sch_due', state: 'due', dueSince: '2026-08-08T11:00:00' })
@@ -50,12 +56,12 @@ describe('scheduleRows', () => {
       NOW
     );
     expect(rows.map((row) => row.id)).toEqual(['sch_due', 'sch_soon']);
-    expect(rows[0].when).toBe('due now');
+    expect(rows[0].when.key).toBe('agent.schedule.dueNow');
     expect(rows[0].due).toBe(true);
   });
 
   it('orders the rest by when they fire', () => {
-    const rows = scheduleRows(
+    const rows = buildRows(
       [
         record({ id: 'sch_late', nextDueAt: '2026-08-10T09:00:00' }),
         record({ id: 'sch_early', nextDueAt: '2026-08-08T18:00:00' })
@@ -70,12 +76,12 @@ describe('scheduleRows', () => {
       record({ id: 'sch_late', nextDueAt: '2026-08-10T09:00:00' }),
       record({ id: 'sch_early', nextDueAt: '2026-08-08T18:00:00' })
     ];
-    scheduleRows(records, NOW);
+    buildRows(records, NOW);
     expect(records.map((r) => r.id)).toEqual(['sch_late', 'sch_early']);
   });
 
   it('sorts an unreadable date last rather than scattering the list', () => {
-    const rows = scheduleRows(
+    const rows = buildRows(
       [
         record({ id: 'sch_broken', nextDueAt: 'not a date' }),
         record({ id: 'sch_ok', nextDueAt: '2026-08-10T09:00:00' })
@@ -86,31 +92,31 @@ describe('scheduleRows', () => {
   });
 
   it('keeps a short note whole', () => {
-    const [row] = scheduleRows([record({ note: 'Check the deploy.' })], NOW);
+    const [row] = buildRows([record({ note: 'Check the deploy.' })], NOW);
     expect(row.note).toBe('Check the deploy.');
   });
 
   it('flattens a note written over several lines', () => {
-    const [row] = scheduleRows([record({ note: 'Check the deploy.\n\nThen say so.' })], NOW);
+    const [row] = buildRows([record({ note: 'Check the deploy.\n\nThen say so.' })], NOW);
     expect(row.note).toBe('Check the deploy. Then say so.');
   });
 
   it('cuts a long note on a word, since none of it fits the column', () => {
     const note = 'the deploy pipeline for the staging environment '.repeat(6);
-    const [row] = scheduleRows([record({ note })], NOW);
+    const [row] = buildRows([record({ note })], NOW);
     expect(row.note.length).toBeLessThanOrEqual(SCHEDULE_NOTE_PREVIEW_CHARS + 1);
     expect(row.note.endsWith('…')).toBe(true);
     expect(row.note).not.toMatch(/ …$/);
   });
 
   it('cuts a long note with no word to cut on', () => {
-    const [row] = scheduleRows([record({ note: 'x'.repeat(400) })], NOW);
+    const [row] = buildRows([record({ note: 'x'.repeat(400) })], NOW);
     expect(row.note).toBe(`${'x'.repeat(SCHEDULE_NOTE_PREVIEW_CHARS)}…`);
   });
 });
 
 describe('showSchedulePanel', () => {
-  const rows = scheduleRows([record()], NOW);
+  const rows = buildRows([record()], NOW);
 
   it('stays away when nothing is set, however wide the pane', () => {
     expect(showSchedulePanel([], { width: 2000, shown: false })).toBe(false);
@@ -132,19 +138,30 @@ describe('showSchedulePanel', () => {
 });
 
 describe('scheduleChip', () => {
+  const chipTitle = (rows: ReturnType<typeof buildRows>): string =>
+    scheduleChip(rows)
+      .title.map((row) =>
+        translate('en', 'agent.schedule.titleLine', {
+          when: say(row.when),
+          cron: row.cron,
+          note: row.note
+        })
+      )
+      .join('\n');
+
   it('says when, when there is one', () => {
-    const rows = scheduleRows([record({ nextDueAt: '2026-08-08T15:30:00' })], NOW);
-    expect(scheduleChip(rows).label).toMatch(/^today 3:30/);
+    const rows = buildRows([record({ nextDueAt: '2026-08-08T15:30:00' })], NOW);
+    expect(say(scheduleChip(rows).label)).toMatch(/^today 3:30/);
   });
 
   it('says how many, when there are several', () => {
-    const rows = scheduleRows([record({ id: 'a' }), record({ id: 'b' })], NOW);
-    expect(scheduleChip(rows).label).toBe('2 schedules');
+    const rows = buildRows([record({ id: 'a' }), record({ id: 'b' })], NOW);
+    expect(say(scheduleChip(rows).label)).toBe('2 schedules');
   });
 
   it('puts what the collapse cost in the title', () => {
-    const rows = scheduleRows([record({ note: 'Check the deploy.' })], NOW);
-    expect(scheduleChip(rows).title).toContain('Check the deploy.');
-    expect(scheduleChip(rows).title).toContain('0 9 * * *');
+    const rows = buildRows([record({ note: 'Check the deploy.' })], NOW);
+    expect(chipTitle(rows)).toContain('Check the deploy.');
+    expect(chipTitle(rows)).toContain('0 9 * * *');
   });
 });

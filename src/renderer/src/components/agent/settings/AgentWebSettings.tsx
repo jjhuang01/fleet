@@ -5,6 +5,7 @@ import {
   WEB_FETCH_MIN_CHARS,
   type AgentWebFetchConfig
 } from '../../../../../shared/agent-types';
+import { useTranslation } from '../../../lib/i18n';
 import { RoleCard } from './controls';
 import { Toggle } from './Toggle';
 
@@ -25,16 +26,18 @@ export function AgentWebSettings({
   config: AgentWebFetchConfig;
   onChange: (patch: Partial<AgentWebFetchConfig>) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <RoleCard
-      title="Web pages"
-      description="Lets the agent read a page by URL - documentation, a changelog, an issue - and get it back as markdown. Switched off, it is not offered the tool at all."
+      title={t('agentSettings.web.title')}
+      description={t('agentSettings.web.description')}
       icon={<Globe size={16} />}
     >
       <Row
         id="agent-web-enabled"
-        label="Read web pages"
-        hint="Pages that need JavaScript are run in a browser first, so most documentation sites work."
+        label={t('agentSettings.web.enabled.label')}
+        hint={t('agentSettings.web.enabled.hint')}
       >
         <Toggle
           id="agent-web-enabled"
@@ -47,8 +50,8 @@ export function AgentWebSettings({
         <>
           <Row
             id="agent-web-local"
-            label="Allow local addresses"
-            hint="Lets it read a dev server on this machine, or something else on your network. Cloud metadata addresses are always refused, whatever this says."
+            label={t('agentSettings.web.local.label')}
+            hint={t('agentSettings.web.local.hint')}
           >
             <Toggle
               id="agent-web-local"
@@ -104,16 +107,17 @@ function MaxCharsField({
   value: number;
   onChange: (next: number) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const changed = value !== DEFAULT_AGENT_WEB_FETCH.maxChars;
 
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
         <label htmlFor="agent-web-max-chars" className="text-sm text-fleet-text-secondary">
-          Characters per page
+          {t('agentSettings.web.maxChars.label')}
         </label>
         <p className="mt-0.5 text-xs text-fleet-text-muted">
-          Anything past this is cut, with a note saying so. A long page is mostly navigation.
+          {t('agentSettings.web.maxChars.hint')}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
@@ -139,8 +143,10 @@ function MaxCharsField({
           <button
             type="button"
             onClick={() => onChange(DEFAULT_AGENT_WEB_FETCH.maxChars)}
-            title={`Back to ${DEFAULT_AGENT_WEB_FETCH.maxChars.toLocaleString()}`}
-            aria-label="Reset characters per page"
+            title={t('agentSettings.web.maxChars.resetTitle', {
+              value: DEFAULT_AGENT_WEB_FETCH.maxChars.toLocaleString()
+            })}
+            aria-label={t('agentSettings.web.maxChars.resetAria')}
             className="rounded p-0.5 text-fleet-text-subtle transition-colors hover:text-fleet-text-secondary focus-ring"
           >
             <RotateCcw size={12} />

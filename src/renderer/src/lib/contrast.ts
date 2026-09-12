@@ -53,42 +53,43 @@ export function contrastRatio(a: string, b: string): number {
 }
 
 /**
- * Heuristic legibility hint for an IMAGE background behind terminal text.
+ * A legibility problem worth telling the user about, worst case first.
  *
- * Returns a short user-facing message when the image is likely to hurt readability,
- * or null when it's fine.
+ * Named rather than a sentence so the caller can render it in the active
+ * language; this module stays a pure function with no catalogue dependency.
+ */
+export type LegibilityIssue = 'highOpacity' | 'moderateOpacity' | 'lowThemeContrast';
+
+/**
+ * Heuristic legibility issues for an IMAGE background behind terminal text.
+ *
+ * Returns the problems worth a warning, or an empty array when the image is
+ * unlikely to hurt readability.
  *
  * Logic:
  * - Warn when opacity > 0.5 AND blur < 4 (unknown image pixels increasingly replace
  *   the safe theme bg, worst-case contrast can collapse toward ~1).
- * - Use a stronger message when opacity > 0.75.
- * - If the theme's own base contrast < 4.5, mention it.
+ * - Report the stronger issue when opacity > 0.75.
+ * - Report separately when the theme's own base contrast < 4.5, because that is
+ *   true with or without an image.
  */
-export function backgroundLegibilityHint(opts: {
+export function backgroundLegibilityIssues(opts: {
   opacity: number;
   blur: number;
   themeForeground: string;
   themeBackground: string;
-}): string | null {
+}): LegibilityIssue[] {
   const { opacity, blur, themeForeground, themeBackground } = opts;
-  const base = contrastRatio(themeForeground, themeBackground);
-  const lowThemeContrast = base < 4.5;
-  const lowThemeMsg = 'This terminal theme already has low text contrast.';
+  const issues: LegibilityIssue[] = [];
 
-  if (opacity > 0.75 && blur < 4) {
-    const msg =
-      'High image opacity may make terminal text hard to read — lower opacity or add blur.';
-    return lowThemeContrast ? `${msg} ${lowThemeMsg}` : msg;
+  if (blur < 4) {
+    if (opacity > 0.75) issues.push('highOpacity');
+    else if (opacity > 0.5) issues.push('moderateOpacity');
   }
 
-  if (opacity > 0.5 && blur < 4) {
-    const msg = 'Image opacity is moderate — consider lowering it or adding blur for readability.';
-    return lowThemeContrast ? `${msg} ${lowThemeMsg}` : msg;
+  if (contrastRatio(themeForeground, themeBackground) < 4.5) {
+    issues.push('lowThemeContrast');
   }
 
-  if (lowThemeContrast) {
-    return lowThemeMsg;
-  }
-
-  return null;
+  return issues;
 }

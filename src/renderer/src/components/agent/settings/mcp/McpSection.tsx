@@ -4,6 +4,7 @@ import type { McpServerConfig } from '../../../../../../shared/agent-mcp';
 import { FieldGroup } from '../primitives';
 import { newlyFound, statusOf, useAgentMcpStore } from '../../../../store/agent-mcp-store';
 import { useWorkspaceStore } from '../../../../store/workspace-store';
+import { useTranslation } from '../../../../lib/i18n';
 import { McpServerRow } from './McpServerRow';
 import { McpAddDialog, type McpDraft } from './McpAddDialog';
 import { McpImportDialog } from './McpImportDialog';
@@ -27,6 +28,7 @@ import { McpImportDialog } from './McpImportDialog';
 const CROWDED = 50;
 
 export function McpSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const { servers, statuses, credentials, detected, loaded, scanning, busy, signInErrors } =
     useAgentMcpStore();
   const store = useAgentMcpStore;
@@ -83,14 +85,12 @@ export function McpSection(): React.JSX.Element {
   };
 
   return (
-    <FieldGroup title="MCP servers">
+    <FieldGroup title={t('agentSettings.mcp.title')}>
       {names.length === 0 ? (
         <div className="rounded-lg border border-dashed border-fleet-border-strong px-4 py-6 text-center">
-          <p className="text-sm text-fleet-text-secondary">No servers connected.</p>
+          <p className="text-sm text-fleet-text-secondary">{t('agentSettings.mcp.empty')}</p>
           <p className="mx-auto mt-1 max-w-sm text-xs text-fleet-text-muted">
-            {loaded
-              ? 'MCP servers give the agent tools Fleet does not have - a docs index, a ticket tracker, a design library.'
-              : 'Loading…'}
+            {loaded ? t('agentSettings.mcp.description') : t('agentSettings.common.loading')}
           </p>
         </div>
       ) : (
@@ -128,7 +128,7 @@ export function McpSection(): React.JSX.Element {
             className="flex items-center gap-1.5 rounded-md border border-fleet-border-strong px-2.5 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 active:scale-[0.98] focus-ring"
           >
             <Plus size={13} />
-            Add server
+            {t('agentSettings.mcp.add')}
           </button>
           <button
             type="button"
@@ -136,7 +136,7 @@ export function McpSection(): React.JSX.Element {
             className="flex items-center gap-1.5 rounded-md border border-fleet-border-strong px-2.5 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 active:scale-[0.98] focus-ring"
           >
             <Download size={13} />
-            Import
+            {t('agentSettings.mcp.import')}
             {waiting > 0 && (
               <span className="rounded-full fleet-accent-bg px-1.5 text-[10px] font-medium text-white">
                 {waiting}
@@ -152,16 +152,19 @@ export function McpSection(): React.JSX.Element {
             }`}
           >
             {toolCount > CROWDED && <TriangleAlert size={12} />}
-            {toolCount} {toolCount === 1 ? 'tool' : 'tools'} from {connected}{' '}
-            {connected === 1 ? 'server' : 'servers'}
+            {t(
+              toolCount === 1
+                ? 'agentSettings.mcp.toolCount.one'
+                : 'agentSettings.mcp.toolCount.many',
+              { tools: toolCount, servers: connected }
+            )}
           </span>
         )}
       </div>
 
       {toolCount > CROWDED && (
         <p className="text-xs text-fleet-text-muted">
-          Past about {CROWDED} tools models start picking the wrong one. Switch off the tools you do
-          not use, on the servers above.
+          {t('agentSettings.mcp.crowded', { count: CROWDED })}
         </p>
       )}
 

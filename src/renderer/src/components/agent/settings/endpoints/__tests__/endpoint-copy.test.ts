@@ -75,66 +75,95 @@ describe('tone', () => {
 
 describe('the line on a collapsed row', () => {
   it('says nothing has been checked when no status has arrived', () => {
-    expect(statusText(undefined)).toBe('Not checked');
+    expect(statusText(undefined)).toEqual({ key: 'agentSettings.endpoint.statusNotChecked' });
   });
 
   it('counts models rather than announcing success', () => {
-    expect(statusText(STATUS({ state: 'ready', modelCount: 1 }))).toBe('1 model');
-    expect(statusText(STATUS({ state: 'ready', modelCount: 3 }))).toBe('3 models');
+    expect(statusText(STATUS({ state: 'ready', modelCount: 1 }))).toEqual({
+      key: 'agentSettings.endpoint.statusReadyOne'
+    });
+    expect(statusText(STATUS({ state: 'ready', modelCount: 3 }))).toEqual({
+      key: 'agentSettings.endpoint.statusReadyOther',
+      params: { count: 3 }
+    });
   });
 
   it('distinguishes off from not yet asked', () => {
     // Both are grey, and they are not the same thing - which is the whole
     // reason this is text and not a dot.
-    expect(statusText(STATUS({ state: 'disabled' }))).toBe('Off');
-    expect(statusText(STATUS({ state: 'unchecked', modelCount: 0 }))).toBe('Not checked');
+    expect(statusText(STATUS({ state: 'disabled' }))).toEqual({
+      key: 'agentSettings.common.off'
+    });
+    expect(statusText(STATUS({ state: 'unchecked', modelCount: 0 }))).toEqual({
+      key: 'agentSettings.endpoint.statusNotChecked'
+    });
   });
 
   it('shows what a cold start remembers, and says it is remembered', () => {
-    expect(statusText(STATUS({ state: 'unchecked', modelCount: 2 }))).toBe('2 models, saved');
+    expect(statusText(STATUS({ state: 'unchecked', modelCount: 2 }))).toEqual({
+      key: 'agentSettings.endpoint.statusSavedOther',
+      params: { count: 2 }
+    });
   });
 
   it('names an idle server as idle rather than as a problem', () => {
-    expect(statusText(STATUS({ state: 'sleeping', modelCount: 1 }))).toBe('1 model, idle');
+    expect(statusText(STATUS({ state: 'sleeping', modelCount: 1 }))).toEqual({
+      key: 'agentSettings.endpoint.statusIdleOne'
+    });
   });
 
   it('reports the specific failure, not a generic one', () => {
-    expect(statusText(STATUS({ state: 'unreachable', reason: 'refused' }))).toBe('Not running');
-    expect(statusText(STATUS({ state: 'unreachable', reason: 'loading' }))).toBe('Starting up');
+    expect(statusText(STATUS({ state: 'unreachable', reason: 'refused' }))).toEqual({
+      key: 'agentSettings.endpoint.failureRefusedTitle'
+    });
+    expect(statusText(STATUS({ state: 'unreachable', reason: 'loading' }))).toEqual({
+      key: 'agentSettings.endpoint.failureLoadingTitle'
+    });
   });
 });
 
 describe('model counts', () => {
   it('reads as a sentence at zero and at one', () => {
-    expect(modelCount(0)).toBe('No models');
-    expect(modelCount(1)).toBe('1 model');
-    expect(modelCount(2)).toBe('2 models');
+    expect(modelCount(0)).toEqual({ key: 'agentSettings.endpoint.statusReadyNone' });
+    expect(modelCount(1)).toEqual({ key: 'agentSettings.endpoint.statusReadyOne' });
+    expect(modelCount(2)).toEqual({
+      key: 'agentSettings.endpoint.statusReadyOther',
+      params: { count: 2 }
+    });
   });
 });
 
 describe('failures', () => {
   it('gives every cause its own heading and its own advice', () => {
     const titles = new Set(FAILURES.map((r) => failureTitle(r)));
-    const hints = new Set(FAILURES.map((r) => failureHint(r, '127.0.0.1:11437')));
+    const hints = new Set(FAILURES.map((r) => failureHint(r, '127.0.0.1:11437').key));
     expect(titles.size).toBe(FAILURES.length);
     expect(hints.size).toBe(FAILURES.length);
   });
 
   it('names the address in the hints that are about the address', () => {
-    expect(failureHint('refused', '127.0.0.1:11437')).toContain('127.0.0.1:11437');
-    expect(failureHint('not-openai', '127.0.0.1:11437')).toContain('127.0.0.1:11437');
-    expect(failureHint(null, '127.0.0.1:11437')).toContain('127.0.0.1:11437');
+    expect(failureHint('refused', '127.0.0.1:11437').params).toEqual({
+      hostPort: '127.0.0.1:11437'
+    });
+    expect(failureHint('not-openai', '127.0.0.1:11437').params).toEqual({
+      hostPort: '127.0.0.1:11437'
+    });
+    expect(failureHint(null, '127.0.0.1:11437').params).toEqual({
+      hostPort: '127.0.0.1:11437'
+    });
   });
 
   it('does not send someone loading a model off to check their network', () => {
     // The one case where waiting is the right thing to do, and the copy has to
     // say so rather than describe a fault.
-    expect(failureHint('loading', '127.0.0.1:11437')).toContain('check again');
-    expect(failureTitle('loading')).toBe('Starting up');
+    expect(failureHint('loading', '127.0.0.1:11437').key).toBe(
+      'agentSettings.endpoint.failureLoadingHint'
+    );
+    expect(failureTitle('loading')).toBe('agentSettings.endpoint.failureLoadingTitle');
   });
 
   it('falls back to a heading when the cause is unknown', () => {
-    expect(failureTitle(null)).toBe('Unreachable');
+    expect(failureTitle(null)).toBe('agentSettings.endpoint.failureUnreachableTitle');
   });
 });
 
@@ -157,8 +186,11 @@ describe('what Test reports', () => {
     };
     const outcome = testOutcome(result, '127.0.0.1:11437');
     expect(outcome.tone).toBe('ok');
-    expect(outcome.title).toBe('Found a llama.cpp');
-    expect(outcome.hint).toBe('Serving qwen3-30b.');
+    expect(outcome.title).toBe('agentSettings.endpoint.testFoundLlama');
+    expect(outcome.hint).toEqual({
+      key: 'agentSettings.endpoint.testServing',
+      params: { models: 'qwen3-30b' }
+    });
     expect(outcome.models).toEqual(['qwen3-30b']);
   });
 
@@ -169,7 +201,9 @@ describe('what Test reports', () => {
       models: [ENTRY],
       sleeping: false
     };
-    expect(testOutcome(result, '127.0.0.1:8080').title).toBe('Found a OpenAI-compatible server');
+    expect(testOutcome(result, '127.0.0.1:8080').title).toBe(
+      'agentSettings.endpoint.testFoundOpenAi'
+    );
   });
 
   it('treats an idle server as found, not as failed', () => {
@@ -181,7 +215,7 @@ describe('what Test reports', () => {
     };
     const outcome = testOutcome(result, '127.0.0.1:11437');
     expect(outcome.tone).toBe('ok');
-    expect(outcome.title).toContain('idle');
+    expect(outcome.title).toBe('agentSettings.endpoint.testFoundLlamaIdle');
   });
 
   it('reports a running server with nothing loaded as running', () => {
@@ -193,7 +227,7 @@ describe('what Test reports', () => {
     };
     const outcome = testOutcome(result, '127.0.0.1:8080');
     expect(outcome.tone).toBe('ok');
-    expect(outcome.hint).toContain('no model loaded');
+    expect(outcome.hint).toEqual({ key: 'agentSettings.endpoint.testNoModel' });
     expect(outcome.models).toEqual([]);
   });
 
@@ -204,7 +238,7 @@ describe('what Test reports', () => {
     const result: EndpointProbeResult = { ok: false, reason: 'refused', detail: null };
     const outcome = testOutcome(result, '127.0.0.1:11437');
     expect(outcome.tone).toBe('warn');
-    expect(outcome.title).toBe('Not running');
+    expect(outcome.title).toBe('agentSettings.endpoint.failureRefusedTitle');
     expect(outcome.models).toEqual([]);
   });
 });

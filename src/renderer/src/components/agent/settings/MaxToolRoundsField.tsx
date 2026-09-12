@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MAX_TOOL_ROUNDS_CEILING, MAX_TOOL_ROUNDS_MIN } from '../../../../../shared/agent-types';
+import { useTranslation } from '../../../lib/i18n';
 import { Toggle } from './Toggle';
 
 /**
@@ -27,6 +28,7 @@ export function MaxToolRoundsField({
   value: number | null;
   onChange: (value: number | null) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   // Typed locally so a half-written number is not committed a digit at a time -
   // "10" on the way to "100" is a real setting, and saving it would clamp the
   // field out from under the cursor.
@@ -44,23 +46,25 @@ export function MaxToolRoundsField({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <span className="text-sm text-fleet-text-secondary">Limit tool rounds</span>
+          <span className="text-sm text-fleet-text-secondary">
+            {t('agentSettings.maxToolRounds.enabled.label')}
+          </span>
           <p className="mt-0.5 text-xs text-fleet-text-muted">
-            Stop a turn after this many rounds of tool calls. Off means it runs until it has an
-            answer, which is what long work needs - a turn that hits a limit has already spent what
-            it cost to get there.
+            {t('agentSettings.maxToolRounds.enabled.hint')}
           </p>
         </div>
         <Toggle
           checked={value !== null}
           onChange={(next) => onChange(next ? DEFAULT_ROUNDS : null)}
-          ariaLabel="Limit tool rounds"
+          ariaLabel={t('agentSettings.maxToolRounds.enabled.label')}
         />
       </div>
 
       {value !== null && (
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-xs text-fleet-text-muted">Stop after</span>
+          <span className="text-xs text-fleet-text-muted">
+            {t('agentSettings.maxToolRounds.stopAfter')}
+          </span>
           <span className="flex items-baseline gap-1.5">
             <input
               type="number"
@@ -68,7 +72,7 @@ export function MaxToolRoundsField({
               max={MAX_TOOL_ROUNDS_CEILING}
               step={1}
               value={typing ?? String(value)}
-              aria-label="Stop after"
+              aria-label={t('agentSettings.maxToolRounds.stopAfter')}
               onChange={(e) => setTyping(e.target.value)}
               onBlur={commit}
               onKeyDown={(e) => {
@@ -76,7 +80,9 @@ export function MaxToolRoundsField({
               }}
               className="w-20 rounded-md border border-fleet-border bg-fleet-glass-surface px-2 py-1 text-right text-sm tabular-nums text-fleet-text focus-ring"
             />
-            <span className="text-xs text-fleet-text-muted">rounds</span>
+            <span className="text-xs text-fleet-text-muted">
+              {t('agentSettings.maxToolRounds.rounds')}
+            </span>
           </span>
         </div>
       )}

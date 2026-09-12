@@ -37,9 +37,9 @@ export function createFilesMode(cwd: string, activePaneId: string | null): Teles
 
   return {
     id: 'files',
-    label: 'Files',
+    label: 'dialogs.telescope.mode.files',
     icon: File,
-    placeholder: 'Search files by name...',
+    placeholder: 'dialogs.telescope.placeholder.files',
 
     onSearch: async (query: string): Promise<TelescopeItem[]> => {
       if (!query) {

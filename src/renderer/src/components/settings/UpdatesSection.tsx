@@ -3,11 +3,13 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { AgentMarkdown } from '../agent/AgentMarkdown';
 import { useUpdateStore } from '../../store/update-store';
 import type { ReleaseNote } from '../../../../shared/release-notes';
+import { useTranslation } from '../../lib/i18n';
 
 /** A version in the list, and why it is worth pointing at. */
 type Row = ReleaseNote & { badge: 'pending' | 'current' | null };
 
 export function UpdatesSection(): React.JSX.Element {
+  const { t } = useTranslation();
   // Read from the store rather than subscribing here. This section is mounted
   // by opening Settings, which is almost always *after* the update was found -
   // a listener of its own only ever hears what arrives later, so the page the
@@ -86,7 +88,7 @@ export function UpdatesSection(): React.JSX.Element {
             onClick={() => window.fleet.updates.installUpdate()}
             className="px-3 py-1.5 text-sm fleet-accent-bg fleet-accent-bg-hover text-white rounded-md transition-colors active:scale-[0.97]"
           >
-            Restart to Update
+            {t('updates.restart')}
           </button>
         ) : (
           <button
@@ -96,12 +98,12 @@ export function UpdatesSection(): React.JSX.Element {
             disabled={updateStatus.state === 'checking' || updateStatus.state === 'downloading'}
             className="px-3 py-1.5 text-sm bg-fleet-surface-3 hover:bg-fleet-surface-3 text-fleet-text rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97] disabled:active:scale-100"
           >
-            {updateStatus.state === 'checking' ? 'Checking...' : 'Check for Updates'}
+            {updateStatus.state === 'checking' ? t('updates.checking') : t('updates.check')}
           </button>
         )}
 
         {updateStatus.state === 'not-available' && (
-          <div className="text-sm text-green-400">You{"'"}re up to date.</div>
+          <div className="text-sm text-green-400">{t('updates.upToDate')}</div>
         )}
 
         {updateStatus.state === 'error' && (
@@ -111,7 +113,10 @@ export function UpdatesSection(): React.JSX.Element {
         {updateStatus.state === 'downloading' && (
           <div className="space-y-2">
             <div className="text-sm text-fleet-text-secondary">
-              Downloading v{updateStatus.version}... {updateStatus.percent}%
+              {t('updates.downloading', {
+                version: updateStatus.version,
+                percent: updateStatus.percent
+              })}
             </div>
             <div className="w-full h-1.5 bg-fleet-surface-3 rounded-full overflow-hidden">
               <div
@@ -123,13 +128,15 @@ export function UpdatesSection(): React.JSX.Element {
         )}
 
         {staged && (
-          <div className="text-sm fleet-accent-text">v{staged.version} is ready to install.</div>
+          <div className="text-sm fleet-accent-text">
+            {t('updates.ready', { version: staged.version })}
+          </div>
         )}
 
         {rows.length > 0 && (
           <div className="mt-2">
             <div className="text-xs text-fleet-text-subtle uppercase tracking-wider mb-1">
-              Release Notes
+              {t('updates.releaseNotes')}
             </div>
             {/* Bounded: one row per release, and there is a release every few
                 days, so the page must not grow with the project's age. */}
@@ -161,6 +168,7 @@ function VersionRow({
   open: boolean;
   onToggle: (() => void) | null;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const Chevron = open ? ChevronDown : ChevronRight;
   const header = (
     <>
@@ -174,7 +182,7 @@ function VersionRow({
       <span className="text-fleet-text-secondary">v{row.version}</span>
       {row.badge && (
         <span className="text-[10px] uppercase tracking-wider text-fleet-text-subtle border border-fleet-border-strong rounded px-1 py-px shrink-0">
-          {row.badge === 'pending' ? 'Pending' : 'Current'}
+          {row.badge === 'pending' ? t('updates.pending') : t('updates.current')}
         </span>
       )}
     </>

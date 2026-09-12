@@ -3,6 +3,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown, Copy } from 'lucide-react';
 import { useToastStore } from '../../store/toast-store';
 import { popperAnim } from '../../lib/motion';
+import { useTranslation } from '../../lib/i18n';
 
 type CopyDocMenuProps = {
   /** Raw markdown source of the document. */
@@ -16,6 +17,7 @@ type CopyDocMenuProps = {
  * raw markdown source or as rendered plain text. Lives in the Preview/Raw sub-tab bar.
  */
 export function CopyDocMenu({ getMarkdown, getText }: CopyDocMenuProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const showToast = useToastStore((s) => s.show);
 
@@ -32,10 +34,10 @@ export function CopyDocMenu({ getMarkdown, getText }: CopyDocMenuProps): React.J
         <button
           type="button"
           className="flex items-center gap-1 rounded px-2 py-1 text-xs text-neutral-500 transition-colors hover:text-neutral-300 active:scale-[0.97]"
-          title="Copy document"
+          title={t('dialogs.markdown.copyDocument')}
         >
           <Copy size={12} />
-          Copy as
+          {t('dialogs.markdown.copyAs')}
           <ChevronDown size={10} />
         </button>
       </Popover.Trigger>
@@ -49,16 +51,16 @@ export function CopyDocMenu({ getMarkdown, getText }: CopyDocMenuProps): React.J
           <button
             type="button"
             className="w-full rounded px-3 py-1.5 text-left text-xs text-neutral-300 transition-colors hover:bg-neutral-700 hover:text-white"
-            onClick={() => copy(getMarkdown(), 'Copied as Markdown')}
+            onClick={() => copy(getMarkdown(), t('dialogs.markdown.copiedAsMarkdown'))}
           >
-            Copy as Markdown
+            {t('dialogs.markdown.copyAsMarkdown')}
           </button>
           <button
             type="button"
             className="w-full rounded px-3 py-1.5 text-left text-xs text-neutral-300 transition-colors hover:bg-neutral-700 hover:text-white"
-            onClick={() => copy(getText(), 'Copied as plain text')}
+            onClick={() => copy(getText(), t('dialogs.markdown.copiedAsPlainText'))}
           >
-            Copy as Text
+            {t('dialogs.markdown.copyAsText')}
           </button>
         </Popover.Content>
       </Popover.Portal>

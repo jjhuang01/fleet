@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import type { McpServerConfig, McpServerStatus } from '../../../../../../shared/agent-mcp';
 import { transportOf } from '../../../../../../shared/agent-mcp';
+import type { MessageKey } from '../../../../../../shared/i18n';
+import { useTranslation } from '../../../../lib/i18n';
 import { Toggle } from '../Toggle';
 import { MenuItem, RowMenu } from '../RowMenu';
 
@@ -32,12 +34,12 @@ const DOT: Record<McpServerStatus['state'], string> = {
   disabled: 'bg-fleet-text-subtle/50'
 };
 
-const STATE_TEXT: Record<McpServerStatus['state'], string> = {
-  connected: 'Connected',
-  connecting: 'Connecting…',
-  'needs-auth': 'Needs sign-in',
-  failed: 'Not connected',
-  disabled: 'Off'
+const STATE_KEYS: Record<McpServerStatus['state'], MessageKey> = {
+  connected: 'agentSettings.mcp.state.connected',
+  connecting: 'agentSettings.mcp.state.connecting',
+  'needs-auth': 'agentSettings.mcp.state.needsAuth',
+  failed: 'agentSettings.mcp.state.failed',
+  disabled: 'agentSettings.common.off'
 };
 
 export function McpServerRow({
@@ -70,6 +72,7 @@ export function McpServerRow({
   onSignOut: () => void;
   onToolsChange: (disabledTools: string[]) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const state = config.enabled ? (status?.state ?? 'connecting') : 'disabled';
   const tools = status?.tools ?? [];
@@ -96,7 +99,7 @@ export function McpServerRow({
             className={`shrink-0 text-fleet-text-subtle transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
           />
           <span
-            title={STATE_TEXT[state]}
+            title={t(STATE_KEYS[state])}
             className={`size-2 shrink-0 rounded-full ${DOT[state]} ${state === 'connecting' ? 'animate-pulse' : ''}`}
           />
           <span className="min-w-0 truncate text-sm text-fleet-text">{name}</span>
@@ -104,28 +107,34 @@ export function McpServerRow({
             {transportOf(config) === 'http' ? 'HTTP' : 'stdio'}
           </span>
           <span className="min-w-0 truncate text-xs text-fleet-text-muted">
-            {config.enabled ? summary(status) : 'Off'}
+            {config.enabled
+              ? t(summaryKey(status), { count: status?.toolCount ?? 0 })
+              : t('agentSettings.common.off')}
           </span>
         </button>
 
         {busy && <Loader2 size={14} className="shrink-0 animate-spin text-fleet-text-subtle" />}
-        <Toggle checked={config.enabled} onChange={onToggle} ariaLabel={`Enable ${name}`} />
+        <Toggle
+          checked={config.enabled}
+          onChange={onToggle}
+          ariaLabel={t('agentSettings.mcp.row.enable', { name })}
+        />
         <RowMenu label={name}>
           {(pick) => (
             <>
               <MenuItem icon={<Pencil size={13} />} onClick={pick(onEdit)}>
-                Edit…
+                {t('agentSettings.mcp.row.edit')}
               </MenuItem>
               <MenuItem icon={<RefreshCw size={13} />} onClick={pick(onReconnect)}>
-                Reconnect
+                {t('agentSettings.mcp.row.reconnect')}
               </MenuItem>
               {hasCredential && (
                 <MenuItem icon={<KeyRound size={13} />} onClick={pick(onSignOut)}>
-                  Sign out
+                  {t('agentSettings.mcp.row.signOut')}
                 </MenuItem>
               )}
               <MenuItem icon={<Trash2 size={13} />} danger onClick={pick(onRemove)}>
-                Remove
+                {t('agentSettings.common.remove')}
               </MenuItem>
             </>
           )}
@@ -140,7 +149,7 @@ export function McpServerRow({
 
           {state === 'needs-auth' && (
             <Notice tone="info">
-              <span className="flex-1">This server wants you to sign in.</span>
+              <span className="flex-1">{t('agentSettings.mcp.row.needsAuth')}</span>
               <button
                 type="button"
                 onClick={onSignIn}
@@ -148,7 +157,7 @@ export function McpServerRow({
                 className="shrink-0 rounded-md fleet-accent-bg px-2.5 py-1 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40 focus-ring-offset"
               >
                 <KeyRound size={12} className="-mt-px mr-1 inline" />
-                Sign in
+                {t('agentSettings.mcp.row.signIn')}
               </button>
             </Notice>
           )}
@@ -160,12 +169,14 @@ export function McpServerRow({
 
           {tools.length === 0 ? (
             <p className="text-xs text-fleet-text-muted">
-              {state === 'connected' ? 'This server offers no tools.' : 'No tools yet.'}
+              {state === 'connected'
+                ? t('agentSettings.mcp.row.noTools')
+                : t('agentSettings.mcp.row.noToolsYet')}
             </p>
           ) : (
             <div className="space-y-1">
               <p className="text-[11px] font-medium uppercase tracking-wider text-fleet-text-subtle">
-                Tools
+                {t('agentSettings.mcp.row.tools')}
               </p>
               {tools.map((tool) => (
                 <label
@@ -197,12 +208,14 @@ export function McpServerRow({
 }
 
 /** What the server brought, or why it did not. */
-function summary(status: McpServerStatus | undefined): string {
-  if (status === undefined) return 'Connecting…';
+function summaryKey(status: McpServerStatus | undefined): MessageKey {
+  if (status === undefined) return 'agentSettings.mcp.state.connecting';
   if (status.state === 'connected') {
-    return status.toolCount === 1 ? '1 tool' : `${status.toolCount} tools`;
+    return status.toolCount === 1
+      ? 'agentSettings.mcp.toolSummary.one'
+      : 'agentSettings.mcp.toolSummary.many';
   }
-  return STATE_TEXT[status.state];
+  return STATE_KEYS[status.state];
 }
 
 /** The thing this server actually is: a URL, or a command line. */

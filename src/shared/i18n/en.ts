@@ -13,7 +13,29 @@
  * overlay/palette, then Settings. A key is added here by whoever wires it up,
  * never speculatively.
  */
+import * as agentpane from './parts/agent-pane';
+import * as agentsettings from './parts/agent-settings';
+import * as ssh from './parts/ssh';
+import * as dialogs from './parts/dialogs';
+import * as panes from './parts/panes';
+import * as main from './parts/main';
+import * as copilot from './parts/copilot';
+import * as remotehosts from './parts/remote-hosts';
+import * as workspaces from './parts/workspaces';
+import * as envsync from './parts/env-sync';
+import * as claudeconfig from './parts/claude-config';
 export const en = {
+  ...agentpane.en,
+  ...agentsettings.en,
+  ...ssh.en,
+  ...dialogs.en,
+  ...panes.en,
+  ...main.en,
+  ...copilot.en,
+  ...remotehosts.en,
+  ...workspaces.en,
+  ...envsync.en,
+  ...claudeconfig.en,
   // Shared vocabulary. Anything a second surface needs belongs here.
   'common.cancel': 'Cancel',
   'common.close': 'Close',
@@ -31,6 +53,9 @@ export const en = {
   'common.dismiss': 'esc dismiss',
   'common.noActiveTerminal': 'No active terminal',
   'common.searching': 'Searching…',
+
+  'common.decrease': 'Decrease {label}',
+  'common.increase': 'Increase {label}',
 
   // Sidebar chrome.
   'sidebar.newTab': 'New Tab',
@@ -60,6 +85,10 @@ export const en = {
   'sidebar.movePaneToNewTab': 'Move pane to a new tab',
   'sidebar.fileClose.title': 'Save changes to \u201c{label}\u201d?',
   'sidebar.fileClose.body': 'Your changes will be lost if you don\u2019t save.',
+  'sidebar.worktree.groupLabel': 'Worktree Group',
+  'sidebar.worktree.alreadyWorktree': 'Already a worktree',
+  'sidebar.worktree.groupExists': 'Worktrees already created',
+  'sidebar.worktree.notGitRepo': 'Not a git repository',
   'sidebar.worktree.removeTitle': 'Remove worktree \u201c{label}\u201d?',
   'sidebar.worktree.removeBody':
     'This will destroy the worktree and its directory. Any work not committed and pushed will be lost.',
@@ -189,6 +218,7 @@ export const en = {
   'palette.section.commands': 'Commands',
   'palette.section.destinations': 'Destinations',
   'palette.badge.needsYou': 'needs you',
+  'palette.aria.commands': 'Command palette',
   'palette.footer.title': 'Command palette',
   'palette.footer.run': '↵ Run',
   'palette.footer.back': 'esc Back',
@@ -269,7 +299,8 @@ export const en = {
   'settings.nav.diagnostics': 'Diagnostics',
   'settings.nav.updates': 'Updates',
   'settings.language.title': 'Language',
-  'settings.language.hint': 'Applies to the whole app. Untranslated screens stay in English.',
+  'settings.language.hint':
+    'Applies to the whole app. Text your model, tools and servers send back stays as they wrote it.',
   'settings.language.system': 'Follow system',
   'settings.language.en': 'English',
   'settings.language.zhCN': '简体中文',
@@ -313,6 +344,12 @@ export const en = {
   'settings.background.add': 'Add…',
   'settings.background.selectFiles': 'Select Files…',
   'settings.background.clearAll': 'Clear All',
+  'settings.background.legibility.highOpacity':
+    'High image opacity may make terminal text hard to read — lower opacity or add blur.',
+  'settings.background.legibility.moderateOpacity':
+    'Image opacity is moderate — consider lowering it or adding blur for readability.',
+  'settings.background.legibility.lowThemeContrast':
+    'This terminal theme already has low text contrast.',
   'settings.background.order': 'Order',
   'settings.background.orderAria': 'Slideshow order',
   'settings.background.shuffle': 'Shuffle',
@@ -345,6 +382,56 @@ export const en = {
   'settings.background.saturationAria': 'Pane saturation',
   'settings.background.scanning': 'Scanning\u2026',
   'settings.background.noImages': 'No images found in folder.',
+
+  // Settings: socket, annotate, notifications, learnings.
+  'settings.socket.enabled': 'Socket API Enabled',
+  'settings.socket.path': 'Socket Path',
+  'settings.annotate.title': 'Annotations',
+  'settings.annotate.body': 'Configure how webpage annotations are stored and cleaned up.',
+  'settings.annotate.storage': 'Storage',
+  'settings.annotate.retention': 'Delete annotations older than',
+  'settings.annotate.days': 'days',
+  'notifications.event': 'Event',
+  'notifications.badge': 'Badge',
+  'notifications.sound': 'Sound',
+  'notifications.os': 'OS',
+  'notifications.taskComplete': 'Task Complete',
+  'notifications.needsPermission': 'Needs Permission',
+  'notifications.processExitError': 'Process Exit (Error)',
+  'notifications.processExitClean': 'Process Exit (Clean)',
+  'settings.learnings.title': 'Learnings',
+  'settings.learnings.body':
+    'Semantic search over your cross-project Learnings knowledge base. Embeddings run locally, so nothing leaves your machine.',
+  'settings.learnings.semantic': 'Semantic search',
+  'settings.learnings.status': 'Status',
+  'settings.learnings.modelCache': 'Model cache',
+  'settings.learnings.modelCacheNote': 'all-MiniLM-L6-v2, downloaded on first use',
+  'settings.learnings.clearCache': 'Clear cache',
+  'settings.learnings.clearing': 'Clearing…',
+  'settings.learnings.confirmClear':
+    'Delete the downloaded embedding model? It re-downloads on next use.',
+  'learnings.status.checking': 'Checking…',
+  'learnings.status.keywordOnlyVector': 'Keyword only (vector extension unavailable)',
+  'learnings.status.active': 'Semantic search active',
+  'learnings.status.preparing': 'Preparing model…',
+  'learnings.status.keywordOnlyModel': 'Keyword only (model unavailable)',
+
+  // Settings: diagnostics and updates.
+  'diagnostics.body':
+    'Hit a bug? Report a Problem opens a prefilled GitHub issue with your version, OS, and a redacted snippet of recent logs. For the full logs, open the logs folder and attach the latest fleet-*.log file. Nothing is sent anywhere until you submit the issue.',
+  'diagnostics.report': 'Report a Problem',
+  'diagnostics.opening': 'Opening…',
+  'diagnostics.openLogs': 'Open Logs Folder',
+  'diagnostics.failed': 'Failed to open report',
+  'updates.restart': 'Restart to Update',
+  'updates.checking': 'Checking…',
+  'updates.check': 'Check for Updates',
+  'updates.upToDate': 'You’re up to date.',
+  'updates.downloading': 'Downloading v{version}… {percent}%',
+  'updates.ready': 'v{version} is ready to install.',
+  'updates.releaseNotes': 'Release Notes',
+  'updates.pending': 'Pending',
+  'updates.current': 'Current',
 
   // Empty state.
   'dashboard.newTerminal': 'New Terminal',

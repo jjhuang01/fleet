@@ -67,9 +67,9 @@ export function createBrowseMode(
 
   const mode: TelescopeMode & { getState: () => BrowseState } = {
     id: 'browse',
-    label: 'Browse',
+    label: 'dialogs.telescope.mode.browse',
     icon: FolderOpen,
-    placeholder: 'Filter current directory...',
+    placeholder: 'dialogs.telescope.placeholder.browse',
 
     get breadcrumbs(): string[] {
       const dir = state.currentDir;

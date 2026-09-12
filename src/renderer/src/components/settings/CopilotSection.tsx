@@ -3,7 +3,10 @@ import { useSettingsStore } from '../../store/settings-store';
 import { useWorkspaceStore } from '../../store/workspace-store';
 import { useWorkspaceListStore } from '../../store/workspace-list-store';
 import { useHookStatusStore } from '../../store/hook-status-store';
+import type { HookState } from '../../store/hook-status-store';
 import { resolveClaudeConfig } from '../../../../shared/claude-config';
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
 import { SettingRow } from './SettingRow';
 import type { SettingsSectionProps } from './SettingsTab';
 
@@ -24,11 +27,11 @@ const SYSTEM_SOUNDS = [
   'Basso'
 ];
 
-const HOOK_SUMMARY: Record<string, string> = {
-  checking: 'Checking…',
-  installed: 'Hooks installed',
-  missing: 'Hooks not installed',
-  error: 'Status unknown'
+const HOOK_SUMMARY: Record<HookState, MessageKey> = {
+  checking: 'settings.copilot.hookChecking',
+  installed: 'settings.copilot.hookInstalled',
+  missing: 'settings.copilot.hookMissing',
+  error: 'settings.copilot.hookError'
 };
 
 /**
@@ -50,6 +53,7 @@ function ConnectionRow({
   source: 'default' | 'custom';
   onManage: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const state = useHookStatusStore((s) => s.byFolder[folder]?.state) ?? 'checking';
   const check = useHookStatusStore((s) => s.check);
 
@@ -62,10 +66,12 @@ function ConnectionRow({
       <div className="flex items-center gap-2">
         <span className="text-sm text-fleet-text-secondary truncate">{label}</span>
         <span className="text-[10px] uppercase tracking-wider text-fleet-text-subtle border border-fleet-border-strong rounded px-1 py-px shrink-0">
-          {source === 'custom' ? 'Custom' : 'Inherited'}
+          {source === 'custom'
+            ? t('settings.copilot.sourceCustom')
+            : t('settings.copilot.sourceInherited')}
         </span>
         <span className="text-xs text-fleet-text-subtle ml-auto shrink-0">
-          {HOOK_SUMMARY[state]}
+          {t(HOOK_SUMMARY[state])}
         </span>
       </div>
       <p className="text-xs text-fleet-text-subtle mt-0.5 break-all">{folder}</p>
@@ -73,13 +79,14 @@ function ConnectionRow({
         onClick={onManage}
         className="mt-1 text-xs text-fleet-text-secondary underline underline-offset-2 hover:text-fleet-text transition"
       >
-        Manage workspace connection
+        {t('settings.copilot.manageWorkspaceConnection')}
       </button>
     </div>
   );
 }
 
 export function CopilotSection({ onNavigate }: SettingsSectionProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const { settings, updateSettings } = useSettingsStore();
   const activeWorkspaceId = useWorkspaceStore((s) => s.workspace.id);
   const workspaces = useWorkspaceListStore((s) => s.workspaces);
@@ -122,7 +129,7 @@ export function CopilotSection({ onNavigate }: SettingsSectionProps): React.JSX.
     <div className="space-y-6">
       {/* Show Copilot */}
       <div>
-        <SettingRow label="Show Copilot">
+        <SettingRow label={t('settings.copilot.enabled')}>
           <input
             type="checkbox"
             checked={copilot.enabled}
@@ -131,20 +138,19 @@ export function CopilotSection({ onNavigate }: SettingsSectionProps): React.JSX.
           />
         </SettingRow>
         <p className="text-xs text-fleet-text-subtle mt-1">
-          Show the Copilot overlay window on macOS. Copilot watches your active agent sessions and
-          surfaces status, permissions, and quick actions in a floating panel.
+          {t('settings.copilot.enabledDescription')}
         </p>
       </div>
 
       {/* Notification sound */}
       <div>
-        <SettingRow label="Notification sound">
+        <SettingRow label={t('settings.copilot.notificationSound')}>
           <select
             value={copilot.notificationSound}
             onChange={(e) => updateCopilot({ notificationSound: e.target.value })}
             className="bg-fleet-surface-2 text-sm text-fleet-text rounded px-2 py-1 border border-fleet-border-strong"
           >
-            <option value="">None</option>
+            <option value="">{t('settings.copilot.notificationSoundNone')}</option>
             {SYSTEM_SOUNDS.map((sound) => (
               <option key={sound} value={sound}>
                 {sound}
@@ -153,20 +159,20 @@ export function CopilotSection({ onNavigate }: SettingsSectionProps): React.JSX.
           </select>
         </SettingRow>
         <p className="text-xs text-fleet-text-subtle mt-1">
-          Sound played when an agent needs attention.
+          {t('settings.copilot.notificationSoundDescription')}
         </p>
       </div>
 
       {/* Sessions to show */}
       <div>
-        <SettingRow label="Sessions to show">
+        <SettingRow label={t('settings.copilot.sessionsToShow')}>
           <select
             value={copilot.showAllWorkspaces ? 'all' : 'active'}
             onChange={(e) => updateCopilot({ showAllWorkspaces: e.target.value === 'all' })}
             className="bg-fleet-surface-2 text-sm text-fleet-text rounded px-2 py-1 border border-fleet-border-strong"
           >
-            <option value="all">All workspaces</option>
-            <option value="active">Active workspace only</option>
+            <option value="all">{t('settings.copilot.allWorkspaces')}</option>
+            <option value="active">{t('settings.copilot.activeWorkspaceOnly')}</option>
           </select>
         </SettingRow>
       </div>
@@ -174,22 +180,27 @@ export function CopilotSection({ onNavigate }: SettingsSectionProps): React.JSX.
       {/* Claude Code connection */}
       <div>
         <label className="text-sm text-fleet-text-secondary block mb-1">
-          Claude Code connection
+          {t('settings.copilot.claudeCodeConnection')}
         </label>
         <p className="text-xs text-fleet-text-subtle mb-2">
-          Copilot receives updates through Fleet hooks in each workspace&apos;s Claude config
-          folder.
+          {t('settings.copilot.claudeCodeConnectionDescription')}
         </p>
         {!claudeDetected && (
           <div className="rounded bg-amber-900/30 border border-amber-700/50 px-2 py-1.5 mb-2">
-            <span className="text-xs text-amber-400 block font-medium">Claude Code not found</span>
+            <span className="text-xs text-amber-400 block font-medium">
+              {t('settings.copilot.claudeNotFound')}
+            </span>
             <span className="text-xs text-amber-400/70 block">
-              Install it with: npm install -g @anthropic-ai/claude-code
+              {t('settings.copilot.claudeInstall', {
+                command: 'npm install -g @anthropic-ai/claude-code'
+              })}
             </span>
           </div>
         )}
         {shown.length === 0 ? (
-          <p className="text-xs text-fleet-text-subtle italic">No workspaces configured.</p>
+          <p className="text-xs text-fleet-text-subtle italic">
+            {t('settings.copilot.noWorkspaces')}
+          </p>
         ) : (
           <div className="space-y-1">
             {shown.map(({ ws, config }) => (

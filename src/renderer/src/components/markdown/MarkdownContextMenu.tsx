@@ -2,6 +2,7 @@ import { useState } from 'react';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import { Copy, FileCode, Search, TextSelect, Type } from 'lucide-react';
 import { popperAnim } from '../../lib/motion';
+import { useTranslation } from '../../lib/i18n';
 
 type MarkdownContextMenuProps = {
   children: React.ReactNode;
@@ -31,6 +32,7 @@ export function MarkdownContextMenu({
   onSelectAll,
   onFind
 }: MarkdownContextMenuProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [hasSelection, setHasSelection] = useState(false);
 
   return (
@@ -50,25 +52,25 @@ export function MarkdownContextMenu({
             onSelect={onCopySelection}
           >
             <Copy size={14} />
-            Copy
+            {t('dialogs.markdown.context.copy')}
           </ContextMenu.Item>
           <ContextMenu.Item className={itemClass} onSelect={onSelectAll}>
             <TextSelect size={14} />
-            Select all
+            {t('dialogs.markdown.context.selectAll')}
           </ContextMenu.Item>
           <ContextMenu.Separator className="my-1 h-px bg-fleet-surface-3" />
           <ContextMenu.Item className={itemClass} onSelect={onCopyMarkdown}>
             <FileCode size={14} />
-            Copy document as Markdown
+            {t('dialogs.markdown.context.copyMarkdown')}
           </ContextMenu.Item>
           <ContextMenu.Item className={itemClass} onSelect={onCopyText}>
             <Type size={14} />
-            Copy document as Text
+            {t('dialogs.markdown.context.copyText')}
           </ContextMenu.Item>
           <ContextMenu.Separator className="my-1 h-px bg-fleet-surface-3" />
           <ContextMenu.Item className={itemClass} onSelect={onFind}>
             <Search size={14} />
-            Find…
+            {t('dialogs.markdown.context.find')}
           </ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Portal>

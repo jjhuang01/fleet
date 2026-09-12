@@ -4,6 +4,8 @@ import { ChevronRight, KeyRound, Loader2, MoreHorizontal, X } from 'lucide-react
 import { useToastStore } from '../../store/toast-store';
 import { primaryBtn, neutralBtn } from '../../lib/button-styles';
 import { Overlay } from '../Overlay';
+import { useTranslation, type Translator } from '../../lib/i18n';
+import type { MessageKey } from '../../../../shared/i18n';
 import type {
   EnvSyncConfig,
   EnvSyncTarget,
@@ -18,15 +20,15 @@ import type { PathContext } from '../../../../shared/shell-profiles';
 import { toWindowsAccessiblePath } from '../../../../shared/path-platform';
 import { createCancellation } from '../../lib/cancellation';
 
-const STATUS_LABEL: Record<TargetSyncState, string> = {
-  'in-sync': 'In sync',
-  'remote-ahead': 'Remote ahead — pull',
-  'local-ahead': 'Local ahead — push',
-  conflict: 'Conflict',
-  'local-only': 'Local only — push',
-  'remote-only': 'Remote only — pull',
-  'no-remote-no-local': 'Nothing yet',
-  error: 'Error'
+const STATUS_LABEL: Record<TargetSyncState, MessageKey> = {
+  'in-sync': 'envSync.status.inSync',
+  'remote-ahead': 'envSync.status.remoteAhead',
+  'local-ahead': 'envSync.status.localAhead',
+  conflict: 'envSync.status.conflict',
+  'local-only': 'envSync.status.localOnly',
+  'remote-only': 'envSync.status.remoteOnly',
+  'no-remote-no-local': 'envSync.status.nothingYet',
+  error: 'envSync.status.error'
 };
 
 // Status text colour by state: green = settled, amber = action available, red = problem.
@@ -42,16 +44,16 @@ const STATE_TEXT: Record<TargetSyncState, string> = {
 };
 
 /** The single recommended sync action for a state, or null when nothing to do. */
-function primaryAction(state: TargetSyncState): { dir: 'pull' | 'push'; label: string } | null {
+function primaryAction(state: TargetSyncState): { dir: 'pull' | 'push'; label: MessageKey } | null {
   switch (state) {
     case 'remote-ahead':
     case 'remote-only':
-      return { dir: 'pull', label: 'Pull' };
+      return { dir: 'pull', label: 'envSync.action.pull' };
     case 'local-ahead':
     case 'local-only':
-      return { dir: 'push', label: 'Push' };
+      return { dir: 'push', label: 'envSync.action.push' };
     case 'conflict':
-      return { dir: 'pull', label: 'Resolve' };
+      return { dir: 'pull', label: 'envSync.action.resolve' };
     case 'in-sync':
     case 'no-remote-no-local':
     case 'error':
@@ -129,10 +131,11 @@ function PassphraseControl({
   id?: string;
   present: boolean;
   encAvailable: boolean;
-  clearLabel: string;
+  clearLabel: MessageKey;
   onChanged: () => Promise<void>;
 }): React.JSX.Element {
   const showToast = useToastStore((s) => s.show);
+  const { t } = useTranslation();
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -143,7 +146,7 @@ function PassphraseControl({
       await window.fleet.envSync.setPassphrase({ id, passphrase: draft });
       setDraft('');
       await onChanged();
-      showToast('Passphrase saved');
+      showToast(t('envSync.passphrase.saved'));
     } finally {
       setSaving(false);
     }
@@ -160,14 +163,14 @@ function PassphraseControl({
 
   return present ? (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-neutral-400">●●●●●●●● (set)</span>
+      <span className="text-sm text-neutral-400">{t('envSync.passphrase.set')}</span>
       <button
         disabled={clearing}
         className="inline-flex items-center gap-1.5 text-xs text-red-400 transition-colors hover:text-red-300 disabled:text-neutral-500 active:scale-[0.97] disabled:active:scale-100"
         onClick={() => void clear()}
       >
         {clearing && SPIN}
-        {clearLabel}
+        {t(clearLabel)}
       </button>
     </div>
   ) : (
@@ -177,7 +180,7 @@ function PassphraseControl({
         autoComplete="off"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        placeholder="Encryption passphrase"
+        placeholder={t('envSync.passphrase.label')}
         className={inputCls}
       />
       <button
@@ -186,7 +189,7 @@ function PassphraseControl({
         className={`shrink-0 ${neutralBtn}`}
       >
         {saving && SPIN}
-        Save
+        {t('common.save')}
       </button>
     </div>
   );
@@ -202,10 +205,11 @@ function AuthControl({
   id?: string;
   redacted: RedactedEnvSyncAuth | undefined;
   encAvailable: boolean;
-  resetLabel: string;
+  resetLabel: MessageKey;
   onChanged: () => Promise<void>;
 }): React.JSX.Element {
   const showToast = useToastStore((s) => s.show);
+  const { t } = useTranslation();
   const [mode, setMode] = useState<EnvSyncAuthMode>(redacted?.mode ?? 'default-chain');
   const [profile, setProfile] = useState(redacted?.profile ?? '');
   const [accessKeyId, setAccessKeyId] = useState('');
@@ -234,11 +238,14 @@ function AuthControl({
       setSecretAccessKey('');
       setSessionToken('');
       await onChanged();
-      showToast('AWS auth saved');
+      showToast(t('envSync.auth.saved'));
     } catch (err) {
-      showToast(`Could not save AWS auth: ${err instanceof Error ? err.message : 'unknown'}`, {
-        duration: 6000
-      });
+      showToast(
+        t('envSync.auth.saveFailed', {
+          error: err instanceof Error ? err.message : t('envSync.toast.unknown')
+        }),
+        { duration: 6000 }
+      );
     } finally {
       setSaving(false);
     }
@@ -263,10 +270,10 @@ function AuthControl({
         }}
         className={inputCls}
       >
-        <option value="default-chain">Default credential chain</option>
-        <option value="profile">Named profile</option>
+        <option value="default-chain">{t('envSync.auth.defaultChain')}</option>
+        <option value="profile">{t('envSync.auth.namedProfile')}</option>
         <option value="static" disabled={!encAvailable}>
-          Static keys
+          {t('envSync.auth.staticKeys')}
         </option>
       </select>
 
@@ -275,7 +282,7 @@ function AuthControl({
           type="text"
           value={profile}
           onChange={(e) => setProfile(e.target.value)}
-          placeholder="AWS profile name (e.g. work)"
+          placeholder={t('envSync.auth.profilePlaceholder')}
           className={inputCls}
         />
       )}
@@ -283,16 +290,14 @@ function AuthControl({
       {mode === 'static' && (
         <div className="flex flex-col gap-3">
           {redacted?.mode === 'static' && redacted.hasAccessKeyId ? (
-            <span className="text-sm text-neutral-400">
-              Static keys ●●●● (set) — re-enter below to replace
-            </span>
+            <span className="text-sm text-neutral-400">{t('envSync.auth.staticKeysSet')}</span>
           ) : null}
           <input
             type="text"
             autoComplete="off"
             value={accessKeyId}
             onChange={(e) => setAccessKeyId(e.target.value)}
-            placeholder="Access key ID"
+            placeholder={t('envSync.auth.accessKeyId')}
             className={inputCls}
           />
           <input
@@ -300,7 +305,7 @@ function AuthControl({
             autoComplete="off"
             value={secretAccessKey}
             onChange={(e) => setSecretAccessKey(e.target.value)}
-            placeholder="Secret access key"
+            placeholder={t('envSync.auth.secretAccessKey')}
             className={inputCls}
           />
           <input
@@ -308,7 +313,7 @@ function AuthControl({
             autoComplete="off"
             value={sessionToken}
             onChange={(e) => setSessionToken(e.target.value)}
-            placeholder="Session token (optional)"
+            placeholder={t('envSync.auth.sessionToken')}
             className={inputCls}
           />
         </div>
@@ -317,7 +322,7 @@ function AuthControl({
       <div className="flex items-center gap-3">
         <button disabled={saving} onClick={() => void save()} className={neutralBtn}>
           {saving && SPIN}
-          Save
+          {t('common.save')}
         </button>
         {redacted && (
           <button
@@ -326,7 +331,7 @@ function AuthControl({
             onClick={() => void reset()}
           >
             {resetting && SPIN}
-            {resetLabel}
+            {t(resetLabel)}
           </button>
         )}
       </div>
@@ -334,10 +339,14 @@ function AuthControl({
   );
 }
 
-function authSummary(a: RedactedEnvSyncAuth | undefined): string {
-  if (!a || a.mode === 'default-chain') return 'Default credential chain';
-  if (a.mode === 'profile') return `Profile: ${a.profile || '(unset)'}`;
-  return 'Static keys';
+function authSummary(t: Translator, a: RedactedEnvSyncAuth | undefined): string {
+  if (!a || a.mode === 'default-chain') return t('envSync.auth.defaultChain');
+  if (a.mode === 'profile') {
+    return t('envSync.auth.profileSummary', {
+      profile: a.profile || t('envSync.auth.unset')
+    });
+  }
+  return t('envSync.auth.staticKeys');
 }
 
 /**
@@ -358,19 +367,20 @@ function RepoAuthOverride({
   encAvailable: boolean;
   onChanged: () => Promise<void>;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
 
   if (!override && !editing) {
     return (
       <div className="flex items-center gap-3">
         <span className="text-sm text-neutral-400">
-          Inherits global ({authSummary(globalAuth)})
+          {t('envSync.auth.inheritsGlobal', { auth: authSummary(t, globalAuth) })}
         </span>
         <button
           className="text-xs text-blue-400 transition-colors hover:text-blue-300 active:scale-[0.97]"
           onClick={() => setEditing(true)}
         >
-          Override
+          {t('envSync.action.override')}
         </button>
       </div>
     );
@@ -381,7 +391,7 @@ function RepoAuthOverride({
       id={id}
       redacted={override}
       encAvailable={encAvailable}
-      resetLabel="Use global default"
+      resetLabel="envSync.action.useGlobalDefault"
       onChanged={async () => {
         setEditing(false);
         await onChanged();
@@ -398,6 +408,7 @@ function InitForm({
   onCreate: (config: EnvSyncConfig) => Promise<void>;
 }): React.JSX.Element {
   const showToast = useToastStore((s) => s.show);
+  const { t } = useTranslation();
   const [id, setId] = useState(basename(repoDir));
   const [bucket, setBucket] = useState('');
   const [region, setRegion] = useState('');
@@ -408,7 +419,7 @@ function InitForm({
     const trimmedBucket = bucket.trim();
     const trimmedRegion = region.trim();
     if (!trimmedId || !trimmedBucket || !trimmedRegion) {
-      showToast('Id, bucket, and region are required', { duration: 4000 });
+      showToast(t('envSync.config.required'), { duration: 4000 });
       return;
     }
     setCreating(true);
@@ -428,35 +439,34 @@ function InitForm({
   return (
     <div className="space-y-5 rounded-lg border border-neutral-800 p-5">
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold text-neutral-200">Set up this repo</h3>
+        <h3 className="text-sm font-semibold text-neutral-200">{t('envSync.config.setupTitle')}</h3>
         <p className="text-xs text-neutral-500">
-          No <code className="text-neutral-400">.fleet/env-sync.json</code> here yet. Create one to
-          start syncing env files.
+          {t('envSync.config.setupDescription', { file: '.fleet/env-sync.json' })}
         </p>
         <p className="break-all pt-1 text-xs text-neutral-600">{repoDir}</p>
       </div>
-      <Field label="Repo id (S3 namespace)">
+      <Field label={t('envSync.config.repoId')}>
         <input value={id} onChange={(e) => setId(e.target.value)} className={inputCls} />
       </Field>
-      <Field label="S3 bucket">
+      <Field label={t('envSync.config.s3Bucket')}>
         <input
           value={bucket}
           onChange={(e) => setBucket(e.target.value)}
-          placeholder="my-fleet-env-bucket"
+          placeholder={t('envSync.config.bucketPlaceholder')}
           className={inputCls}
         />
       </Field>
-      <Field label="AWS region">
+      <Field label={t('envSync.config.awsRegion')}>
         <input
           value={region}
           onChange={(e) => setRegion(e.target.value)}
-          placeholder="us-east-1"
+          placeholder={t('envSync.config.regionPlaceholder')}
           className={inputCls}
         />
       </Field>
       <button disabled={creating} onClick={() => void create()} className={primaryBtn}>
         {creating && SPIN}
-        Create config
+        {t('envSync.config.createConfig')}
       </button>
     </div>
   );
@@ -474,6 +484,7 @@ function RepoManager({
   reload: () => Promise<void>;
 }): React.JSX.Element {
   const showToast = useToastStore((s) => s.show);
+  const { t } = useTranslation();
 
   const [editing, setEditing] = useState(false);
   const [bucketDraft, setBucketDraft] = useState(config.bucket);
@@ -497,10 +508,10 @@ function RepoManager({
     setCreatingBucket(false);
     setConfirmBucket(false);
     if (res.ok) {
-      showToast(`Created bucket ${config.bucket}`);
+      showToast(t('envSync.config.createdBucket', { bucket: config.bucket }));
       await reload();
     } else {
-      showToast(`Create bucket failed: ${res.error}`, { duration: 6000 });
+      showToast(t('envSync.config.createBucketFailed', { error: res.error }), { duration: 6000 });
     }
   };
 
@@ -510,9 +521,12 @@ function RepoManager({
       await reload();
       return true;
     } catch (err) {
-      showToast(`Could not save config: ${err instanceof Error ? err.message : 'unknown'}`, {
-        duration: 6000
-      });
+      showToast(
+        t('envSync.config.saveFailed', {
+          error: err instanceof Error ? err.message : t('envSync.toast.unknown')
+        }),
+        { duration: 6000 }
+      );
       return false;
     }
   };
@@ -527,14 +541,14 @@ function RepoManager({
     const bucket = bucketDraft.trim();
     const region = regionDraft.trim();
     if (!bucket || !region) {
-      showToast('Bucket and region are required', { duration: 4000 });
+      showToast(t('envSync.config.bucketRegionRequired'), { duration: 4000 });
       return;
     }
     setSavingBucket(true);
     try {
       if (await saveConfig({ ...config, bucket, region })) {
         setEditing(false);
-        showToast('Saved bucket/region');
+        showToast(t('envSync.config.bucketRegionSaved'));
       }
     } finally {
       setSavingBucket(false);
@@ -578,7 +592,11 @@ function RepoManager({
     try {
       if (await saveConfig({ ...config, targets: [...config.targets, ...additions] })) {
         closeScan();
-        showToast(`Added ${additions.length} target${additions.length === 1 ? '' : 's'}`);
+        showToast(
+          t(additions.length === 1 ? 'envSync.config.addedTarget' : 'envSync.config.addedTargets', {
+            count: additions.length
+          })
+        );
       }
     } finally {
       setAdding(false);
@@ -600,14 +618,21 @@ function RepoManager({
           ? await window.fleet.envSync.pull(repoDir, envFile, false)
           : await window.fleet.envSync.push(repoDir, envFile, false);
       if (res.ok) {
-        showToast(`${dir === 'pull' ? 'Pulled' : 'Pushed'} ${envFile}`);
+        showToast(
+          t(dir === 'pull' ? 'envSync.toast.pulled' : 'envSync.toast.pushed', { file: envFile })
+        );
         await reload();
       } else if ('conflict' in res && res.conflict) {
         window.dispatchEvent(
           new CustomEvent('env-sync:conflict', { detail: { repoDir, envFile } })
         );
       } else {
-        showToast(`Sync failed: ${'error' in res ? res.error : 'unknown'}`, { duration: 6000 });
+        showToast(
+          t('envSync.toast.syncFailed', {
+            error: 'error' in res ? res.error : t('envSync.toast.unknown')
+          }),
+          { duration: 6000 }
+        );
       }
     } finally {
       setBusyRow(null);
@@ -626,13 +651,13 @@ function RepoManager({
             <input
               value={bucketDraft}
               onChange={(e) => setBucketDraft(e.target.value)}
-              placeholder="Bucket"
+              placeholder={t('envSync.config.bucket')}
               className="w-36 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200"
             />
             <input
               value={regionDraft}
               onChange={(e) => setRegionDraft(e.target.value)}
-              placeholder="Region"
+              placeholder={t('envSync.config.region')}
               className="w-28 rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-neutral-200"
             />
             <button
@@ -641,13 +666,13 @@ function RepoManager({
               onClick={() => void saveBucketRegion()}
             >
               {savingBucket && <Loader2 size={12} className="animate-spin" />}
-              Save
+              {t('common.save')}
             </button>
             <button
               className="text-xs text-neutral-400 transition-colors hover:text-neutral-200 active:scale-[0.97]"
               onClick={() => setEditing(false)}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         ) : (
@@ -659,24 +684,26 @@ function RepoManager({
               className="text-xs text-blue-400 transition-colors hover:text-blue-300 active:scale-[0.97]"
               onClick={startEdit}
             >
-              Edit
+              {t('envSync.action.edit')}
             </button>
             {confirmBucket ? (
               <span className="flex items-center gap-2 text-xs">
-                <span className="text-neutral-400">Create in {config.region}?</span>
+                <span className="text-neutral-400">
+                  {t('envSync.config.createInRegion', { region: config.region })}
+                </span>
                 <button
                   disabled={creatingBucket}
                   className="inline-flex items-center gap-1.5 text-blue-400 transition-colors hover:text-blue-300 disabled:text-neutral-500 active:scale-[0.97] disabled:active:scale-100"
                   onClick={() => void createBucket()}
                 >
                   {creatingBucket && <Loader2 size={12} className="animate-spin" />}
-                  {creatingBucket ? 'Creating…' : 'Create'}
+                  {creatingBucket ? t('envSync.action.creating') : t('common.create')}
                 </button>
                 <button
                   className="text-neutral-400 transition-colors hover:text-neutral-200 active:scale-[0.97]"
                   onClick={() => setConfirmBucket(false)}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </span>
             ) : (
@@ -684,7 +711,7 @@ function RepoManager({
                 className="text-xs text-blue-400 transition-colors hover:text-blue-300 active:scale-[0.97]"
                 onClick={() => setConfirmBucket(true)}
               >
-                Create bucket
+                {t('envSync.action.createBucket')}
               </button>
             )}
           </div>
@@ -692,82 +719,84 @@ function RepoManager({
       </div>
 
       {statuses.length === 0 ? (
-        <p className="mt-5 text-xs text-neutral-500">
-          No env files tracked yet. Scan to add some below.
-        </p>
+        <p className="mt-5 text-xs text-neutral-500">{t('envSync.config.noTracked')}</p>
       ) : (
         <table className="mt-5 w-full border-separate border-spacing-y-1 text-sm">
           <tbody>
-            {statuses.map((t) => {
-              const action = primaryAction(t.state);
+            {statuses.map((target) => {
+              const action = primaryAction(target.state);
               return (
-                <Fragment key={t.envFile}>
+                <Fragment key={target.envFile}>
                   <tr>
-                    <td className="py-2 pr-3 text-neutral-200">{t.envFile}</td>
-                    <td className={`py-2 pr-3 ${STATE_TEXT[t.state]}`} title={t.error}>
-                      {STATUS_LABEL[t.state]}
+                    <td className="py-2 pr-3 text-neutral-200">{target.envFile}</td>
+                    <td className={`py-2 pr-3 ${STATE_TEXT[target.state]}`} title={target.error}>
+                      {t(STATUS_LABEL[target.state])}
                     </td>
                     <td className="py-2 text-right">
                       <div className="relative inline-flex items-center justify-end gap-2">
                         {action && (
                           <button
-                            disabled={busyRow === t.envFile}
+                            disabled={busyRow === target.envFile}
                             className="inline-flex items-center gap-1.5 rounded-md bg-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-100 transition active:scale-[0.94] hover:bg-neutral-600 disabled:active:scale-100"
-                            onClick={() => void doSync(t.envFile, action.dir)}
+                            onClick={() => void doSync(target.envFile, action.dir)}
                           >
-                            {busyRow === t.envFile && (
+                            {busyRow === target.envFile && (
                               <Loader2 size={12} className="animate-spin" />
                             )}
-                            {action.label}
+                            {t(action.label)}
                           </button>
                         )}
                         <button
-                          aria-label="More actions"
-                          disabled={busyRow === t.envFile}
+                          aria-label={t('envSync.action.moreActions')}
+                          disabled={busyRow === target.envFile}
                           className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200 disabled:opacity-50 active:scale-90 disabled:active:scale-100"
-                          onClick={() => setMenuFor(menuFor === t.envFile ? null : t.envFile)}
+                          onClick={() =>
+                            setMenuFor(menuFor === target.envFile ? null : target.envFile)
+                          }
                         >
                           <MoreHorizontal size={15} />
                         </button>
-                        {menuFor === t.envFile && (
+                        {menuFor === target.envFile && (
                           <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-md border border-neutral-700 bg-neutral-800 py-1.5 text-left shadow-xl">
                             <button
                               className="block w-full px-3 py-1.5 text-left text-xs text-neutral-200 transition-colors hover:bg-neutral-700 active:scale-[0.97]"
-                              onClick={() => void doSync(t.envFile, 'pull')}
+                              onClick={() => void doSync(target.envFile, 'pull')}
                             >
-                              Pull from remote
+                              {t('envSync.action.pullFromRemote')}
                             </button>
                             <button
                               className="block w-full px-3 py-1.5 text-left text-xs text-neutral-200 transition-colors hover:bg-neutral-700 active:scale-[0.97]"
-                              onClick={() => void doSync(t.envFile, 'push')}
+                              onClick={() => void doSync(target.envFile, 'push')}
                             >
-                              Push to remote
+                              {t('envSync.action.pushToRemote')}
                             </button>
                             <div className="my-1.5 border-t border-neutral-700" />
                             <div className="px-3 py-1 text-[11px] uppercase tracking-wide text-neutral-500">
-                              Delivery
+                              {t('envSync.delivery.heading')}
                             </div>
                             <button
                               className="block w-full px-3 py-1.5 text-left text-xs text-neutral-200 transition-colors hover:bg-neutral-700 active:scale-[0.97]"
-                              onClick={() => void changeDelivery(t.envFile, 'file')}
+                              onClick={() => void changeDelivery(target.envFile, 'file')}
                             >
-                              {t.delivery === 'file' ? '✓ ' : '  '}Write file
+                              {target.delivery === 'file' ? '✓ ' : '  '}
+                              {t('envSync.action.writeFile')}
                             </button>
                             <button
                               className="block w-full px-3 py-1.5 text-left text-xs text-neutral-200 transition-colors hover:bg-neutral-700 active:scale-[0.97]"
-                              onClick={() => void changeDelivery(t.envFile, 'inject')}
+                              onClick={() => void changeDelivery(target.envFile, 'inject')}
                             >
-                              {t.delivery === 'inject' ? '✓ ' : '  '}Inject into env
+                              {target.delivery === 'inject' ? '✓ ' : '  '}
+                              {t('envSync.action.injectIntoEnv')}
                             </button>
                           </div>
                         )}
                       </div>
                     </td>
                   </tr>
-                  {t.error && (
+                  {target.error && (
                     <tr>
                       <td colSpan={3} className="pb-2 text-xs leading-relaxed text-red-400">
-                        {t.error}
+                        {target.error}
                       </td>
                     </tr>
                   )}
@@ -786,12 +815,12 @@ function RepoManager({
             onClick={() => void runScan()}
           >
             {scanning && <Loader2 size={12} className="animate-spin" />}
-            {scanning ? 'Scanning…' : '+ Scan for env files'}
+            {scanning ? t('envSync.action.scanning') : `+ ${t('envSync.action.scanForFiles')}`}
           </button>
         ) : (
           <div className="rounded-lg border border-neutral-800 p-4">
             {candidates.length === 0 ? (
-              <p className="text-xs text-neutral-500">No new env files found.</p>
+              <p className="text-xs text-neutral-500">{t('envSync.config.noNewFiles')}</p>
             ) : (
               <div className="space-y-2">
                 {candidates.map((path) => (
@@ -813,13 +842,13 @@ function RepoManager({
                 onClick={() => void addSelected()}
               >
                 {adding && <Loader2 size={12} className="animate-spin" />}
-                Add selected
+                {t('envSync.action.addSelected')}
               </button>
               <button
                 className="text-xs text-neutral-400 transition-colors hover:text-neutral-200 active:scale-[0.97]"
                 onClick={closeScan}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </div>
@@ -841,6 +870,7 @@ export function EnvSyncModal({
   pathContext?: PathContext;
 }): React.JSX.Element | null {
   const showToast = useToastStore((s) => s.show);
+  const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [repoDir, setRepoDir] = useState<string | null>(null);
@@ -938,15 +968,23 @@ export function EnvSyncModal({
     try {
       await window.fleet.envSync.writeConfig(repoDir, next);
       await reload();
-      showToast('Created .fleet/env-sync.json');
+      showToast(t('envSync.config.created'));
     } catch (err) {
-      showToast(`Could not create config: ${err instanceof Error ? err.message : 'unknown'}`, {
-        duration: 6000
-      });
+      showToast(
+        t('envSync.config.createFailed', {
+          error: err instanceof Error ? err.message : t('envSync.toast.unknown')
+        }),
+        { duration: 6000 }
+      );
     }
   };
 
-  const globalSummary = `${secrets.globalPresent ? 'Passphrase set' : 'No passphrase'} · ${authSummary(secrets.globalAuth)}`;
+  const globalSummary = t(
+    secrets.globalPresent
+      ? 'envSync.globalSummary.passphraseSet'
+      : 'envSync.globalSummary.noPassphrase',
+    { auth: authSummary(t, secrets.globalAuth) }
+  );
 
   // Effective AWS auth for the active repo: a per-repo override wins, else global.
   const repoAuthOverride = config ? secrets.authRepoOverrides[config.id] : undefined;
@@ -967,7 +1005,7 @@ export function EnvSyncModal({
         className="flex max-h-[85vh] w-[600px] flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
-          <h2 className="text-base font-semibold text-neutral-100">Env Sync</h2>
+          <h2 className="text-base font-semibold text-neutral-100">{t('pane.envSync')}</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-white active:scale-90"
@@ -979,9 +1017,9 @@ export function EnvSyncModal({
         {!loading && (
           <div className="flex items-center gap-2 border-b border-neutral-800 bg-neutral-800/40 px-6 py-2.5 text-xs">
             <KeyRound size={13} className="shrink-0 text-neutral-500" />
-            <span className="text-neutral-400">Active AWS credentials:</span>
+            <span className="text-neutral-400">{t('envSync.auth.activeCredentials')}</span>
             <span className="truncate font-medium text-neutral-100">
-              {authSummary(effectiveAuth)}
+              {authSummary(t, effectiveAuth)}
             </span>
             <span
               className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
@@ -990,7 +1028,7 @@ export function EnvSyncModal({
                   : 'bg-neutral-700/50 text-neutral-400'
               }`}
             >
-              {authIsOverride ? 'repo override' : 'global'}
+              {t(authIsOverride ? 'envSync.auth.repoOverride' : 'envSync.auth.global')}
             </span>
           </div>
         )}
@@ -998,24 +1036,19 @@ export function EnvSyncModal({
         <div className="space-y-5 overflow-y-auto p-6">
           {!encAvailable && (
             <div className="rounded-lg border border-red-700 bg-red-950/40 p-4 text-sm text-red-300">
-              OS keychain encryption is unavailable. Passphrases and static AWS keys cannot be
-              stored securely on this machine.
+              {t('envSync.warning.encryptionUnavailable')}
             </div>
           )}
           {encAvailable && encBackend === 'basic_text' && (
             <div className="rounded-lg border border-amber-700 bg-amber-950/40 p-4 text-sm text-amber-300">
-              This Linux session uses the <code>basic_text</code> keychain backend — stored secrets
-              are NOT meaningfully encrypted. Configure libsecret (gnome-keyring) or kwallet for
-              real protection.
+              {t('envSync.warning.basicTextBackend', { backend: 'basic_text' })}
             </div>
           )}
 
           {loading ? (
-            <p className="text-sm text-neutral-500">Loading…</p>
+            <p className="text-sm text-neutral-500">{t('common.loading')}</p>
           ) : !repoDir ? (
-            <p className="text-sm text-neutral-500">
-              No active terminal directory — focus a pane to manage its env sync.
-            </p>
+            <p className="text-sm text-neutral-500">{t('envSync.modal.noActiveTerminal')}</p>
           ) : (
             <>
               {/* Primary: this repo. */}
@@ -1031,20 +1064,20 @@ export function EnvSyncModal({
               )}
 
               {/* Secondary: shared account settings, collapsed with a state summary. */}
-              <Disclosure title="Global account" summary={globalSummary}>
-                <Field label="Encryption passphrase">
+              <Disclosure title={t('envSync.modal.globalAccount')} summary={globalSummary}>
+                <Field label={t('envSync.passphrase.label')}>
                   <PassphraseControl
                     present={secrets.globalPresent}
                     encAvailable={encAvailable}
-                    clearLabel="Clear"
+                    clearLabel="envSync.action.clear"
                     onChanged={onSecretsChanged}
                   />
                 </Field>
-                <Field label="AWS authentication">
+                <Field label={t('envSync.auth.authentication')}>
                   <AuthControl
                     redacted={secrets.globalAuth}
                     encAvailable={encAvailable}
-                    resetLabel="Reset to default chain"
+                    resetLabel="envSync.action.resetDefaultChain"
                     onChanged={onSecretsChanged}
                   />
                 </Field>
@@ -1052,17 +1085,17 @@ export function EnvSyncModal({
 
               {/* Advanced: per-repo overrides, only meaningful once a config exists. */}
               {config && (
-                <Disclosure title="Advanced — this repo overrides">
-                  <Field label="Passphrase override">
+                <Disclosure title={t('envSync.modal.advancedOverrides')}>
+                  <Field label={t('envSync.passphrase.override')}>
                     <PassphraseControl
                       id={config.id}
                       present={Boolean(secrets.repoOverrides[config.id]?.present)}
                       encAvailable={encAvailable}
-                      clearLabel="Use global"
+                      clearLabel="envSync.action.useGlobal"
                       onChanged={onSecretsChanged}
                     />
                   </Field>
-                  <Field label="AWS auth override">
+                  <Field label={t('envSync.auth.override')}>
                     <RepoAuthOverride
                       id={config.id}
                       override={secrets.authRepoOverrides[config.id]}

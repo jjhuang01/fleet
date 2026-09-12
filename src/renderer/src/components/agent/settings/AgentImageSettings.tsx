@@ -4,6 +4,7 @@ import {
   type AgentImageConfig,
   type AgentImageModel
 } from '../../../../../shared/agent-types';
+import { useTranslation } from '../../../lib/i18n';
 import { ModelPicker } from './ModelSelect';
 import { OptionPills, RoleCard } from './controls';
 
@@ -32,6 +33,7 @@ export function AgentImageSettings({
   config: AgentImageConfig;
   onChange: (patch: Partial<AgentImageConfig>) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const selected = models.find((m) => m.id === config.model) ?? null;
 
   /**
@@ -46,8 +48,8 @@ export function AgentImageSettings({
 
   return (
     <RoleCard
-      title="Image agent"
-      description="Generates and edits images on request. With none selected, the agent is not offered the tool at all."
+      title={t('agentSettings.image.title')}
+      description={t('agentSettings.image.description')}
       icon={<ImagePlus size={16} />}
     >
       <ModelPicker
@@ -56,21 +58,19 @@ export function AgentImageSettings({
         onChange={chooseModel}
         renderMeta={(model) => <ImageModelMeta model={model} />}
         allowNone
-        noneLabel="None - image generation off"
+        noneLabel={t('agentSettings.image.none')}
       />
 
       {config.model !== null && selected === null && (
-        <p className="text-xs text-amber-400">
-          The images endpoint does not list this model. Pick another, or refresh the catalog below.
-        </p>
+        <p className="text-xs text-amber-400">{t('agentSettings.image.missingModel')}</p>
       )}
 
       {selected !== null && (
         <>
           {selected.resolutions.length > 0 && (
             <OptionPills
-              label="Resolution"
-              hint="How large the image comes back. Bigger costs more and takes longer."
+              label={t('agentSettings.image.resolution.label')}
+              hint={t('agentSettings.image.resolution.hint')}
               options={selected.resolutions}
               value={config.resolution}
               onChange={(resolution) => onChange({ resolution })}
@@ -79,8 +79,8 @@ export function AgentImageSettings({
 
           {selected.qualities.length > 0 && (
             <OptionPills
-              label="Quality"
-              hint="How much work the model puts into the render."
+              label={t('agentSettings.image.quality.label')}
+              hint={t('agentSettings.image.quality.hint')}
               options={selected.qualities}
               value={config.quality}
               onChange={(quality) => onChange({ quality })}
@@ -108,16 +108,24 @@ export function AgentImageSettings({
  * price lives behind the link instead.
  */
 function ImageModelMeta({ model }: { model: AgentImageModel }): React.JSX.Element {
-  const facts = [
+  const { t } = useTranslation();
+  const facts: Array<string | null> = [
     model.resolutions.length > 0
-      ? `up to ${model.resolutions[model.resolutions.length - 1]}`
+      ? t('agentSettings.image.meta.upTo', {
+          resolution: model.resolutions[model.resolutions.length - 1]
+        })
       : null,
     model.maxReferences > 0
-      ? `${model.maxReferences} reference${model.maxReferences === 1 ? '' : 's'}`
+      ? t(
+          model.maxReferences === 1
+            ? 'agentSettings.image.meta.reference'
+            : 'agentSettings.image.meta.references',
+          { count: model.maxReferences }
+        )
       : null,
-    model.qualities.length > 0 ? 'quality' : null,
-    model.seed ? 'seed' : null,
-    model.streams ? 'streams' : null
+    model.qualities.length > 0 ? t('agentSettings.image.meta.quality') : null,
+    model.seed ? t('agentSettings.image.meta.seed') : null,
+    model.streams ? t('agentSettings.image.meta.streams') : null
   ].filter((fact) => fact !== null);
 
   return (
@@ -131,13 +139,15 @@ function ImageModelMeta({ model }: { model: AgentImageModel }): React.JSX.Elemen
 
 /** Where the pricing and the sample images are, since neither is shown here. */
 function ModelLink({ id }: { id: string }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <button
       type="button"
       onClick={() => void window.fleet.shell.openExternal(`https://openrouter.ai/${id}`)}
       className="flex items-center gap-1 text-xs text-fleet-text-muted transition-colors hover:text-fleet-text-secondary focus-ring"
     >
-      Pricing and samples on OpenRouter
+      {t('agentSettings.image.pricing')}
       <ExternalLink size={11} />
     </button>
   );
@@ -159,15 +169,15 @@ function SeedField({
   value: number | null;
   onChange: (next: number | null) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="min-w-0">
         <label htmlFor="agent-image-seed" className="text-sm text-fleet-text-secondary">
-          Seed
+          {t('agentSettings.image.seed.label')}
         </label>
-        <p className="mt-0.5 text-xs text-fleet-text-muted">
-          Fix it to get the same picture from the same prompt. Empty means a new one each time.
-        </p>
+        <p className="mt-0.5 text-xs text-fleet-text-muted">{t('agentSettings.image.seed.hint')}</p>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
         <input
@@ -176,7 +186,7 @@ function SeedField({
           inputMode="numeric"
           min={0}
           value={value ?? ''}
-          placeholder="Random"
+          placeholder={t('agentSettings.image.seed.placeholder')}
           onChange={(e) => {
             const next = e.target.value.trim();
             // An unparseable or negative entry is treated as no seed rather
@@ -190,8 +200,8 @@ function SeedField({
           <button
             type="button"
             onClick={() => onChange(null)}
-            title="Back to a new seed each time"
-            aria-label="Reset seed"
+            title={t('agentSettings.image.seed.resetTitle')}
+            aria-label={t('agentSettings.image.seed.resetAria')}
             className="rounded p-0.5 text-fleet-text-subtle transition-colors hover:text-fleet-text-secondary focus-ring"
           >
             <RotateCcw size={12} />

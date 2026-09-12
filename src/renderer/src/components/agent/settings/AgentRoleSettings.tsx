@@ -5,10 +5,11 @@ import {
   type AgentCatalogModel,
   type AgentModelConfig
 } from '../../../../../shared/agent-types';
+import { useTranslation } from '../../../lib/i18n';
 import { Toggle } from './Toggle';
 import { ModelSelect } from './ModelSelect';
 import { ParamSlider, OptionPills, RoleCard } from './controls';
-import { formatTokens, formatCost } from './format';
+import { formatTokens } from './format';
 
 /** Sane ceiling for models whose catalog entry omits an output limit. */
 const FALLBACK_OUTPUT_LIMIT = 32_000;
@@ -37,6 +38,7 @@ export function AgentRoleSettings({
   allowNone?: boolean;
   noneLabel?: string;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const model = models.find((m) => m.id === config.model) ?? null;
   const outputLimit = model?.outputLimit ?? FALLBACK_OUTPUT_LIMIT;
   const effort = model?.reasoning.find((r) => r.type === 'effort');
@@ -73,11 +75,11 @@ export function AgentRoleSettings({
           <ModelFacts model={model} />
 
           <ParamSlider
-            label="Max output tokens"
-            hint="Left alone, a reply may run to the model's full output limit."
+            label={t('agentSettings.role.maxOutput.label')}
+            hint={t('agentSettings.role.maxOutput.hint')}
             value={config.maxTokens === null ? null : Math.min(config.maxTokens, outputLimit)}
             defaultValue={outputLimit}
-            defaultNote="model max"
+            defaultNote={t('agentSettings.role.maxOutput.default')}
             onChange={(v) => onChange({ maxTokens: v })}
             min={1024}
             max={outputLimit}
@@ -87,11 +89,15 @@ export function AgentRoleSettings({
 
           {model.supportsTemperature && (
             <ParamSlider
-              label="Temperature"
-              hint="Lower is more deterministic. Coding usually wants the low end."
+              label={t('agentSettings.role.temperature.label')}
+              hint={t('agentSettings.role.temperature.hint')}
               value={config.temperature}
               defaultValue={model.defaultTemperature ?? FALLBACK_TEMPERATURE}
-              defaultNote={model.defaultTemperature === null ? 'provider default' : 'model default'}
+              defaultNote={
+                model.defaultTemperature === null
+                  ? t('agentSettings.role.temperature.providerDefault')
+                  : t('agentSettings.role.temperature.modelDefault')
+              }
               onChange={(v) => onChange({ temperature: v })}
               min={0}
               max={2}
@@ -103,26 +109,28 @@ export function AgentRoleSettings({
           {toggle && (
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <span className="text-sm text-fleet-text-secondary">Reasoning</span>
+                <span className="text-sm text-fleet-text-secondary">
+                  {t('agentSettings.role.reasoning.label')}
+                </span>
                 <p className="mt-0.5 text-xs text-fleet-text-muted">
-                  Let the model think before it answers.
+                  {t('agentSettings.role.reasoning.hint')}
                 </p>
               </div>
               <Toggle
                 checked={reasoningOn}
                 onChange={(next) => onChange({ reasoningEnabled: next })}
-                ariaLabel="Reasoning"
+                ariaLabel={t('agentSettings.role.reasoning.label')}
               />
             </div>
           )}
 
           {effort && (
             <OptionPills
-              label="Reasoning effort"
+              label={t('agentSettings.role.effort.label')}
               hint={
                 defaultEffort === null
-                  ? 'How much thinking the model budgets per turn.'
-                  : `How much thinking the model budgets per turn. Default is ${defaultEffort}.`
+                  ? t('agentSettings.role.effort.hint')
+                  : t('agentSettings.role.effort.hintDefault', { effort: defaultEffort })
               }
               options={effort.values}
               value={config.reasoningEffort}
@@ -132,11 +140,11 @@ export function AgentRoleSettings({
 
           {budget && reasoningOn && (
             <ParamSlider
-              label="Thinking budget"
-              hint="Tokens the model may spend reasoning before it replies."
+              label={t('agentSettings.role.thinkingBudget.label')}
+              hint={t('agentSettings.role.thinkingBudget.hint')}
               value={config.reasoningTokens}
               defaultValue={budgetDefault}
-              defaultNote="medium effort"
+              defaultNote={t('agentSettings.role.thinkingBudget.default')}
               onChange={(v) => onChange({ reasoningTokens: v })}
               min={budget.min}
               max={budget.max}
@@ -152,20 +160,33 @@ export function AgentRoleSettings({
 
 /** The catalog's own read-only summary of the selected model. */
 function ModelFacts({ model }: { model: AgentCatalogModel }): React.JSX.Element {
-  const facts = [
-    model.contextLimit !== null ? `${formatTokens(model.contextLimit)} context` : null,
-    model.outputLimit !== null ? `${formatTokens(model.outputLimit)} max output` : null,
+  const { t } = useTranslation();
+  const unitPrice = (n: number): string => (n < 1 ? `$${n.toFixed(2)}` : `$${n}`);
+  const facts: Array<React.ReactNode | null> = [
+    model.contextLimit !== null
+      ? t('agentSettings.role.fact.context', { tokens: formatTokens(model.contextLimit) })
+      : null,
+    model.outputLimit !== null
+      ? t('agentSettings.role.fact.maxOutput', { tokens: formatTokens(model.outputLimit) })
+      : null,
     // A model on the user's own hardware bills nothing, and "$0.00 / $0.00 per
     // 1M" reads as a price that failed to load rather than as an absence of one.
-    model.cost && model.local === undefined ? formatCost(model.cost) : null,
-    model.supportsTools ? 'Tool calling' : 'No tool calling',
-    model.releaseDate ? `Released ${model.releaseDate}` : null
-  ].filter((f): f is string => f !== null);
+    model.cost && model.local === undefined
+      ? t('agentSettings.model.cost', {
+          input: unitPrice(model.cost.input),
+          output: unitPrice(model.cost.output)
+        })
+      : null,
+    model.supportsTools
+      ? t('agentSettings.role.fact.toolCalling')
+      : t('agentSettings.role.fact.noToolCalling'),
+    model.releaseDate ? t('agentSettings.role.fact.released', { date: model.releaseDate }) : null
+  ].filter((fact) => fact !== null);
 
   return (
     <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-fleet-text-muted">
-      {facts.map((fact) => (
-        <span key={fact}>{fact}</span>
+      {facts.map((fact, index) => (
+        <span key={index}>{fact}</span>
       ))}
     </div>
   );

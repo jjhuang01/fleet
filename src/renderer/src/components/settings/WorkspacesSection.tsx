@@ -6,6 +6,8 @@ import { useWorkspaceListStore } from '../../store/workspace-list-store';
 import { useToastStore } from '../../store/toast-store';
 import { createConfigFolderChoice } from '../../lib/config-folder-choice';
 import type { ConfigFolderChoice } from '../../lib/config-folder-choice';
+import { useTranslation } from '../../lib/i18n';
+import type { MessageKey } from '../../../../shared/i18n';
 import { resolveClaudeConfig } from '../../../../shared/claude-config';
 import type { ResolvedClaudeConfig } from '../../../../shared/claude-config';
 import { FolderHooks } from './FolderHooks';
@@ -18,12 +20,12 @@ import type { SettingsSectionProps } from './SettingsTab';
  * the *active* workspace's terminals, which is the wrong workspace whenever the
  * row being edited is not the active one.
  */
-const APPLIES_TO_NEW_TERMINALS =
-  'Folder changes apply to new terminals. Existing terminals keep their current configuration.';
+const APPLIES_TO_NEW_TERMINALS: MessageKey = 'settings.workspaces.appliesToNewTerminals';
 
 export function WorkspacesSection({
   focusWorkspaceId
 }: SettingsSectionProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const { settings } = useSettingsStore();
   const loadSettings = useSettingsStore((s) => s.loadSettings);
   const activeWorkspaceId = useWorkspaceStore((s) => s.workspace.id);
@@ -45,7 +47,7 @@ export function WorkspacesSection({
   // Undefined means the user has not chosen; the saved state decides.
   const [customMode, setCustomMode] = useState<Record<string, boolean | undefined>>({});
   const announceChange = (): void => {
-    showToast(APPLIES_TO_NEW_TERMINALS, { duration: 6000 });
+    showToast(t(APPLIES_TO_NEW_TERMINALS), { duration: 6000 });
   };
 
   const rowRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -58,7 +60,9 @@ export function WorkspacesSection({
     setWorkspaceOverride: window.fleet.settings.setWorkspaceOverride,
     reload: loadSettings,
     announce: announceChange,
-    onError: showToast
+    // A folder that could not be created is a sentence, so it is assembled
+    // here where the catalogue is reachable rather than in the helper.
+    onError: ({ dir, detail }) => showToast(t('settings.workspaces.createFailed', { dir, detail }))
   });
 
   useEffect(() => {
@@ -160,15 +164,13 @@ export function WorkspacesSection({
 
   return (
     <div className="space-y-6">
-      <p className="text-xs text-fleet-text-subtle">
-        Choose the Claude Code config folder used by new terminals in each workspace.
-      </p>
+      <p className="text-xs text-fleet-text-subtle">{t('settings.workspaces.description')}</p>
 
       {/* Default folder - inherited by every workspace without its own choice */}
       <div className="space-y-3">
         <div>
           <label className="text-sm text-fleet-text-secondary block mb-1">
-            Default Claude config folder
+            {t('settings.workspaces.defaultFolder')}
           </label>
           <div className="flex gap-2">
             <input
@@ -188,7 +190,7 @@ export function WorkspacesSection({
               className="flex items-center gap-1.5 px-2 py-1 text-sm bg-fleet-surface-3 hover:bg-fleet-surface-3 rounded border border-fleet-border-strong text-fleet-text-secondary transition active:scale-[0.97] shrink-0"
             >
               <FolderOpen size={13} />
-              Browse
+              {t('settings.workspaces.browse')}
             </button>
           </div>
           {/* Only while the box is empty: once a folder is set, saying what
@@ -196,30 +198,32 @@ export function WorkspacesSection({
               in, and the resolved path is already shown beside the hooks. */}
           {!copilot.claudeConfigDir && (
             <p className="text-xs text-fleet-text-subtle mt-1 break-all">
-              Empty means Claude Code&apos;s own folder ({defaultConfig.path}).
+              {t('settings.workspaces.emptyDefault', { path: defaultConfig.path })}
             </p>
           )}
         </div>
         <FolderHooks folder={defaultConfig.path} sharedWith={sharersOf(defaultConfig.path)} />
       </div>
 
-      <p className="text-xs text-fleet-text-subtle">{APPLIES_TO_NEW_TERMINALS}</p>
+      <p className="text-xs text-fleet-text-subtle">{t(APPLIES_TO_NEW_TERMINALS)}</p>
 
       {/* Per-workspace assignments */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm text-fleet-text-secondary">Workspace config folders</label>
+          <label className="text-sm text-fleet-text-secondary">
+            {t('settings.workspaces.folders')}
+          </label>
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1 px-2 py-1 text-xs bg-fleet-surface-3 hover:bg-fleet-surface-3 rounded border border-fleet-border-strong text-fleet-text-secondary transition active:scale-[0.97]"
           >
             <Plus size={12} />
-            Add workspace
+            {t('settings.workspaces.add')}
           </button>
         </div>
 
         {assignments.length === 0 ? (
-          <p className="text-xs text-fleet-text-subtle italic">No workspaces configured.</p>
+          <p className="text-xs text-fleet-text-subtle italic">{t('settings.workspaces.none')}</p>
         ) : (
           <div className="space-y-1">
             {assignments.map(({ ws, config }) => {
@@ -254,7 +258,7 @@ export function WorkspacesSection({
                     <span className="truncate shrink-0 max-w-[40%]">{ws.label}</span>
                     {ws.id === activeWorkspaceId && (
                       <span className="text-[10px] uppercase tracking-wider text-fleet-text-subtle border border-fleet-border-strong rounded px-1 py-px shrink-0">
-                        Active
+                        {t('settings.workspaces.active')}
                       </span>
                     )}
                     <span className="text-[10px] uppercase tracking-wider text-fleet-text-subtle border border-fleet-border-strong rounded px-1 py-px shrink-0">
@@ -262,7 +266,9 @@ export function WorkspacesSection({
                           workspace's folder came from, and "Default" read as
                           the name of a folder rather than as the absence of a
                           choice. */}
-                      {isCustom ? 'Custom' : 'Inherited'}
+                      {isCustom
+                        ? t('settings.workspaces.sourceCustom')
+                        : t('settings.workspaces.sourceInherited')}
                     </span>
                     {/* The resolved path in the collapsed row is the point of
                         this list: every assignment is readable without opening
@@ -290,7 +296,7 @@ export function WorkspacesSection({
                             className="fleet-accent-input mt-0.5"
                           />
                           <span className="min-w-0">
-                            Use default
+                            {t('settings.workspaces.useDefault')}
                             <span className="text-fleet-text-subtle block break-all">
                               {defaultConfig.path}
                             </span>
@@ -303,7 +309,7 @@ export function WorkspacesSection({
                             onChange={() => setCustomMode((prev) => ({ ...prev, [ws.id]: true }))}
                             className="fleet-accent-input"
                           />
-                          Use custom folder
+                          {t('settings.workspaces.useCustomFolder')}
                         </label>
                         {showCustom && (
                           <div className="flex gap-2 pt-1">
@@ -321,7 +327,7 @@ export function WorkspacesSection({
                                   clearMode(ws.id);
                                 }
                               }}
-                              placeholder="Pick a Claude config folder"
+                              placeholder={t('settings.workspaces.customPlaceholder')}
                               className="flex-1 min-w-0 bg-fleet-surface-2 text-xs text-fleet-text rounded px-2 py-1 border border-fleet-border-strong placeholder:text-fleet-text-subtle focus-ring"
                             />
                             <button
@@ -329,7 +335,7 @@ export function WorkspacesSection({
                               className="flex items-center gap-1.5 px-2 py-1 text-xs bg-fleet-surface-3 hover:bg-fleet-surface-3 rounded border border-fleet-border-strong text-fleet-text-secondary transition active:scale-[0.97] shrink-0"
                             >
                               <FolderOpen size={12} />
-                              Browse
+                              {t('settings.workspaces.browse')}
                             </button>
                           </div>
                         )}
@@ -352,7 +358,7 @@ export function WorkspacesSection({
           // change which workspace is active, which tab is open, or which
           // terminals are running.
           setExpandedWs(ws.id);
-          showToast(`Workspace "${ws.label}" created`);
+          showToast(t('settings.workspaces.created', { label: ws.label }));
         }}
       />
     </div>

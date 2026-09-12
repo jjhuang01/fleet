@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useClaudeConfigStore } from '../../store/claude-config-store';
 import { parseSettings } from '../../lib/claude-json-edit';
-import { summarizeChanges, changedKeys, formatList } from '../../lib/claude-change-summary';
+import { summarizeChanges, changedKeys } from '../../lib/claude-change-summary';
+import type { ChangeSummary } from '../../lib/claude-change-summary';
 import type { ClaudeConfigScope, ClaudeFileKind } from '../../../../shared/claude-config';
 import type { ClaudeWriteRefusal } from '../../../../shared/claude-config-types';
+import type { Locale, MessageKey } from '../../../../shared/i18n';
+import { useTranslation, type Translator } from '../../lib/i18n';
 import type { SettingsSectionProps } from './SettingsTab';
 
 /**
@@ -20,14 +23,14 @@ import type { SettingsSectionProps } from './SettingsTab';
  * "could not save" would hide which of them happened.
  */
 
-const REFUSAL_TEXT: Record<ClaudeWriteRefusal, string> = {
-  modified: 'This file changed on disk after Fleet loaded it.',
-  deleted: 'This file was deleted after Fleet loaded it.',
-  created: 'This file was created by something else after Fleet loaded it.',
-  missingDir: 'Fleet could not create the folder for this file.',
-  invalidJson: 'Fleet will not write this text because it is not valid JSON.',
-  refused: 'Fleet refused this path. It is not one of the files this page may edit.',
-  failed: 'Writing the file failed.'
+const REFUSAL_TEXT: Record<ClaudeWriteRefusal, MessageKey> = {
+  modified: 'settings.claudeConfig.save.modified',
+  deleted: 'settings.claudeConfig.save.deleted',
+  created: 'settings.claudeConfig.save.created',
+  missingDir: 'settings.claudeConfig.save.missingDir',
+  invalidJson: 'settings.claudeConfig.save.invalidJson',
+  refused: 'settings.claudeConfig.save.refused',
+  failed: 'settings.claudeConfig.save.failed'
 };
 
 /** Which refusals a reload or an overwrite can actually resolve. */
@@ -39,10 +42,40 @@ const RECOVERABLE = new Set<ClaudeWriteRefusal>(['modified', 'deleted', 'created
  * Only the shared project file leaves the machine, so only that one gets a
  * sentence. Saying it on all three would train the user to skip it.
  */
-const BLAST_RADIUS: Partial<Record<ClaudeConfigScope, string>> = {
-  project:
-    'This file is committed to git, so everyone who clones the repository gets these settings.'
+const BLAST_RADIUS: Partial<Record<ClaudeConfigScope, MessageKey>> = {
+  project: 'settings.claudeConfig.save.blastRadius.project'
 };
+
+const SUMMARY_SECTION_KEYS: Record<string, MessageKey> = {
+  'Model and behaviour': 'settings.claudeConfig.form.group.modelAndBehaviour',
+  Permissions: 'settings.claudeConfig.form.group.permissions',
+  'Environment and plugins': 'settings.claudeConfig.form.group.environmentAndPlugins',
+  Hooks: 'settings.claudeConfig.hooks.title',
+  'Other settings': 'settings.claudeConfig.save.section.other'
+};
+
+function joinKeys(keys: string[], locale: Locale): string {
+  if (keys.length <= 1) return keys[0] ?? '';
+  if (locale === 'zh-Hans') return keys.join('、');
+  return `${keys.slice(0, -1).join(', ')} and ${keys[keys.length - 1]}`;
+}
+
+function summaryLabel(summary: Pick<ChangeSummary, 'count' | 'sections'>, t: Translator): string {
+  if (summary.count === 0) return t('settings.claudeConfig.save.unsavedChanges');
+  if (summary.sections.length === 0) {
+    return summary.count === 1
+      ? t('settings.claudeConfig.save.unsavedChange')
+      : t('settings.claudeConfig.save.unsavedChangesCount', { count: summary.count });
+  }
+  const sections = summary.sections
+    .map((section) =>
+      t(SUMMARY_SECTION_KEYS[section] ?? 'settings.claudeConfig.save.section.other')
+    )
+    .join(' · ');
+  return summary.count === 1
+    ? t('settings.claudeConfig.save.unsavedChangeIn', { sections })
+    : t('settings.claudeConfig.save.unsavedChangesIn', { count: summary.count, sections });
+}
 
 function isRefusal(reason: string): reason is ClaudeWriteRefusal {
   return reason in REFUSAL_TEXT;
@@ -75,6 +108,7 @@ export function ClaudeConfigSaveBar({
   dirty: boolean;
   onNavigate?: SettingsSectionProps['onNavigate'];
 }): React.JSX.Element | null {
+  const { t, locale } = useTranslation();
   const doc = useClaudeConfigStore((s) => s.documents[path]);
   const save = useClaudeConfigStore((s) => s.save);
   const reload = useClaudeConfigStore((s) => s.reload);
@@ -149,7 +183,8 @@ export function ClaudeConfigSaveBar({
   const summary =
     kind === 'settings'
       ? summarizeChanges(doc?.savedText ?? '{}', doc?.text ?? '{}')
-      : { count: 0, sections: [], label: 'Unsaved changes' };
+      : { count: 0, sections: [] };
+  const blastRadius = BLAST_RADIUS[scope];
 
   const showPill = dirty || saved;
   const showAnything = showPill || staleOnDisk || conflict !== undefined || doc?.hooksDiscarded;
@@ -161,9 +196,9 @@ export function ClaudeConfigSaveBar({
     <div className="pointer-events-none sticky bottom-4 z-10 flex flex-col items-center gap-2">
       {staleOnDisk ? (
         <div className={WARN_NOTICE}>
-          This file changed on disk while you were editing. Your edits are kept.{' '}
+          {t('settings.claudeConfig.save.staleOnDisk')}{' '}
           <button onClick={() => void reload(scope, kind, path)} className={LINK_CLS}>
-            Load the disk version
+            {t('settings.claudeConfig.save.loadDiskVersion')}
           </button>
         </div>
       ) : null}
@@ -171,11 +206,14 @@ export function ClaudeConfigSaveBar({
       {conflict ? (
         <div className={ERROR_NOTICE}>
           <div className="space-y-2">
-            <div>{reason ? REFUSAL_TEXT[reason] : 'Saving failed.'}</div>
+            <div>
+              {reason ? t(REFUSAL_TEXT[reason]) : t('settings.claudeConfig.save.savingFailed')}
+            </div>
             {theirKeys.length > 0 ? (
               <div className="text-[11px] text-red-200/90">
-                Different from your version:{' '}
-                <span className="font-mono">{formatList(theirKeys)}</span>
+                {t('settings.claudeConfig.save.differentKeys', {
+                  keys: joinKeys(theirKeys, locale)
+                })}
               </div>
             ) : null}
             {conflict.message ? (
@@ -189,15 +227,15 @@ export function ClaudeConfigSaveBar({
                 onClick={() => dismissNotice(path)}
                 className="rounded border border-red-400/50 px-2 py-0.5 transition active:scale-[0.97]"
               >
-                Keep editing
+                {t('settings.claudeConfig.save.keepEditing')}
               </button>
               {recoverable ? (
                 <div className="flex items-center gap-3">
                   <button onClick={() => void reload(scope, kind, path)} className={LINK_CLS}>
-                    Discard my edits
+                    {t('settings.claudeConfig.save.discardEdits')}
                   </button>
                   <button onClick={() => runSave({ overwrite: true })} className={LINK_CLS}>
-                    Overwrite the file
+                    {t('settings.claudeConfig.save.overwriteFile')}
                   </button>
                 </div>
               ) : null}
@@ -208,19 +246,18 @@ export function ClaudeConfigSaveBar({
 
       {doc?.hooksDiscarded ? (
         <div className={WARN_NOTICE}>
-          Your change to <span className="font-mono">hooks</span> was not written. Fleet keeps the
-          hooks block that is on disk.{' '}
+          {t('settings.claudeConfig.save.hooksDiscarded', { key: 'hooks' })}{' '}
           <button onClick={() => onNavigate?.('copilot')} className={LINK_CLS}>
-            Manage hooks on the Copilot page
+            {t('settings.claudeConfig.save.manageHooks')}
           </button>
         </div>
       ) : null}
 
       {showPill ? (
         <>
-          {BLAST_RADIUS[scope] ? (
+          {blastRadius ? (
             <p className="pointer-events-auto rounded bg-fleet-surface/90 px-2 py-0.5 text-[11px] text-fleet-text-subtle">
-              {BLAST_RADIUS[scope]}
+              {t(blastRadius)}
             </p>
           ) : null}
 
@@ -235,7 +272,11 @@ export function ClaudeConfigSaveBar({
               }`}
             />
             <span className="text-xs text-fleet-text">
-              {!dirty ? 'Saved' : unparseable ? 'Fix the JSON before saving' : summary.label}
+              {!dirty
+                ? t('settings.claudeConfig.save.saved')
+                : unparseable
+                  ? t('settings.claudeConfig.save.fixJson')
+                  : summaryLabel(summary, t)}
             </span>
             {dirty ? (
               <>
@@ -243,14 +284,14 @@ export function ClaudeConfigSaveBar({
                   onClick={() => edit(path, doc?.savedText ?? '')}
                   className="text-xs text-fleet-text-secondary transition hover:text-fleet-text active:scale-[0.97]"
                 >
-                  Reset
+                  {t('common.reset')}
                 </button>
                 <button
                   disabled={!canSave}
                   onClick={() => runSave()}
                   className="fleet-accent-bg fleet-accent-bg-hover rounded-full px-3 py-1.5 text-xs text-white transition active:scale-[0.97] disabled:opacity-40"
                 >
-                  Save
+                  {t('common.save')}
                 </button>
               </>
             ) : null}

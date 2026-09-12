@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { McpServerConfig } from '../../../../../../shared/agent-mcp';
+import type { MessageKey } from '../../../../../../shared/i18n';
 
 /**
  * Turning what someone typed into a server config, and back.
@@ -88,7 +89,7 @@ const Wrapped = z.object({ mcpServers: PastedServers });
 
 export type PasteResult =
   | { ok: true; servers: Record<string, McpServerConfig> }
-  | { ok: false; error: string };
+  | { ok: false; error: MessageKey };
 
 /**
  * Read a pasted blob as a set of servers.
@@ -99,13 +100,13 @@ export type PasteResult =
  */
 export function parsePasted(text: string): PasteResult {
   const trimmed = text.trim();
-  if (trimmed === '') return { ok: false, error: 'Nothing to read yet.' };
+  if (trimmed === '') return { ok: false, error: 'agentSettings.mcp.add.pasteErrorEmpty' };
 
   let json: unknown;
   try {
     json = JSON.parse(trimmed);
   } catch {
-    return { ok: false, error: 'That is not valid JSON.' };
+    return { ok: false, error: 'agentSettings.mcp.add.pasteErrorInvalidJson' };
   }
 
   // The wrapped form is tried first because it also satisfies the bare one -
@@ -118,7 +119,7 @@ export function parsePasted(text: string): PasteResult {
       ? bare.data
       : null;
   if (entries === null) {
-    return { ok: false, error: 'That JSON does not describe any MCP servers.' };
+    return { ok: false, error: 'agentSettings.mcp.add.pasteErrorNoServers' };
   }
 
   const servers: Record<string, McpServerConfig> = {};
@@ -136,7 +137,7 @@ export function parsePasted(text: string): PasteResult {
   }
 
   if (Object.keys(servers).length === 0) {
-    return { ok: false, error: 'No server in there had a command or a URL.' };
+    return { ok: false, error: 'agentSettings.mcp.add.pasteErrorUnusableServer' };
   }
   return { ok: true, servers };
 }

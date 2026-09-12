@@ -1,22 +1,26 @@
 import { useSettingsStore } from '../../store/settings-store';
+import { useTranslation } from '../../lib/i18n';
 
 export function AnnotateSection(): React.JSX.Element {
+  const { t } = useTranslation();
   const { settings, updateSettings } = useSettingsStore();
   const retentionDays = settings?.annotate.retentionDays ?? 3;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-medium text-fleet-text mb-1">Annotations</h2>
-        <p className="text-sm text-fleet-text-muted">
-          Configure how webpage annotations are stored and cleaned up.
-        </p>
+        <h2 className="text-lg font-medium text-fleet-text mb-1">{t('settings.annotate.title')}</h2>
+        <p className="text-sm text-fleet-text-muted">{t('settings.annotate.body')}</p>
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-fleet-text-secondary">Storage</h3>
+        <h3 className="text-sm font-medium text-fleet-text-secondary">
+          {t('settings.annotate.storage')}
+        </h3>
         <div className="flex items-center justify-between">
-          <label className="text-sm text-fleet-text-muted">Delete annotations older than</label>
+          <label className="text-sm text-fleet-text-muted">
+            {t('settings.annotate.retention')}
+          </label>
           <div className="flex items-center gap-1.5">
             <input
               type="number"
@@ -29,7 +33,7 @@ export function AnnotateSection(): React.JSX.Element {
               }}
               className="w-16 px-2 py-1 bg-fleet-surface-3 border border-fleet-border-strong rounded text-sm text-fleet-text text-center"
             />
-            <span className="text-sm text-fleet-text-muted">days</span>
+            <span className="text-sm text-fleet-text-muted">{t('settings.annotate.days')}</span>
           </div>
         </div>
       </div>

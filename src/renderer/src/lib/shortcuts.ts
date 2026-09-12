@@ -217,6 +217,18 @@ function modLabel(platform: 'mac' | 'other'): string {
   return platform === 'mac' ? 'Cmd' : 'Ctrl';
 }
 
+/**
+ * The DOM spells arrow keys `ArrowLeft`; uppercasing that gives `ARROWLEFT`,
+ * which is not a key anybody has seen on a keyboard. The pane-move shortcuts
+ * are the ones that use them.
+ */
+const KEY_LABELS: Record<string, string> = {
+  ArrowLeft: '←',
+  ArrowRight: '→',
+  ArrowUp: '↑',
+  ArrowDown: '↓'
+};
+
 export function formatShortcut(def: ShortcutDef): string {
   const combo = PLATFORM === 'mac' ? def.mac : def.other;
   const parts: string[] = [];
@@ -225,7 +237,7 @@ export function formatShortcut(def: ShortcutDef): string {
   if (combo.alt) parts.push('Alt');
   if (combo.shift) parts.push('Shift');
   // Display key nicely
-  const keyLabel = combo.key === 'Tab' ? 'Tab' : combo.key.toUpperCase();
+  const keyLabel = KEY_LABELS[combo.key] ?? combo.key.toUpperCase();
   parts.push(keyLabel);
   return parts.join('+');
 }

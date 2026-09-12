@@ -3,6 +3,7 @@ import { Loader2, Radar } from 'lucide-react';
 import type { LocalEndpointScanHit } from '../../../../../../shared/agent-endpoints';
 import { hostPort } from '../../../../../../shared/agent-endpoint-url';
 import { Overlay } from '../../../Overlay';
+import { useTranslation } from '../../../../lib/i18n';
 
 /**
  * What is already running on this machine.
@@ -34,6 +35,7 @@ export function EndpointScanDialog({
   onAdd: (hit: LocalEndpointScanHit) => void;
   onClose: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   // Which rows have been added, so a list nobody re-scanned stops offering the
   // same server twice.
   const [added, setAdded] = useState<string[]>([]);
@@ -49,9 +51,11 @@ export function EndpointScanDialog({
           <Radar size={17} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-fleet-text">Look for local servers</h2>
+          <h2 className="text-sm font-semibold text-fleet-text">
+            {t('agentSettings.endpoint.scan.title')}
+          </h2>
           <p className="text-xs text-fleet-text-muted">
-            Fleet checks the usual ports on this machine - nothing leaves it.
+            {t('agentSettings.endpoint.scan.description')}
           </p>
         </div>
       </div>
@@ -60,21 +64,22 @@ export function EndpointScanDialog({
         {scanning ? (
           <p className="flex items-center gap-2 py-6 text-sm text-fleet-text-muted">
             <Loader2 size={14} className="animate-spin" />
-            Checking…
+            {t('agentSettings.endpoint.scan.checking')}
           </p>
         ) : found === null ? (
           <p className="py-6 text-center text-sm text-fleet-text-muted">
-            Nothing checked yet. Press Check to look.
+            {t('agentSettings.endpoint.scan.notChecked')}
           </p>
         ) : found.length === 0 ? (
           <div className="py-6 text-center">
-            <p className="text-sm text-fleet-text-secondary">Nothing found.</p>
+            <p className="text-sm text-fleet-text-secondary">
+              {t('agentSettings.endpoint.scan.none')}
+            </p>
             {/* Told what was actually tried, rather than left to conclude that
                 there is nothing on the machine. The list is short by design and
                 a server on any other port is invisible to it. */}
             <p className="mx-auto mt-1 max-w-xs text-xs text-fleet-text-muted">
-              Only the common ports are checked. If your server is on another one, close this and
-              add its address directly.
+              {t('agentSettings.endpoint.scan.noneHint')}
             </p>
           </div>
         ) : (
@@ -108,7 +113,7 @@ export function EndpointScanDialog({
                     }}
                     className="shrink-0 rounded-md border border-fleet-border-strong px-2.5 py-1 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-3 disabled:opacity-40 focus-ring"
                   >
-                    {done ? 'Added' : 'Add'}
+                    {done ? t('agentSettings.endpoint.scan.added') : t('agentSettings.common.add')}
                   </button>
                 </div>
               );
@@ -123,7 +128,7 @@ export function EndpointScanDialog({
           onClick={onClose}
           className="rounded-md border border-fleet-border-strong px-3 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 focus-ring"
         >
-          Done
+          {t('agentSettings.endpoint.scan.done')}
         </button>
         <button
           type="button"
@@ -134,7 +139,9 @@ export function EndpointScanDialog({
           disabled={scanning}
           className="rounded-md fleet-accent-bg px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40 active:scale-[0.98] focus-ring-offset"
         >
-          {found === null ? 'Check' : 'Check again'}
+          {found === null
+            ? t('agentSettings.endpoint.scan.check')
+            : t('agentSettings.endpoint.scan.checkAgain')}
         </button>
       </div>
     </Overlay>

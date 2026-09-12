@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ComponentPropsWithoutRef } from 'react';
 import { Check, Copy } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n';
 
 type CodeBlockProps = ComponentPropsWithoutRef<'pre'>;
 
@@ -16,6 +17,7 @@ type CodeBlockProps = ComponentPropsWithoutRef<'pre'>;
  * react-markdown's extra props, matching the existing `a` renderer in MarkdownPane.)
  */
 export function CodeBlock({ children, ...props }: CodeBlockProps): React.JSX.Element {
+  const { t } = useTranslation();
   const preRef = useRef<HTMLPreElement>(null);
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,8 +43,8 @@ export function CodeBlock({ children, ...props }: CodeBlockProps): React.JSX.Ele
         type="button"
         onClick={handleCopy}
         className="absolute top-2 right-2 z-10 flex items-center gap-1 rounded bg-neutral-700/80 px-1.5 py-0.5 text-xs text-neutral-300 opacity-0 transition-all hover:bg-neutral-600 hover:text-white group-hover:opacity-100 active:scale-90"
-        title={copied ? 'Copied!' : 'Copy code'}
-        aria-label="Copy code"
+        title={copied ? t('dialogs.markdown.copied') : t('dialogs.markdown.copyCode')}
+        aria-label={t('dialogs.markdown.copyCode')}
       >
         {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
       </button>

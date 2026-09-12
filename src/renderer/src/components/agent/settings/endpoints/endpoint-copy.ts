@@ -4,6 +4,7 @@ import type {
   LocalEndpointState,
   LocalEndpointStatus
 } from '../../../../../../shared/agent-endpoints';
+import type { MessageKey, TranslateParams } from '../../../../../../shared/i18n';
 
 /**
  * What a row says about a server, and what it says when there is nothing there.
@@ -49,47 +50,60 @@ export function statusTone(state: LocalEndpointState): StatusTone {
  * has to have learned, and three of these states differ in ways no colour can
  * carry - "off" and "not checked" are both grey and are not the same thing.
  */
-export function statusText(status: LocalEndpointStatus | undefined): string {
-  if (status === undefined) return 'Not checked';
+export function statusText(status: LocalEndpointStatus | undefined): {
+  key: MessageKey;
+  params?: TranslateParams;
+} {
+  if (status === undefined) return { key: 'agentSettings.endpoint.statusNotChecked' };
   switch (status.state) {
     case 'checking':
-      return 'Checking…';
+      return { key: 'agentSettings.endpoint.statusChecking' };
     case 'ready':
       return modelCount(status.modelCount);
     case 'sleeping':
-      return `${modelCount(status.modelCount)}, idle`;
+      if (status.modelCount === 1) return { key: 'agentSettings.endpoint.statusIdleOne' };
+      return {
+        key: 'agentSettings.endpoint.statusIdleOther',
+        params: { count: status.modelCount }
+      };
     case 'unreachable':
-      return failureTitle(status.reason);
+      return { key: failureTitle(status.reason) };
     case 'disabled':
-      return 'Off';
+      return { key: 'agentSettings.common.off' };
     case 'unchecked':
-      return status.modelCount === 0 ? 'Not checked' : `${modelCount(status.modelCount)}, saved`;
+      if (status.modelCount === 0) return { key: 'agentSettings.endpoint.statusNotChecked' };
+      if (status.modelCount === 1) return { key: 'agentSettings.endpoint.statusSavedOne' };
+      return {
+        key: 'agentSettings.endpoint.statusSavedOther',
+        params: { count: status.modelCount }
+      };
   }
 }
 
 /** "1 model" / "3 models" / "No models". */
-export function modelCount(n: number): string {
-  if (n === 0) return 'No models';
-  return n === 1 ? '1 model' : `${n} models`;
+export function modelCount(n: number): { key: MessageKey; params?: TranslateParams } {
+  if (n === 0) return { key: 'agentSettings.endpoint.statusReadyNone' };
+  if (n === 1) return { key: 'agentSettings.endpoint.statusReadyOne' };
+  return { key: 'agentSettings.endpoint.statusReadyOther', params: { count: n } };
 }
 
 /** The heading a failure gets, on a row and in the add form alike. */
-export function failureTitle(reason: EndpointProbeFailure | null): string {
+export function failureTitle(reason: EndpointProbeFailure | null): MessageKey {
   switch (reason) {
     case 'refused':
-      return 'Not running';
+      return 'agentSettings.endpoint.failureRefusedTitle';
     case 'timeout':
-      return 'No answer';
+      return 'agentSettings.endpoint.failureTimeoutTitle';
     case 'loading':
-      return 'Starting up';
+      return 'agentSettings.endpoint.failureLoadingTitle';
     case 'auth-required':
-      return 'Needs a key';
+      return 'agentSettings.endpoint.failureAuthRequiredTitle';
     case 'no-models':
-      return 'No model loaded';
+      return 'agentSettings.endpoint.failureNoModelsTitle';
     case 'not-openai':
-      return 'Not a model server';
+      return 'agentSettings.endpoint.failureNotOpenAiTitle';
     case null:
-      return 'Unreachable';
+      return 'agentSettings.endpoint.failureUnreachableTitle';
   }
 }
 
@@ -101,22 +115,37 @@ export function failureTitle(reason: EndpointProbeFailure | null): string {
  * and say so, because a person who reads "failed" about a server that is
  * working goes looking for a problem that does not exist.
  */
-export function failureHint(reason: EndpointProbeFailure | null, hostPort: string): string {
+export function failureHint(
+  reason: EndpointProbeFailure | null,
+  hostPort: string
+): { key: MessageKey; params?: TranslateParams } {
   switch (reason) {
     case 'refused':
-      return `Nothing is listening on ${hostPort}. Start the server, then check again.`;
+      return {
+        key: 'agentSettings.endpoint.failureRefusedHint',
+        params: { hostPort }
+      };
     case 'timeout':
-      return `${hostPort} accepted the connection but never replied. It may still be starting.`;
+      return {
+        key: 'agentSettings.endpoint.failureTimeoutHint',
+        params: { hostPort }
+      };
     case 'loading':
-      return 'The server is loading its model. This can take a while for a large one - check again in a moment.';
+      return { key: 'agentSettings.endpoint.failureLoadingHint' };
     case 'auth-required':
-      return 'This server wants an API key, which Fleet has nowhere to put yet. Restart it without one to use it here.';
+      return { key: 'agentSettings.endpoint.failureAuthRequiredHint' };
     case 'no-models':
-      return 'The server is running but has no model loaded.';
+      return { key: 'agentSettings.endpoint.failureNoModelsHint' };
     case 'not-openai':
-      return `Something is listening on ${hostPort}, but it does not answer like a model server.`;
+      return {
+        key: 'agentSettings.endpoint.failureNotOpenAiHint',
+        params: { hostPort }
+      };
     case null:
-      return `Fleet could not reach ${hostPort}.`;
+      return {
+        key: 'agentSettings.endpoint.failureUnreachableHint',
+        params: { hostPort }
+      };
   }
 }
 
@@ -131,8 +160,8 @@ export function failureHint(reason: EndpointProbeFailure | null, hostPort: strin
  */
 export type TestOutcome = {
   tone: 'ok' | 'warn';
-  title: string;
-  hint: string;
+  title: MessageKey;
+  hint: { key: MessageKey; params?: TranslateParams };
   /** What was found, so the form can name it before it is saved. */
   models: string[];
 };
@@ -147,14 +176,23 @@ export function testOutcome(result: EndpointProbeResult, hostPort: string): Test
     };
   }
   const names = result.models.map((m) => m.name);
-  const kind = result.fingerprint === 'llamacpp' ? 'llama.cpp' : 'OpenAI-compatible server';
   return {
     tone: 'ok',
-    title: result.sleeping ? `Found a ${kind}, idle` : `Found a ${kind}`,
+    title:
+      result.fingerprint === 'llamacpp'
+        ? result.sleeping
+          ? 'agentSettings.endpoint.testFoundLlamaIdle'
+          : 'agentSettings.endpoint.testFoundLlama'
+        : result.sleeping
+          ? 'agentSettings.endpoint.testFoundOpenAiIdle'
+          : 'agentSettings.endpoint.testFoundOpenAi',
     hint:
       names.length === 0
-        ? 'It is running but has no model loaded.'
-        : `Serving ${names.join(', ')}.`,
+        ? { key: 'agentSettings.endpoint.testNoModel' }
+        : {
+            key: 'agentSettings.endpoint.testServing',
+            params: { models: names.join(', ') }
+          },
     models: names
   };
 }

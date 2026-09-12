@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Overlay } from '../Overlay';
+import { useTranslation } from '../../lib/i18n';
 import type { SessionSummary } from '../../../../shared/sessions';
 import type { DistillResult, Learning, TagCount } from '../../../../shared/learnings';
 
@@ -59,6 +60,7 @@ export function DistillModal({
   onClose: () => void;
   onSaved?: () => void;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   // Snapshot the session so it stays stable while the modal is open.
   const [shown, setShown] = useState<SessionSummary | null>(session);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -174,7 +176,7 @@ export function DistillModal({
       onSaved?.();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(err instanceof Error ? err.message : t('dialogs.sessions.distill.error'));
       setPhase('error');
     } finally {
       setSaving(false);
@@ -193,31 +195,33 @@ export function DistillModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Distill learning"
+        aria-label={t('dialogs.sessions.transcript.distill')}
         className="flex max-h-[80vh] w-[560px] flex-col rounded-lg border border-fleet-border bg-fleet-surface-2 p-4"
       >
         <h2 className="mb-3 flex-shrink-0 text-sm font-semibold text-fleet-text">
-          Distill learning
+          {t('dialogs.sessions.transcript.distill')}
           {shown ? <span className="ml-2 text-fleet-text-subtle">· {shown.title}</span> : null}
         </h2>
 
         {phase === 'loading' && (
           <div className="py-10 text-center text-sm text-fleet-text-muted">
-            Reading the session and distilling a learning…
+            {t('dialogs.sessions.distill.loading')}
             <div className="mt-1 text-xs text-fleet-text-subtle">
-              Running a headless Claude pass — this can take a moment.
+              {t('dialogs.sessions.distill.loadingBody')}
             </div>
           </div>
         )}
 
         {phase === 'nothing' && (
           <div className="py-10 text-center text-sm text-fleet-text-muted">
-            Nothing notable to record from this session.
+            {t('dialogs.sessions.distill.nothing')}
           </div>
         )}
 
         {phase === 'error' && (
-          <div className="py-8 text-center text-sm text-red-400">{error || 'Distill failed.'}</div>
+          <div className="py-8 text-center text-sm text-red-400">
+            {error || t('dialogs.sessions.distill.error')}
+          </div>
         )}
 
         {phase === 'ready' && (
@@ -226,8 +230,8 @@ export function DistillModal({
               <div className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-2 text-xs text-amber-200">
                 <div className="mb-1 font-medium">
                   {mergeTarget
-                    ? `Merging into “${mergeTarget.title}”`
-                    : 'Similar learnings already exist:'}
+                    ? t('dialogs.sessions.distill.mergingInto', { title: mergeTarget.title })
+                    : t('dialogs.sessions.distill.similarExist')}
                 </div>
                 <div className="flex flex-col gap-1">
                   {similar.map((l) => {
@@ -243,7 +247,9 @@ export function DistillModal({
                               : 'text-amber-300 hover:bg-amber-500/20'
                           }`}
                         >
-                          {isTarget ? 'Cancel merge' : 'Merge into'}
+                          {isTarget
+                            ? t('dialogs.sessions.distill.cancelMerge')
+                            : t('dialogs.sessions.distill.mergeInto')}
                         </button>
                       </div>
                     );
@@ -253,7 +259,7 @@ export function DistillModal({
             )}
 
             <label className="block text-xs text-fleet-text-secondary">
-              Title
+              {t('dialogs.sessions.distill.title')}
               <input
                 autoFocus
                 value={title}
@@ -263,7 +269,7 @@ export function DistillModal({
               />
             </label>
             <label className="flex min-h-0 flex-1 flex-col text-xs text-fleet-text-secondary">
-              Body (markdown)
+              {t('dialogs.sessions.distill.body')}
               <textarea
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
@@ -271,17 +277,22 @@ export function DistillModal({
               />
             </label>
             <label className="block text-xs text-fleet-text-secondary">
-              Tags <span className="text-fleet-text-subtle">(comma-separated)</span>
+              {t('dialogs.sessions.distill.tags')}{' '}
+              <span className="text-fleet-text-subtle">
+                {t('dialogs.sessions.distill.tagsHint')}
+              </span>
               <input
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
-                placeholder="e.g. sqlite, testing"
+                placeholder={t('dialogs.sessions.distill.tagsPlaceholder')}
                 className="mt-1 w-full rounded border border-fleet-border-strong bg-fleet-surface px-2 py-1 text-xs focus-ring"
               />
             </label>
             {suggestions.length > 0 && (
               <div className="flex flex-wrap items-center gap-1">
-                <span className="text-[10px] text-fleet-text-subtle">Existing tags:</span>
+                <span className="text-[10px] text-fleet-text-subtle">
+                  {t('dialogs.sessions.distill.existingTags')}
+                </span>
                 {suggestions.map((v) => (
                   <button
                     key={v.tag}
@@ -303,14 +314,14 @@ export function DistillModal({
               onClick={() => shown && void run(shown)}
               className="rounded px-3 py-1 text-xs text-fleet-text-secondary transition hover:bg-fleet-surface-3 active:scale-[0.97]"
             >
-              Try again
+              {t('dialogs.sessions.distill.tryAgain')}
             </button>
           ) : phase === 'ready' ? (
             <button
               onClick={() => shown && void run(shown)}
               className="rounded px-3 py-1 text-xs text-fleet-text-muted transition hover:bg-fleet-surface-3 active:scale-[0.97]"
             >
-              Regenerate
+              {t('dialogs.sessions.distill.regenerate')}
             </button>
           ) : (
             <span />
@@ -320,7 +331,7 @@ export function DistillModal({
               onClick={onClose}
               className="rounded px-3 py-1 text-xs text-fleet-text-muted transition hover:bg-fleet-surface-3 active:scale-[0.97]"
             >
-              {phase === 'ready' ? 'Cancel' : 'Close'}
+              {phase === 'ready' ? t('common.cancel') : t('common.close')}
             </button>
             {phase === 'ready' && (
               <button
@@ -328,7 +339,11 @@ export function DistillModal({
                 disabled={saving || title.trim() === ''}
                 className="rounded fleet-accent-bg fleet-accent-bg-hover px-3 py-1 text-xs text-white transition active:scale-[0.97] disabled:opacity-50"
               >
-                {saving ? 'Saving…' : mergeTarget ? 'Merge learning' : 'Save learning'}
+                {saving
+                  ? t('common.saving')
+                  : mergeTarget
+                    ? t('dialogs.sessions.distill.mergeLearning')
+                    : t('dialogs.sessions.distill.saveLearning')}
               </button>
             )}
           </div>

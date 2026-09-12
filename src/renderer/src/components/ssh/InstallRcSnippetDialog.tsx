@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, TerminalSquare } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n';
 import { Overlay } from '../Overlay';
 
 type Props = {
@@ -25,6 +26,7 @@ export function InstallRcSnippetDialog({
   onInstall,
   onDecline
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Held copy so the host name stays put through the exit animation.
@@ -60,18 +62,13 @@ export function InstallRcSnippetDialog({
           <TerminalSquare size={16} className="mt-0.5 shrink-0 text-teal-400" />
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-neutral-200">
-              {shownUpdate ? 'Update' : 'Set up'} file transfer on {shown}?
+              {t(shownUpdate ? 'ssh.rc.title.update' : 'ssh.rc.title.setup', {
+                destination: shown ?? ''
+              })}
             </h3>
-            <p className="mt-1 text-xs text-neutral-400">
-              Drag a file onto this pane to upload it to the folder you are in, and run{' '}
-              <span className="font-mono text-neutral-300">fleet get &lt;path&gt;</span> to pull one
-              back down.
-            </p>
+            <p className="mt-1 text-xs text-neutral-400">{t('ssh.rc.body')}</p>
             <p className="mt-1.5 text-xs text-neutral-500">
-              Fleet {shownUpdate ? 'rewrites' : 'writes'}{' '}
-              <span className="font-mono">~/.fleetrc.sh</span> on the host and adds one line to your{' '}
-              <span className="font-mono">.bashrc</span> or{' '}
-              <span className="font-mono">.zshrc</span>. Nothing else changes.
+              {t(shownUpdate ? 'ssh.rc.files.update' : 'ssh.rc.files.setup')}
             </p>
           </div>
         </div>
@@ -85,7 +82,7 @@ export function InstallRcSnippetDialog({
             onClick={onDecline}
             disabled={busy}
           >
-            Not now
+            {t('ssh.action.notNow')}
           </button>
           <button
             className="flex items-center gap-1.5 text-xs px-3 py-1 rounded bg-teal-700 transition hover:bg-teal-600 active:scale-[0.97] disabled:opacity-50"
@@ -93,7 +90,7 @@ export function InstallRcSnippetDialog({
             disabled={busy}
           >
             {busy && <Loader2 size={12} className="animate-spin" />}
-            {shownUpdate ? 'Update' : 'Set up'}
+            {t(shownUpdate ? 'ssh.action.update' : 'ssh.action.setUp')}
           </button>
         </div>
       </div>

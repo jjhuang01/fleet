@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Bot, ChevronRight, X } from 'lucide-react';
 import type { AgentTaskInfo, AgentToolCall } from '../../../../shared/agent-tools';
 import type { AgentMessage } from '../../../../shared/agent-types';
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
 import { AgentToolRow } from './AgentToolRow';
 import { AgentMarkdown } from './AgentMarkdown';
 import { createLogger } from '../../logger';
@@ -43,6 +45,7 @@ export function AgentTaskCard({
    */
   asking?: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const task = call.task;
   const [open, setOpen] = useState(false);
   if (task === null) {
@@ -90,8 +93,8 @@ export function AgentTaskCard({
           <button
             type="button"
             onClick={() => window.fleet.agent.cancelTask(task.id)}
-            aria-label={`Stop the ${task.agent} subagent`}
-            title="Stop this subagent"
+            aria-label={t('agent.subagent.stopNamed', { name: task.agent })}
+            title={t('agent.subagent.stop')}
             className="shrink-0 text-fleet-text-subtle transition-colors hover:text-fleet-text focus-ring"
           >
             <X size={12} />
@@ -120,21 +123,33 @@ function Status({
   activity: string | null | undefined;
   asking: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   // Ahead of what it is doing, because it is not doing it: this row is the one
   // the strip above the composer is asking about, and saying so is how the two
   // are tied together. Not shimmering, for the same reason - nothing is moving.
   if (asking) {
-    return <span className="text-amber-700 dark:text-amber-400/90">waiting on you</span>;
+    return (
+      <span className="text-amber-700 dark:text-amber-400/90">{t('agent.task.waitingOnYou')}</span>
+    );
   }
   if (task.status === 'running') {
     return (
-      <span className="fleet-shimmer-text font-mono text-[11px]">{activity ?? 'starting'}</span>
+      <span className="fleet-shimmer-text font-mono text-[11px]">
+        {activity ?? t('agent.task.starting')}
+      </span>
     );
   }
   if (task.status === 'done') {
-    return <span className="text-fleet-text-subtle">{task.summary ?? 'reported'}</span>;
+    return (
+      <span className="text-fleet-text-subtle">{task.summary ?? t('agent.task.reported')}</span>
+    );
   }
-  return <span className="text-amber-400/90">{task.status}</span>;
+  const statusKey: Record<'failed' | 'cancelled' | 'interrupted', MessageKey> = {
+    failed: 'agent.task.failed',
+    cancelled: 'agent.task.cancelled',
+    interrupted: 'agent.task.interrupted'
+  };
+  return <span className="text-amber-400/90">{t(statusKey[task.status])}</span>;
 }
 
 /**
@@ -154,13 +169,13 @@ function Body({ task, report }: { task: AgentTaskInfo; report: string | null }):
     // a disclosure, it is a page. One scroller rather than one per section, so
     // reading down the card never means finding the edge of an inner box first.
     <div className="flex max-h-[28rem] flex-col gap-3 overflow-y-auto pl-4">
-      <Section title="Asked">
+      <Section title="agent.task.asked">
         <pre className="text-[11px] leading-relaxed whitespace-pre-wrap text-fleet-text-muted">
           {task.prompt}
         </pre>
       </Section>
       {report !== null && task.status !== 'running' && (
-        <Section title="Reported">
+        <Section title="agent.task.reportedSection">
           <div className="text-sm text-fleet-text">
             {/* Never streaming: a report only exists once the subagent is done. */}
             <AgentMarkdown streaming={false}>{stripMarker(report)}</AgentMarkdown>
@@ -176,12 +191,14 @@ function Section({
   title,
   children
 }: {
-  title: string;
+  title: MessageKey;
   children: React.ReactNode;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] tracking-wide text-fleet-text-subtle uppercase">{title}</span>
+      <span className="text-[10px] tracking-wide text-fleet-text-subtle uppercase">{t(title)}</span>
       {children}
     </div>
   );
@@ -196,6 +213,7 @@ function Section({
  * the case where watching it is the whole point.
  */
 function Transcript({ taskId, running }: { taskId: string; running: boolean }): React.JSX.Element {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<AgentMessage[] | null>(null);
 
   useEffect(() => {
@@ -219,19 +237,19 @@ function Transcript({ taskId, running }: { taskId: string; running: boolean }): 
     };
   }, [taskId, running]);
 
-  if (messages === null) return <Section title="Transcript">{null}</Section>;
+  if (messages === null) return <Section title="agent.task.transcript">{null}</Section>;
   if (messages.length === 0) {
     return (
-      <Section title="Transcript">
+      <Section title="agent.task.transcript">
         <span className="text-[11px] text-fleet-text-subtle">
-          {running ? 'Nothing yet.' : 'This subagent recorded nothing.'}
+          {running ? t('agent.task.nothingYet') : t('agent.task.recordedNothing')}
         </span>
       </Section>
     );
   }
 
   return (
-    <Section title="Transcript">
+    <Section title="agent.task.transcript">
       <div className="flex flex-col gap-2">
         {messages.map((message) => (
           <div key={message.id} className="flex flex-col gap-1.5">

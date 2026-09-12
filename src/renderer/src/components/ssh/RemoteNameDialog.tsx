@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import type { MessageKey, TranslateParams } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
 import { Overlay } from '../Overlay';
 import { validateRemoteName } from '../../lib/remote-names';
 
 export type NameRequest = {
-  title: string;
-  /** Field label, e.g. "Folder name". */
-  label: string;
+  titleKey: MessageKey;
+  labelKey: MessageKey;
+  labelParams?: TranslateParams;
   initialValue: string;
-  confirmLabel: string;
+  confirmLabelKey: MessageKey;
 };
 
 type Props = {
@@ -24,8 +26,29 @@ function stemLength(name: string): number {
   return dot > 0 ? dot : name.length;
 }
 
+const NAME_ERROR_KEYS: Record<string, MessageKey> = {
+  'Enter a name.': 'ssh.name.error.empty',
+  'That name is reserved.': 'ssh.name.error.reserved',
+  'A name cannot contain "/".': 'ssh.name.error.slash',
+  'A name cannot contain line breaks.': 'ssh.name.error.lineBreaks',
+  'A name cannot contain a null byte.': 'ssh.name.error.nullByte'
+};
+
+function remoteNameError(message: string): { key: MessageKey; params?: TranslateParams } | null {
+  if (Object.prototype.hasOwnProperty.call(NAME_ERROR_KEYS, message)) {
+    return { key: NAME_ERROR_KEYS[message] };
+  }
+
+  const exists = /^"(.+)" already exists in this folder\.$/.exec(message);
+  if (exists) return { key: 'ssh.name.error.exists', params: { name: exists[1] } };
+
+  if (message === 'This browser pane is no longer open.') return { key: 'ssh.error.paneGone' };
+  return null;
+}
+
 /** Shared prompt for "New folder" and "Rename". */
 export function RemoteNameDialog({ request, onSubmit, onClose }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -33,6 +56,7 @@ export function RemoteNameDialog({ request, onSubmit, onClose }: Props): React.J
   const [shown, setShown] = useState<NameRequest | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const wasOpen = useRef(false);
+  const localizedError = error === null ? null : remoteNameError(error);
 
   useEffect(() => {
     // Seed only on the transition into open. `request` is rebuilt whenever the
@@ -78,10 +102,12 @@ export function RemoteNameDialog({ request, onSubmit, onClose }: Props): React.J
   return (
     <Overlay open={request !== null} onClose={onClose} closeOnBackdrop={!busy}>
       <div className="w-[380px] rounded-lg border border-neutral-700 bg-neutral-900 p-4">
-        <h3 className="text-sm font-semibold text-neutral-200">{shown?.title}</h3>
+        <h3 className="text-sm font-semibold text-neutral-200">
+          {shown !== null && t(shown.titleKey)}
+        </h3>
 
         <label className="mt-3 block text-xs text-neutral-500" htmlFor="remote-name-input">
-          {shown?.label}
+          {shown !== null && t(shown.labelKey, shown.labelParams)}
         </label>
         <input
           id="remote-name-input"
@@ -102,7 +128,11 @@ export function RemoteNameDialog({ request, onSubmit, onClose }: Props): React.J
           }}
         />
 
-        {error !== null && <div className="mt-2 text-xs text-red-400">{error}</div>}
+        {error !== null && (
+          <div className="mt-2 text-xs text-red-400">
+            {localizedError === null ? error : t(localizedError.key, localizedError.params)}
+          </div>
+        )}
 
         <div className="mt-4 flex justify-end gap-2">
           <button
@@ -110,7 +140,7 @@ export function RemoteNameDialog({ request, onSubmit, onClose }: Props): React.J
             onClick={onClose}
             disabled={busy}
           >
-            Cancel
+            {t('ssh.action.cancel')}
           </button>
           <button
             className="flex items-center gap-1.5 text-xs px-3 py-1 rounded bg-teal-700 transition hover:bg-teal-600 active:scale-[0.97] disabled:opacity-50"
@@ -118,7 +148,7 @@ export function RemoteNameDialog({ request, onSubmit, onClose }: Props): React.J
             disabled={busy || value.trim().length === 0}
           >
             {busy && <Loader2 size={12} className="animate-spin" />}
-            {shown?.confirmLabel}
+            {shown !== null && t(shown.confirmLabelKey)}
           </button>
         </div>
       </div>

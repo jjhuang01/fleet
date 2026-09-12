@@ -1,10 +1,19 @@
 import type { EnvSource, ShellEnvVar } from '../../../../shared/shell-env-types';
+import type { MessageKey } from '../../../../shared/i18n';
 
 /** Section metadata, in render order: Fleet's own injections first, login dump last. */
-export const SECTIONS: Array<{ source: EnvSource; label: string; dotClass: string }> = [
-  { source: 'fleet-builtin', label: 'Fleet built-ins', dotClass: 'bg-teal-400' },
-  { source: 'env-sync', label: 'Env Sync', dotClass: 'bg-blue-400' },
-  { source: 'login-shell', label: 'Login shell', dotClass: 'bg-neutral-500' }
+export const SECTIONS: Array<{ source: EnvSource; label: MessageKey; dotClass: string }> = [
+  {
+    source: 'fleet-builtin',
+    label: 'dialogs.shellEnv.section.fleetBuiltins',
+    dotClass: 'bg-teal-400'
+  },
+  { source: 'env-sync', label: 'dialogs.shellEnv.section.envSync', dotClass: 'bg-blue-400' },
+  {
+    source: 'login-shell',
+    label: 'dialogs.shellEnv.section.loginShell',
+    dotClass: 'bg-neutral-500'
+  }
 ];
 
 const SECRET_RX = /TOKEN|SECRET|KEY|PASSWORD|PASSWD|CREDENTIAL|AUTH/i;
@@ -37,12 +46,4 @@ export function varsForSection(vars: ShellEnvVar[], source: EnvSource): ShellEnv
 export function clampSelection(index: number, length: number): number {
   if (length <= 0) return 0;
   return Math.min(Math.max(index, 0), length - 1);
-}
-
-/** Format epoch ms as a short local time, e.g. "12:34 PM". */
-export function formatSpawnTime(epochMs: number): string {
-  return new Date(epochMs).toLocaleTimeString(undefined, {
-    hour: 'numeric',
-    minute: '2-digit'
-  });
 }

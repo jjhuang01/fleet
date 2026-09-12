@@ -9,6 +9,7 @@ import {
   type AgentWebSearchConfig,
   type WebSearchEngine
 } from '../../../../../shared/agent-web-search';
+import { useTranslation } from '../../../lib/i18n';
 import { RoleCard, inputCls, selectCls } from './controls';
 import { Toggle } from './Toggle';
 
@@ -42,19 +43,21 @@ export function AgentWebSearchSettings({
    */
   hasKey: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <RoleCard
-      title="Web search"
-      description="Lets the agent search the web when it does not already know the address of the answer. OpenRouter runs the search; Fleet shows you the sources."
+      title={t('agentSettings.webSearch.title')}
+      description={t('agentSettings.webSearch.description')}
       icon={<Search size={16} />}
     >
       <Row
         id="agent-search-enabled"
-        label="Search the web"
+        label={t('agentSettings.webSearch.enabled.label')}
         hint={
           hasKey
-            ? 'Billed per search by OpenRouter, on top of the tokens the results cost to read.'
-            : 'Needs an OpenRouter API key. Searches run on OpenRouter, not on this machine.'
+            ? t('agentSettings.webSearch.enabled.hint')
+            : t('agentSettings.webSearch.enabled.noKey')
         }
       >
         <Toggle
@@ -68,8 +71,8 @@ export function AgentWebSearchSettings({
         <>
           <Row
             id="agent-search-engine"
-            label="Engine"
-            hint="Exa is the predictable choice: one price and one set of limits whatever model you pick. Auto uses the model's own search when it has one, which changes both."
+            label={t('agentSettings.common.engine')}
+            hint={t('agentSettings.webSearch.engine.hint')}
           >
             <select
               id="agent-search-engine"
@@ -87,8 +90,8 @@ export function AgentWebSearchSettings({
 
           <NumberRow
             id="agent-search-max-results"
-            label="Results per search"
-            hint="Each result brings an excerpt with it, and the excerpts are what you pay tokens for."
+            label={t('agentSettings.webSearch.maxResults.label')}
+            hint={t('agentSettings.webSearch.maxResults.hint')}
             value={config.maxResults}
             min={WEB_SEARCH_MIN_RESULTS}
             max={WEB_SEARCH_MAX_RESULTS}
@@ -97,8 +100,8 @@ export function AgentWebSearchSettings({
 
           <NumberRow
             id="agent-search-max-searches"
-            label="Searches per round"
-            hint="Per round, not per turn: a turn is many rounds, and this number starts again on each one. The spend brake below is what bounds a whole turn."
+            label={t('agentSettings.webSearch.maxSearches.label')}
+            hint={t('agentSettings.webSearch.maxSearches.hint')}
             value={config.maxSearches}
             min={WEB_SEARCH_MIN_SEARCHES}
             max={WEB_SEARCH_MAX_SEARCHES}
@@ -215,11 +218,13 @@ function SpendRow({
   value: number | null;
   onChange: (next: number | null) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <Row
       id="agent-search-max-spend"
-      label="Spend brake"
-      hint="Roughly this many dollars of searching per round before OpenRouter is asked to wind up. It finishes what it started, so the bill lands a little above. Empty for no brake."
+      label={t('agentSettings.webSearch.spend.label')}
+      hint={t('agentSettings.webSearch.spend.hint')}
     >
       <div className="flex items-center gap-1">
         <span className="text-sm text-fleet-text-muted">$</span>

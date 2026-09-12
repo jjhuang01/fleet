@@ -1,7 +1,20 @@
 // src/renderer/src/components/env-sync/EnvSyncBadge.tsx
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../../lib/i18n';
+import type { MessageKey } from '../../../../shared/i18n';
 import type { TargetStatus, TargetSyncState } from '../../../../shared/env-sync-types';
 import type { PathContext } from '../../../../shared/shell-profiles';
+
+const STATUS_LABEL: Record<TargetSyncState, MessageKey> = {
+  'in-sync': 'envSync.status.inSync',
+  'remote-ahead': 'envSync.status.remoteAhead',
+  'local-ahead': 'envSync.status.localAhead',
+  conflict: 'envSync.status.conflict',
+  'local-only': 'envSync.status.localOnly',
+  'remote-only': 'envSync.status.remoteOnly',
+  'no-remote-no-local': 'envSync.status.nothingYet',
+  error: 'envSync.status.error'
+};
 
 // 'error' ranks highest so an auth/config failure is never masked by a benign state.
 const SYNC_STATE_ORDER: TargetSyncState[] = [
@@ -33,6 +46,7 @@ export function EnvSyncBadge({
   cwd: string | undefined;
   pathContext?: PathContext;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [agg, setAgg] = useState<TargetSyncState | null>(null);
 
   useEffect(() => {
@@ -74,9 +88,9 @@ export function EnvSyncBadge({
   return (
     <span
       className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-white ${color}`}
-      title={`Env Sync: ${agg}`}
+      title={t('envSync.badge.title', { state: t(STATUS_LABEL[agg]) })}
     >
-      env {glyph}
+      {t('envSync.badge.label')} {glyph}
     </span>
   );
 }

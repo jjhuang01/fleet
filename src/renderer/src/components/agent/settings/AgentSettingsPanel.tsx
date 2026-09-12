@@ -11,6 +11,7 @@ import type { AgentHostedFetchConfig } from '../../../../../shared/agent-hosted-
 import type { AgentFusionConfig } from '../../../../../shared/agent-fusion';
 import type { AgentAdvisorConfig } from '../../../../../shared/agent-advisor';
 import type { AgentToolSearchConfig } from '../../../../../shared/agent-tool-search';
+import type { MessageKey } from '../../../../../shared/i18n';
 import type {
   AgentCacheConfig,
   AgentFallbackConfig,
@@ -24,6 +25,7 @@ import {
 import { useAgentStore } from '../../../store/agent-store';
 import { useSettingsStore } from '../../../store/settings-store';
 import { useAgentMcpStore } from '../../../store/agent-mcp-store';
+import { useTranslation } from '../../../lib/i18n';
 import { SectionShell, FieldGroup, Field } from './primitives';
 import { SecretInput } from './SecretInput';
 import { AgentRoleSettings } from './AgentRoleSettings';
@@ -49,7 +51,6 @@ import { LocalEndpointsSection } from './endpoints/LocalEndpointsSection';
 import { McpSection } from './mcp/McpSection';
 import { SkillsSection } from './skills/SkillsSection';
 import { MemorySection } from './memory/MemorySection';
-import { relativeTime } from './format';
 
 /**
  * A `<select>` hands back a plain string, and this one decides who gets to say
@@ -61,9 +62,9 @@ function toAgentToolMode(value: string): AgentToolMode {
   return AGENT_TOOL_MODES.find((mode) => mode === value) ?? DEFAULT_AGENT_SETTINGS.toolMode;
 }
 
-function validateOpenRouterKey(key: string): string | null {
-  if (/\s/.test(key)) return 'Keys cannot contain spaces.';
-  if (!key.startsWith('sk-or-')) return 'OpenRouter keys start with "sk-or-".';
+function validateOpenRouterKey(key: string): MessageKey | null {
+  if (/\s/.test(key)) return 'agentSettings.provider.key.errorSpaces';
+  if (!key.startsWith('sk-or-')) return 'agentSettings.provider.key.errorPrefix';
   return null;
 }
 
@@ -77,6 +78,7 @@ function validateOpenRouterKey(key: string): string | null {
  * with the pane's own answer rather than guessed from the recent list.
  */
 export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element {
+  const { t } = useTranslation();
   const settings = useSettingsStore((s) => s.settings);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
   // Field by field rather than the whole store. The agent store also holds every
@@ -181,11 +183,11 @@ export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element 
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-6">
-      <SectionShell title="Agent settings" description="Shared by every agent pane in Fleet.">
-        <FieldGroup title="Provider">
+      <SectionShell title={t('agentSettings.title')} description={t('agentSettings.description')}>
+        <FieldGroup title={t('agentSettings.provider.title')}>
           <Field
-            label="OpenRouter API key"
-            description="Optional. Stored encrypted on this device, and never sent anywhere but OpenRouter. Without one, Fleet runs on the local servers below - though image generation and voice dictation are OpenRouter's alone and stay off."
+            label={t('agentSettings.provider.key.label')}
+            description={t('agentSettings.provider.key.description')}
             layout="stack"
             htmlFor="agent-openrouter-key"
           >
@@ -194,7 +196,7 @@ export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element 
               present={keyPresent}
               onSave={saveKey}
               onClear={clearKey}
-              placeholder="sk-or-…"
+              placeholder={t('agentSettings.provider.key.placeholder')}
               validate={validateOpenRouterKey}
             />
           </Field>
@@ -205,10 +207,10 @@ export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element 
           onChange={(localEndpoints) => void updateSettings({ ai: { agent: { localEndpoints } } })}
         />
 
-        <FieldGroup title="Models">
+        <FieldGroup title={t('agentSettings.models.title')}>
           <AgentRoleSettings
-            title="Coding agent"
-            description="Writes code and drives tools. Only models that support tool calling are listed."
+            title={t('agentSettings.coding.title')}
+            description={t('agentSettings.coding.description')}
             icon={<Code2 size={16} />}
             models={codingModels}
             config={agent.coding}
@@ -252,10 +254,10 @@ export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element 
           />
         </FieldGroup>
 
-        <FieldGroup title="Sessions">
+        <FieldGroup title={t('agentSettings.sessions.title')}>
           <Field
-            label="Title model"
-            description="Names a session once its first turn finishes. Any model will do - naming calls no tools."
+            label={t('agentSettings.sessions.titleModel.label')}
+            description={t('agentSettings.sessions.titleModel.description')}
             layout="stack"
           >
             <ModelSelect
@@ -263,15 +265,15 @@ export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element 
               value={agent.titleModel}
               onChange={(titleModel) => void updateSettings({ ai: { agent: { titleModel } } })}
               allowNone
-              noneLabel="Use the coding model"
+              noneLabel={t('agentSettings.model.useCodingModel')}
             />
           </Field>
         </FieldGroup>
 
-        <FieldGroup title="Voice dictation">
+        <FieldGroup title={t('agentSettings.voice.title')}>
           <Field
-            label="Dictation model"
-            description="Turns a spoken prompt into text. Only Groq-served models honour the recognition hints (project name, branch, coding terms); the others transcribe without them."
+            label={t('agentSettings.voice.model.label')}
+            description={t('agentSettings.voice.model.description')}
             layout="stack"
           >
             <ModelSelect
@@ -289,11 +291,11 @@ export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element 
             />
           </Field>
           <Field
-            label="Recognition hints"
+            label={t('agentSettings.voice.hints.label')}
             description={
               hintsApply
-                ? 'The project name, branch and coding vocabulary go up with the audio, so identifiers come back spelled the way they are written.'
-                : 'This model ignores them, so identifiers may transcribe imprecisely.'
+                ? t('agentSettings.voice.hints.onDescription')
+                : t('agentSettings.voice.hints.offDescription')
             }
           >
             {/* The state, not a second copy of the sentence beside it: the row
@@ -301,15 +303,15 @@ export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element 
             <span
               className={`text-xs ${hintsApply ? 'text-fleet-text-secondary' : 'text-fleet-text-muted'}`}
             >
-              {hintsApply ? 'On' : 'Off'}
+              {hintsApply ? t('agentSettings.common.on') : t('agentSettings.common.off')}
             </span>
           </Field>
         </FieldGroup>
 
-        <FieldGroup title="Permissions">
+        <FieldGroup title={t('agentSettings.permissions.title')}>
           <Field
-            label="Who answers"
-            description="What a command your rules have not settled does next. The picker in the composer sets the same thing. Full access runs everything but a deny rule, and is back to Ask on the next start."
+            label={t('agentSettings.permissions.whoAnswers.label')}
+            description={t('agentSettings.permissions.whoAnswers.description')}
             htmlFor="agent-tool-mode"
           >
             <select
@@ -322,14 +324,14 @@ export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element 
               }
               className={selectCls}
             >
-              <option value="ask">Ask every time</option>
-              <option value="auto">Auto: decide the ordinary ones</option>
-              <option value="full">Full access: never ask</option>
+              <option value="ask">{t('agentSettings.permissions.mode.ask')}</option>
+              <option value="auto">{t('agentSettings.permissions.mode.auto')}</option>
+              <option value="full">{t('agentSettings.permissions.mode.full')}</option>
             </select>
           </Field>
           <Field
-            label="Auto-approval model"
-            description="Judges one command at a time in Auto. Small and fast is what this wants - it never sees the conversation, only the command line."
+            label={t('agentSettings.permissions.classifier.label')}
+            description={t('agentSettings.permissions.classifier.description')}
             layout="stack"
           >
             <ModelSelect
@@ -339,7 +341,7 @@ export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element 
                 void updateSettings({ ai: { agent: { classifierModel } } })
               }
               allowNone
-              noneLabel="Use the coding model"
+              noneLabel={t('agentSettings.model.useCodingModel')}
             />
           </Field>
           <ClassifierNoteField
@@ -356,14 +358,14 @@ export function AgentSettingsPanel({ cwd }: { cwd: string }): React.JSX.Element 
 
         <MemorySection cwd={cwd} />
 
-        <FieldGroup title="Instructions">
+        <FieldGroup title={t('agentSettings.instructions.title')}>
           <SystemPromptField
             value={agent.systemPrompt}
             onChange={(systemPrompt) => void updateSettings({ ai: { agent: { systemPrompt } } })}
           />
         </FieldGroup>
 
-        <FieldGroup title="Context">
+        <FieldGroup title={t('agentSettings.context.title')}>
           <CompactionField
             value={agent.compactThreshold}
             onChange={(compactThreshold) =>
@@ -409,21 +411,51 @@ function CatalogStatus({
   loading: boolean;
   onRefresh: () => void;
 }): React.JSX.Element {
-  const local = localCount === 1 ? '1 local model' : `${localCount} local models`;
+  const { t } = useTranslation();
+  const ageMinutes = Math.round((Date.now() - fetchedAt) / 60_000);
+  const age =
+    fetchedAt <= 0
+      ? null
+      : ageMinutes < 1
+        ? t('agentSettings.catalog.age.justNow')
+        : ageMinutes < 60
+          ? t('agentSettings.catalog.age.minutes', { count: ageMinutes })
+          : ageMinutes < 24 * 60
+            ? t('agentSettings.catalog.age.hours', { count: Math.round(ageMinutes / 60) })
+            : t('agentSettings.catalog.age.days', { count: Math.round(ageMinutes / (24 * 60)) });
+
   return (
     <div className="space-y-2 border-t border-fleet-border pt-4">
       <div className="flex items-center justify-between gap-3 text-xs text-fleet-text-muted">
-        <span className="min-w-0 truncate">
+        <span className="flex min-w-0 flex-wrap gap-x-1">
           {loading
-            ? 'Loading models…'
+            ? t('agentSettings.catalog.loading')
             : count === 0
               ? // Not "no models". A local-only setup is a working setup, and
                 // reporting it as an empty catalog would be the panel calling
                 // the user's own servers nothing.
                 localCount === 0
-                ? 'No models loaded yet.'
-                : `${local}. No OpenRouter models downloaded.`
-              : `${count} OpenRouter models and ${imageCount} image models${fetchedAt > 0 ? `, updated ${relativeTime(fetchedAt)}` : ''}${localCount > 0 ? `, plus ${local}` : ''}.`}
+                ? t('agentSettings.catalog.empty')
+                : t(
+                    localCount === 1
+                      ? 'agentSettings.catalog.localOnly.one'
+                      : 'agentSettings.catalog.localOnly.many',
+                    { count: localCount }
+                  )
+              : t('agentSettings.catalog.counts', { count, imageCount })}
+          {!loading && count > 0 && age !== null && (
+            <span>{t('agentSettings.catalog.updated', { age })}</span>
+          )}
+          {!loading && count > 0 && localCount > 0 && (
+            <span>
+              {t(
+                localCount === 1
+                  ? 'agentSettings.catalog.local.one'
+                  : 'agentSettings.catalog.local.many',
+                { count: localCount }
+              )}
+            </span>
+          )}
         </span>
         <button
           type="button"
@@ -432,19 +464,18 @@ function CatalogStatus({
           className="flex shrink-0 items-center gap-1.5 rounded-md border border-fleet-border-strong px-2 py-1 text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 disabled:opacity-40 focus-ring"
         >
           <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
-          Refresh
+          {t('agentSettings.catalog.refresh')}
         </button>
       </div>
       {error && (
         <p className="flex items-start gap-1.5 text-xs text-amber-400">
           <TriangleAlert size={12} className="mt-0.5 shrink-0" />
-          <span>
-            Could not refresh the OpenRouter model lists ({error}). Showing the last downloaded
-            ones.
+          <span className="flex flex-col">
+            <span>{t('agentSettings.catalog.error', { error })}</span>
             {/* Said plainly, because the warning above is about a download this
                 user may have no stake in - a local-only setup should not read a
                 network failure as though its own models were affected. */}
-            {localCount > 0 && ' Your local models are unaffected.'}
+            {localCount > 0 && <span>{t('agentSettings.catalog.localUnaffected')}</span>}
           </span>
         </p>
       )}

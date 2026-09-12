@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { useTranslation } from '../lib/i18n';
 
 /**
  * Drag handle on the right edge of the sidebar. Emits raw pixel widths;
@@ -15,6 +16,7 @@ export function SidebarResizeHandle({
   onResize: (widthPx: number) => void;
   onReset: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const previousUserSelectRef = useRef<string>('');
 
@@ -48,7 +50,7 @@ export function SidebarResizeHandle({
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize sidebar"
+      aria-label={t('panes.sidebarResize.aria')}
       // Sits in the canvas gutter between the sidebar card and the first pane
       // rather than on the card's rounded edge, so grabbing it never means
       // clicking the last few pixels of a row.

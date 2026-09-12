@@ -12,9 +12,12 @@ import {
   PenLine,
   Trash2
 } from 'lucide-react';
+import type { MessageKey } from '../../../../shared/i18n';
 import type { RemoteDirEntry } from '../../../../shared/remote-ssh-types';
 import { getFileIcon } from '../../lib/file-icons';
+import { useTranslation } from '../../lib/i18n';
 import { popperAnim } from '../../lib/motion';
+import { formatDateTime } from '../../lib/relative-time';
 import type { SortDir, SortKey, ViewMode } from '../../store/remote-ssh-store';
 
 const itemClass =
@@ -31,19 +34,18 @@ function formatSize(entry: RemoteDirEntry): string {
 
 /** Absolute date, day-precision - file lists are scanned, and a stable column
  *  scans far better than "3 days ago" strings of varying width. */
-function formatMtime(mtimeMs: number): string {
+function formatMtime(mtimeMs: number, locale: string): string {
   if (!mtimeMs) return '-';
   const d = new Date(mtimeMs);
   const now = new Date();
   const sameYear = d.getFullYear() === now.getFullYear();
-  const date = d.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    ...(sameYear ? {} : { year: 'numeric' })
-  });
   return sameYear
-    ? `${date}, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
-    : date;
+    ? `${formatDateTime(mtimeMs, locale, { month: 'short', day: 'numeric' })}, ${formatDateTime(
+        mtimeMs,
+        locale,
+        { hour: '2-digit', minute: '2-digit' }
+      )}`
+    : formatDateTime(mtimeMs, locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 function entryIcon(entry: RemoteDirEntry): React.ReactNode {
@@ -87,6 +89,7 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
   },
   ref
 ) {
+  const { t, locale } = useTranslation();
   const rows = entries.map((entry) => {
     const isFocused = entry.path === focused;
     const body =
@@ -121,7 +124,7 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
             {formatSize(entry)}
           </span>
           <span className="w-32 shrink-0 text-right text-xs text-neutral-500 tabular-nums">
-            {formatMtime(entry.mtimeMs)}
+            {formatMtime(entry.mtimeMs, locale)}
           </span>
         </button>
       );
@@ -137,22 +140,22 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
           >
             <ContextMenu.Item className={itemClass} onSelect={() => onOpen(entry)}>
               {entry.kind === 'dir' ? <FolderOpen size={14} /> : <ExternalLink size={14} />}
-              {entry.kind === 'dir' ? 'Open folder' : 'Open'}
+              {t(entry.kind === 'dir' ? 'ssh.action.openFolder' : 'ssh.action.open')}
             </ContextMenu.Item>
             {entry.kind !== 'dir' && (
               <ContextMenu.Item className={itemClass} onSelect={() => onDownload(entry)}>
                 <ArrowDownToLine size={14} />
-                Download…
+                {t('ssh.action.download')}
               </ContextMenu.Item>
             )}
             <ContextMenu.Separator className="my-1 h-px bg-fleet-surface-3" />
             <ContextMenu.Item className={itemClass} onSelect={() => onCopyPath(entry)}>
               <Copy size={14} />
-              Copy path
+              {t('ssh.action.copyPath')}
             </ContextMenu.Item>
             <ContextMenu.Item className={itemClass} onSelect={() => onRename(entry)}>
               <PenLine size={14} />
-              Rename…
+              {t('ssh.action.renameMenu')}
             </ContextMenu.Item>
             <ContextMenu.Separator className="my-1 h-px bg-fleet-surface-3" />
             {/* Destructive action last and visually separated, so it is never
@@ -162,7 +165,7 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
               onSelect={() => onDelete(entry)}
             >
               <Trash2 size={14} />
-              Delete…
+              {t('ssh.action.deleteMenu')}
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Portal>
@@ -190,21 +193,21 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
         <span className="w-[13px] shrink-0" />
         <SortHeader
           className="flex-1 min-w-0"
-          label="Name"
+          labelKey="ssh.list.name"
           active={sortKey === 'name'}
           dir={sortDir}
           onClick={() => onSort('name')}
         />
         <SortHeader
           className="w-20 shrink-0 justify-end"
-          label="Size"
+          labelKey="ssh.list.size"
           active={sortKey === 'size'}
           dir={sortDir}
           onClick={() => onSort('size')}
         />
         <SortHeader
           className="w-32 shrink-0 justify-end"
-          label="Modified"
+          labelKey="ssh.list.modified"
           active={sortKey === 'modified'}
           dir={sortDir}
           onClick={() => onSort('modified')}
@@ -218,25 +221,27 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
 });
 
 function SortHeader({
-  label,
+  labelKey,
   active,
   dir,
   onClick,
   className
 }: {
-  label: string;
+  labelKey: MessageKey;
   active: boolean;
   dir: SortDir;
   onClick: () => void;
   className: string;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <button
       className={`flex items-center gap-1 hover:text-neutral-300 transition-colors ${active ? 'text-neutral-300' : ''} ${className}`}
       onClick={onClick}
       aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
-      {label}
+      {t(labelKey)}
       {active &&
         (dir === 'asc' ? (
           <ArrowUp size={10} className="shrink-0" />

@@ -56,14 +56,34 @@ describe('normalizeEndpointUrl', () => {
 
   it('says so when there is a path it does not recognise', () => {
     const result = normalizeEndpointUrl('http://127.0.0.1:11437/some/proxy');
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toContain('http://127.0.0.1:11437');
+    expect(result).toEqual({
+      ok: false,
+      error: 'agentSettings.endpoint.errorAddressPath',
+      params: { origin: 'http://127.0.0.1:11437' }
+    });
+  });
+
+  it('keeps the input it could not read in the error params', () => {
+    expect(normalizeEndpointUrl('http://[::1')).toEqual({
+      ok: false,
+      error: 'agentSettings.endpoint.errorAddressInvalid',
+      params: { input: 'http://[::1' }
+    });
   });
 
   it('refuses an empty field, and a scheme that is not the web', () => {
-    expect(normalizeEndpointUrl('   ').ok).toBe(false);
-    expect(normalizeEndpointUrl('ftp://127.0.0.1:11437').ok).toBe(false);
-    expect(normalizeEndpointUrl('file:///models').ok).toBe(false);
+    expect(normalizeEndpointUrl('   ')).toEqual({
+      ok: false,
+      error: 'agentSettings.endpoint.errorAddressEmpty'
+    });
+    expect(normalizeEndpointUrl('ftp://127.0.0.1:11437')).toEqual({
+      ok: false,
+      error: 'agentSettings.endpoint.errorAddressScheme'
+    });
+    expect(normalizeEndpointUrl('file:///models')).toEqual({
+      ok: false,
+      error: 'agentSettings.endpoint.errorAddressScheme'
+    });
   });
 });
 

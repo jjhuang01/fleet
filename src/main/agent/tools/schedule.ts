@@ -6,6 +6,7 @@ import type {
   ScheduleCreateArgs
 } from '../../../shared/agent-tools';
 import { nextFireLabel, type AgentScheduleRecord } from '../../../shared/agent-schedule';
+import { translate } from '../../../shared/i18n';
 import { ScheduleCapReached } from '../schedule-store';
 
 /**
@@ -51,7 +52,7 @@ export function runScheduleCreate(
   const now = new Date();
   return {
     text: [
-      `Set. \`${made.id}\` fires ${nextFireLabel(made, now)}${made.recurring ? ` and every ${made.cron} after that, until it expires in a week` : ' and is then gone'}.`,
+      `Set. \`${made.id}\` fires ${whenInEnglish(made, now)}${made.recurring ? ` and every ${made.cron} after that, until it expires in a week` : ' and is then gone'}.`,
       '',
       // Said again at the moment of setting rather than only in the tool
       // description, because this is the last point at which the model can still
@@ -62,8 +63,20 @@ export function runScheduleCreate(
     ].join('\n'),
     // When rather than the expression: the row already carries the expression
     // as its subject, and saying it twice on one line says nothing twice.
-    summary: nextFireLabel(made, now)
+    summary: whenInEnglish(made, now)
   };
+}
+
+/**
+ * When a schedule fires, in the words a model reads.
+ *
+ * The label is a catalogue key because the panel shows the same fact in the
+ * user's language; a tool result is read by a model, so it resolves to English
+ * here rather than picking up whatever the window is set to.
+ */
+function whenInEnglish(record: AgentScheduleRecord, now: Date): string {
+  const label = nextFireLabel(record, now, 'en-US');
+  return translate('en', label.key, label.params);
 }
 
 export function runScheduleList(ctx: AgentToolContext): AgentToolResult {
@@ -129,7 +142,7 @@ function renderList(records: AgentScheduleRecord[], now: Date): string {
     ...records.map(
       (record) =>
         `- \`${record.id}\` ${record.cron} (${record.recurring ? 'recurring' : 'once'}, ${
-          record.state === 'due' ? 'due now' : `next ${nextFireLabel(record, now)}`
+          record.state === 'due' ? 'due now' : `next ${whenInEnglish(record, now)}`
         }): ${record.note}`
     )
   ].join('\n');

@@ -11,6 +11,7 @@ import type { TelescopeMode, TelescopeItem } from './types';
 import { ShikiPreview } from './ShikiPreview';
 import { Overlay } from '../Overlay';
 import { tooltipAnim } from '../../lib/motion';
+import { useTranslation } from '../../lib/i18n';
 
 const IMAGE_EXTENSIONS = new Set([
   'png',
@@ -44,6 +45,7 @@ export function TelescopeModal({
   onClose,
   cwd
 }: TelescopeModalProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [activeModeId, setActiveModeId] = useState<string>('files');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<TelescopeItem[]>([]);
@@ -142,10 +144,10 @@ export function TelescopeModal({
         const paneType = typeof data.paneType === 'string' ? data.paneType : 'terminal';
         const cwd = typeof data.cwd === 'string' ? data.cwd : '';
         const paneInfo = [
-          `Pane: ${item.title}`,
-          `Type: ${paneType}`,
-          `CWD: ${cwd}`,
-          cwd ? `\nDirectory: ${cwd}` : ''
+          t('dialogs.telescope.preview.pane', { title: item.title }),
+          t('dialogs.telescope.preview.type', { type: paneType }),
+          t('dialogs.telescope.preview.cwd', { cwd }),
+          cwd ? `\n${t('dialogs.telescope.preview.directory', { cwd })}` : ''
         ]
           .filter(Boolean)
           .join('\n');
@@ -172,9 +174,9 @@ export function TelescopeModal({
                 })
                 .map((e) => (e.isDirectory ? `${e.name}/` : e.name))
                 .join('\n');
-              setPreviewContent(listing || '(empty directory)');
+              setPreviewContent(listing || t('dialogs.telescope.preview.emptyDirectory'));
             } else {
-              setPreviewContent('Could not read directory');
+              setPreviewContent(t('dialogs.telescope.preview.readDirectoryFailed'));
             }
           })
           .finally(() => setPreviewLoading(false));
@@ -192,7 +194,7 @@ export function TelescopeModal({
               setPreviewImage({ base64: result.data.base64, mimeType: result.data.mimeType });
             } else {
               setPreviewImage(null);
-              setPreviewContent('Could not read image');
+              setPreviewContent(t('dialogs.telescope.preview.readImageFailed'));
             }
           })
           .finally(() => setPreviewLoading(false));
@@ -210,7 +212,7 @@ export function TelescopeModal({
               setPreviewContent(lines.join('\n'));
               setPreviewFilePath(filePath);
             } else {
-              setPreviewContent('Could not read file');
+              setPreviewContent(t('dialogs.telescope.preview.readFileFailed'));
               setPreviewFilePath(null);
             }
           })
@@ -220,13 +222,13 @@ export function TelescopeModal({
 
       setPreviewImage(null);
       setPreviewFilePath(null);
-      setPreviewContent('No preview available');
+      setPreviewContent(t('dialogs.telescope.preview.none'));
     }, 100);
 
     return () => {
       if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
     };
-  }, [isOpen, results, selectedIndex]);
+  }, [isOpen, results, selectedIndex, t]);
 
   // Scroll selected into view
   useEffect(() => {
@@ -330,7 +332,9 @@ export function TelescopeModal({
 
   const renderPreviewPanel = (): React.JSX.Element => {
     if (previewLoading) {
-      return <div className="text-xs text-neutral-500 p-3">Loading preview...</div>;
+      return (
+        <div className="text-xs text-neutral-500 p-3">{t('dialogs.telescope.preview.loading')}</div>
+      );
     }
 
     if (previewImage) {
@@ -339,14 +343,18 @@ export function TelescopeModal({
           <img
             src={`data:${previewImage.mimeType};base64,${previewImage.base64}`}
             className="max-w-full max-h-full object-contain"
-            alt="Preview"
+            alt={t('dialogs.telescope.preview.alt')}
           />
         </div>
       );
     }
 
     if (!previewContent) {
-      return <div className="text-xs text-neutral-600 p-3 italic">Select an item to preview</div>;
+      return (
+        <div className="text-xs text-neutral-600 p-3 italic">
+          {t('dialogs.telescope.preview.select')}
+        </div>
+      );
     }
 
     if (previewFilePath) {
@@ -378,7 +386,7 @@ export function TelescopeModal({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={activeMode?.placeholder ?? 'Search...'}
+            placeholder={t(activeMode?.placeholder ?? 'dialogs.telescope.search')}
             className="flex-1 bg-transparent text-sm text-white outline-none placeholder-neutral-500 min-w-0"
           />
         </div>
@@ -406,7 +414,7 @@ export function TelescopeModal({
                       }`}
                     >
                       <Icon size={12} />
-                      {mode.label}
+                      {t(mode.label)}
                     </button>
                   </Tooltip.Trigger>
                   <Tooltip.Portal>
@@ -435,7 +443,7 @@ export function TelescopeModal({
         <div ref={listRef} className="w-[40%] overflow-y-auto border-r border-neutral-800 py-1">
           {results.length === 0 ? (
             <div className="px-3 py-4 text-xs text-neutral-600 text-center italic">
-              {query ? 'No results' : 'Type to search'}
+              {query ? t('dialogs.telescope.noResults') : t('dialogs.telescope.typeToSearch')}
             </div>
           ) : (
             results.map((item, i) => {
@@ -487,11 +495,11 @@ export function TelescopeModal({
 
       {/* Footer */}
       <div className="px-3 py-1.5 border-t border-neutral-800 flex items-center gap-3 text-xs text-neutral-600">
-        <span>↑↓ navigate</span>
-        <span>↵ open/focus</span>
-        {activeModeId !== 'panes' && <span>⇧↵ paste path</span>}
-        {activeModeId === 'browse' && <span>⌫ up dir</span>}
-        <span>esc dismiss</span>
+        <span>{t('common.navigate')}</span>
+        <span>{t('dialogs.telescope.footer.openFocus')}</span>
+        {activeModeId !== 'panes' && <span>{t('dialogs.telescope.footer.pastePath')}</span>}
+        {activeModeId === 'browse' && <span>{t('dialogs.telescope.footer.upDir')}</span>}
+        <span>{t('common.dismiss')}</span>
       </div>
     </Overlay>
   );

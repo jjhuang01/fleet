@@ -1,5 +1,6 @@
 import { AlertCircle, ArrowDownToLine, ArrowUpFromLine, Check, X } from 'lucide-react';
 import type { RemoteTransfer } from '../../../../shared/remote-ssh-types';
+import { useTranslation } from '../../lib/i18n';
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -41,6 +42,7 @@ function TransferRow({
   onCancel: (id: string) => void;
   onDismiss: (id: string) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const { state, transferred, total } = transfer;
   const active = state === 'active';
   // A transfer whose total is unknown gets a full-width bar rather than a
@@ -68,10 +70,10 @@ function TransferRow({
 
       {state === 'error' ? (
         <span className="flex-1 min-w-0 truncate text-red-400" title={transfer.error}>
-          {transfer.error ?? 'Transfer failed'}
+          {transfer.error ?? t('ssh.transfer.failed')}
         </span>
       ) : state === 'cancelled' ? (
-        <span className="flex-1 text-neutral-500">Cancelled</span>
+        <span className="flex-1 text-neutral-500">{t('ssh.transfer.cancelled')}</span>
       ) : (
         <>
           <div className="flex-1 min-w-0 h-1 rounded-full bg-neutral-800 overflow-hidden">
@@ -92,8 +94,10 @@ function TransferRow({
 
       <button
         className="shrink-0 p-0.5 rounded text-neutral-500 hover:text-white hover:bg-white/10 transition-colors active:scale-[0.97]"
-        title={active ? 'Cancel transfer' : 'Dismiss'}
-        aria-label={active ? `Cancel ${transfer.name}` : `Dismiss ${transfer.name}`}
+        title={t(active ? 'ssh.action.cancelTransfer' : 'ssh.action.dismiss')}
+        aria-label={t(active ? 'ssh.transfer.cancelAria' : 'ssh.transfer.dismissAria', {
+          name: transfer.name
+        })}
         onClick={() => (active ? onCancel(transfer.id) : onDismiss(transfer.id))}
       >
         <X size={12} />

@@ -26,6 +26,7 @@ import {
   type ParsedEnvFile
 } from '../../../../shared/env-parse';
 import { createCancellation } from '../../lib/cancellation';
+import { useTranslation } from '../../lib/i18n';
 
 const RAW_ONLY_BYTES = 256 * 1024;
 
@@ -42,6 +43,7 @@ export function EnvEditorModal({
   paneId: string | null;
   pathContext?: PathContext;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
   const [root, setRoot] = useState<string | undefined>(cwd);
   const [files, setFiles] = useState<EnvFileEntry[]>([]);
@@ -122,12 +124,12 @@ export function EnvEditorModal({
       })
       .catch((e) => {
         if (run.isCancelled()) return;
-        setError(e instanceof Error ? e.message : 'Failed to read file');
+        setError(e instanceof Error ? e.message : t('dialogs.envEditor.readFailed'));
       });
     return () => {
       run.cancel();
     };
-  }, [selected]);
+  }, [selected, t]);
 
   const setLines = useCallback(
     (lines: EnvLine[]) => setParsed((p) => (p ? { ...p, lines } : p)),
@@ -188,23 +190,21 @@ export function EnvEditorModal({
           return;
         }
         if (!res.ok && res.missingDir) {
-          showToast(
-            'This folder no longer exists — it may have been moved or deleted. Run `cd` in the terminal to refresh.'
-          );
+          showToast(t('dialogs.envEditor.folderMissing'));
           return;
         }
         setOriginalText(text);
         mtimeMsRef.current = res.mtimeMs;
         setExternalChange(false);
         void reload(); // refresh var counts
-        showToast('Saved');
+        showToast(t('dialogs.envEditor.saved'));
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to save file');
+        setError(e instanceof Error ? e.message : t('dialogs.envEditor.saveFailed'));
       } finally {
         setSaving(false);
       }
     },
-    [selected, parsed, saving, reload, showToast]
+    [selected, parsed, saving, reload, showToast, t]
   );
 
   const save = useCallback(() => {
@@ -224,16 +224,16 @@ export function EnvEditorModal({
   }, [isOpen, dirty, save]);
 
   const requestClose = useCallback(() => {
-    if (dirty && !window.confirm('Discard unsaved changes?')) return;
+    if (dirty && !window.confirm(t('dialogs.envEditor.discardChanges'))) return;
     onClose();
-  }, [dirty, onClose]);
+  }, [dirty, onClose, t]);
 
   const selectFile = useCallback(
     (file: EnvFileEntry) => {
-      if (dirty && !window.confirm('Discard unsaved changes to this file?')) return;
+      if (dirty && !window.confirm(t('dialogs.envEditor.discardFileChanges'))) return;
       setSelected(file);
     },
-    [dirty]
+    [dirty, t]
   );
 
   const dialogGroups = (() => {
@@ -254,17 +254,17 @@ export function EnvEditorModal({
         const created = list.find((f) => f.absPath === absPath) ?? null;
         if (created) setSelected(created);
       } catch (e) {
-        setNewFileError(e instanceof Error ? e.message : 'Could not create file');
+        setNewFileError(e instanceof Error ? e.message : t('dialogs.envEditor.createFailed'));
       }
     },
-    [root, pathContext]
+    [root, pathContext, t]
   );
 
   const renameFile = useCallback(
     async (file: EnvFileEntry, newName: string) => {
       if (!root || newName === file.name) return;
       if (!newName.startsWith('.env')) {
-        showToast('File name must start with ".env"');
+        showToast(t('dialogs.envEditor.fileNamePrefix'));
         return;
       }
       try {
@@ -275,10 +275,10 @@ export function EnvEditorModal({
           setSelected(list.find((f) => f.absPath === absPath) ?? null);
         }
       } catch (e) {
-        showToast(e instanceof Error ? e.message : 'Could not rename file');
+        showToast(e instanceof Error ? e.message : t('dialogs.envEditor.renameFailed'));
       }
     },
-    [root, selected, showToast, pathContext]
+    [root, selected, showToast, pathContext, t]
   );
 
   const deleteFile = useCallback(
@@ -287,9 +287,9 @@ export function EnvEditorModal({
         const { trashPath } = await window.fleet.envEditor.delete(file.absPath);
         if (selected?.absPath === file.absPath) setSelected(null);
         await reload();
-        showToast(`Deleted ${file.relPath}`, {
+        showToast(t('dialogs.envEditor.deletedFile', { path: file.relPath }), {
           action: {
-            label: 'Undo',
+            label: t('dialogs.envEditor.undo'),
             onClick: () => {
               void window.fleet.envEditor.restore(trashPath, file.absPath).then(() => {
                 void reload();
@@ -298,10 +298,10 @@ export function EnvEditorModal({
           }
         });
       } catch (e) {
-        showToast(e instanceof Error ? e.message : 'Could not delete file');
+        showToast(e instanceof Error ? e.message : t('dialogs.envEditor.deleteFailed'));
       }
     },
-    [reload, selected, showToast]
+    [reload, selected, showToast, t]
   );
 
   if (!isOpen) return null;
@@ -324,7 +324,9 @@ export function EnvEditorModal({
         className="flex h-[85vh] w-[860px] flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900 shadow-2xl duration-150 animate-in fade-in-0 zoom-in-95"
       >
         <div className="flex items-center gap-3 border-b border-neutral-800 px-5 py-3">
-          <h2 className="text-base font-semibold text-neutral-100">Env Editor</h2>
+          <h2 className="text-base font-semibold text-neutral-100">
+            {t('dialogs.envEditor.title')}
+          </h2>
           <button
             onClick={() => void pickFolder()}
             title={root}
@@ -332,18 +334,18 @@ export function EnvEditorModal({
           >
             <Folder size={13} />
             <span className="max-w-[260px] truncate">
-              {root ? basenameOf(root) : 'Pick folder'}
+              {root ? basenameOf(root) : t('dialogs.envEditor.openFolder')}
             </span>
             <ChevronDown size={13} className="text-neutral-500" />
           </button>
           <button
             onClick={() => save()}
             disabled={!dirty || saving}
-            title="Save (⌘S)"
+            title={t('dialogs.envEditor.saveTitle')}
             className="ml-auto inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition active:scale-[0.97] hover:bg-blue-500 disabled:bg-neutral-800 disabled:text-neutral-600 disabled:active:scale-100"
           >
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-            Save
+            {t('common.save')}
           </button>
           <button
             onClick={requestClose}
@@ -375,7 +377,7 @@ export function EnvEditorModal({
             {externalChange && (
               <div className="flex items-center gap-2 border-b border-amber-800 bg-amber-950/40 px-4 py-2 text-xs text-amber-300">
                 <AlertTriangle size={13} />
-                This file changed on disk.
+                {t('dialogs.envEditor.externalChanged')}
                 <button
                   onClick={() => {
                     setExternalChange(false);
@@ -384,7 +386,7 @@ export function EnvEditorModal({
                   }}
                   className="font-medium underline active:scale-95"
                 >
-                  Reload
+                  {t('dialogs.envEditor.reload')}
                 </button>
                 <button
                   onClick={() => {
@@ -392,7 +394,7 @@ export function EnvEditorModal({
                   }}
                   className="font-medium underline active:scale-95"
                 >
-                  Overwrite
+                  {t('dialogs.envEditor.overwrite')}
                 </button>
               </div>
             )}
@@ -401,10 +403,14 @@ export function EnvEditorModal({
                 <span className="font-mono text-xs text-neutral-200">{selected.name}</span>
                 {selected.isTemplate && (
                   <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-neutral-500">
-                    template
+                    {t('dialogs.envEditor.template')}
                   </span>
                 )}
-                {dirty && <span className="text-[10px] text-amber-400">● unsaved</span>}
+                {dirty && (
+                  <span className="text-[10px] text-amber-400">
+                    {t('dialogs.envEditor.unsaved')}
+                  </span>
+                )}
                 <div className="ml-auto flex items-center gap-2">
                   {effectiveMode !== 'raw' && (
                     <button
@@ -412,7 +418,9 @@ export function EnvEditorModal({
                       className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-neutral-300 transition hover:bg-neutral-800 active:scale-95"
                     >
                       {revealAll ? <EyeOff size={13} /> : <Eye size={13} />}
-                      {revealAll ? 'Hide all' : 'Reveal all'}
+                      {revealAll
+                        ? t('dialogs.envEditor.hideAll')
+                        : t('dialogs.envEditor.revealAll')}
                     </button>
                   )}
                   {!rawOnly && (
@@ -425,7 +433,7 @@ export function EnvEditorModal({
                             : 'text-neutral-400 hover:bg-neutral-800'
                         }`}
                       >
-                        <Table size={12} /> Form
+                        <Table size={12} /> {t('dialogs.envEditor.form')}
                       </button>
                       <button
                         onClick={showRaw}
@@ -435,7 +443,7 @@ export function EnvEditorModal({
                             : 'text-neutral-400 hover:bg-neutral-800'
                         }`}
                       >
-                        <Code size={12} /> Raw
+                        <Code size={12} /> {t('dialogs.envEditor.raw')}
                       </button>
                     </div>
                   )}
@@ -460,8 +468,8 @@ export function EnvEditorModal({
                 <FilePlus2 size={28} className="text-neutral-600" />
                 <p className="text-sm text-neutral-400">
                   {files.length === 0
-                    ? 'No .env files in this folder.'
-                    : 'Select a file from the left to edit it.'}
+                    ? t('dialogs.envEditor.noFiles')
+                    : t('dialogs.envEditor.selectFile')}
                 </p>
                 {files.length === 0 && (
                   <button
@@ -471,7 +479,7 @@ export function EnvEditorModal({
                     }}
                     className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 active:scale-[0.97]"
                   >
-                    <FilePlus2 size={15} /> Create .env file
+                    <FilePlus2 size={15} /> {t('dialogs.envEditor.createFile')}
                   </button>
                 )}
               </div>

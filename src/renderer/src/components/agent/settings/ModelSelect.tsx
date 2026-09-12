@@ -3,8 +3,9 @@ import * as Popover from '@radix-ui/react-popover';
 import { Check, ChevronDown, Eye, Image as ImageIcon, Search, Wrench } from 'lucide-react';
 import type { AgentCatalogLocal, AgentCatalogModel } from '../../../../../shared/agent-types';
 import { fuzzyMatch } from '../../../lib/commands';
+import { useTranslation } from '../../../lib/i18n';
 import { popperAnim } from '../../../lib/motion';
-import { formatTokens, formatCost } from './format';
+import { formatTokens } from './format';
 import { groupBySource } from './picker-groups';
 
 /**
@@ -70,8 +71,8 @@ export function ModelPicker<T extends PickerModel>({
   onChange,
   renderMeta,
   allowNone = false,
-  noneLabel = 'None',
-  placeholder = 'Select a model'
+  noneLabel,
+  placeholder
 }: {
   models: T[];
   value: string | null;
@@ -82,6 +83,7 @@ export function ModelPicker<T extends PickerModel>({
   noneLabel?: string;
   placeholder?: string;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -89,6 +91,8 @@ export function ModelPicker<T extends PickerModel>({
   const [shown, setShown] = useState(PAGE);
 
   const selected = models.find((m) => m.id === value) ?? null;
+  const noneText = noneLabel ?? t('agentSettings.common.none');
+  const placeholderText = placeholder ?? t('agentSettings.model.placeholder');
   const filtered = useMemo(() => rank(models, query), [models, query]);
   const groups = useMemo(
     () => groupBySource(filtered.slice(0, shown), query.trim() === ''),
@@ -128,7 +132,7 @@ export function ModelPicker<T extends PickerModel>({
         >
           <span className="min-w-0">
             <span className="block truncate text-sm text-fleet-text">
-              {selected?.name ?? value ?? (allowNone ? noneLabel : placeholder)}
+              {selected?.name ?? value ?? (allowNone ? noneText : placeholderText)}
             </span>
             {selected && (
               <span className="block truncate text-xs text-fleet-text-muted">
@@ -137,7 +141,9 @@ export function ModelPicker<T extends PickerModel>({
                   : // The wire id of a local model is a `.gguf` path as often as
                     // it is a name, so the server it is on is the more useful
                     // second line - and it is what tells two of them apart.
-                    `${selected.local.label}${selected.local.reachable ? '' : ' · offline'}`}
+                    selected.local.reachable
+                    ? selected.local.label
+                    : t('agentSettings.model.offline', { label: selected.local.label })}
               </span>
             )}
           </span>
@@ -156,17 +162,19 @@ export function ModelPicker<T extends PickerModel>({
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search models…"
+              placeholder={t('agentSettings.model.search')}
               spellCheck={false}
               className="w-full bg-transparent text-sm text-fleet-text outline-none placeholder:text-fleet-text-subtle"
             />
           </div>
           <div className="overflow-y-auto py-1" onScroll={onScroll}>
             {allowNone && (
-              <Row selected={value === null} onSelect={() => choose(null)} title={noneLabel} />
+              <Row selected={value === null} onSelect={() => choose(null)} title={noneText} />
             )}
             {filtered.length === 0 && !allowNone && (
-              <p className="px-3 py-4 text-sm text-fleet-text-muted">No models match.</p>
+              <p className="px-3 py-4 text-sm text-fleet-text-muted">
+                {t('agentSettings.model.noMatches')}
+              </p>
             )}
             {groups.map((group) => (
               <div key={group.key}>
@@ -252,7 +260,9 @@ function Row({
 
 /** Context / output / price plus capability glyphs, all from models.dev. */
 function ModelMeta({ model }: { model: AgentCatalogModel }): React.JSX.Element {
+  const { t } = useTranslation();
   const local = model.local;
+  const unitPrice = (n: number): string => (n < 1 ? `$${n.toFixed(2)}` : `$${n}`);
   return (
     <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-fleet-text-muted">
       {/*
@@ -264,17 +274,34 @@ function ModelMeta({ model }: { model: AgentCatalogModel }): React.JSX.Element {
         <span
           className={`rounded px-1 py-px ${local.reachable ? 'bg-fleet-surface-3 text-fleet-text-secondary' : 'bg-amber-500/15 text-amber-300'}`}
         >
-          {local.reachable ? local.label : `${local.label} · offline`}
+          {local.reachable ? local.label : t('agentSettings.model.offline', { label: local.label })}
         </span>
       )}
-      {model.contextLimit !== null && <span>{formatTokens(model.contextLimit)} ctx</span>}
-      {model.outputLimit !== null && <span>{formatTokens(model.outputLimit)} out</span>}
+      {model.contextLimit !== null && (
+        <span>
+          {t('agentSettings.model.contextShort', { tokens: formatTokens(model.contextLimit) })}
+        </span>
+      )}
+      {model.outputLimit !== null && (
+        <span>
+          {t('agentSettings.model.outputShort', { tokens: formatTokens(model.outputLimit) })}
+        </span>
+      )}
       {/* A model on the user's own hardware is free, and a price of nothing is
           not a fact worth a column. */}
-      {model.cost && local === undefined && <span>{formatCost(model.cost)}</span>}
-      {model.supportsTools && <Wrench size={10} aria-label="Tools" />}
-      {model.inputImage && <Eye size={10} aria-label="Vision" />}
-      {model.outputImage && <ImageIcon size={10} aria-label="Image generation" />}
+      {model.cost && local === undefined && (
+        <span>
+          {t('agentSettings.model.cost', {
+            input: unitPrice(model.cost.input),
+            output: unitPrice(model.cost.output)
+          })}
+        </span>
+      )}
+      {model.supportsTools && <Wrench size={10} aria-label={t('agentSettings.model.tools')} />}
+      {model.inputImage && <Eye size={10} aria-label={t('agentSettings.model.vision')} />}
+      {model.outputImage && (
+        <ImageIcon size={10} aria-label={t('agentSettings.model.imageGeneration')} />
+      )}
     </span>
   );
 }

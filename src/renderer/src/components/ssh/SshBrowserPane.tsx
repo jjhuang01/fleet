@@ -12,8 +12,10 @@ import {
   ServerCrash,
   Upload
 } from 'lucide-react';
+import type { MessageKey } from '../../../../shared/i18n';
 import type { RemoteDirEntry, RemoteHost } from '../../../../shared/remote-ssh-types';
 import { isBinaryBlockedFilePath } from '../../../../shared/file-open';
+import { useTranslation } from '../../lib/i18n';
 import { remoteChildPath } from '../../lib/remote-names';
 import { useRemoteSshStore, isTransfer } from '../../store/remote-ssh-store';
 import { useWorkspaceStore } from '../../store/workspace-store';
@@ -37,6 +39,7 @@ type PaneDialog =
   | { kind: 'delete'; entry: RemoteDirEntry };
 
 export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const pane = useRemoteSshStore((s) => s.panes[paneId]);
   const openPane = useRemoteSshStore((s) => s.openPane);
   const closePane = useRemoteSshStore((s) => s.closePane);
@@ -88,19 +91,21 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
         return;
       }
       if (isBinaryBlockedFilePath(entry.path)) {
-        showToast(`Can't preview ${entry.name}`);
+        showToast(t('ssh.toast.previewBlocked', { name: entry.name }));
         return;
       }
       openRemoteFile(host, entry.path);
     },
-    [paneId, host, navigate, openRemoteFile, showToast]
+    [paneId, host, navigate, openRemoteFile, showToast, t]
   );
 
   const handleCopyPath = useCallback(
     (entry: RemoteDirEntry) => {
-      void navigator.clipboard.writeText(entry.path).then(() => showToast('Copied path'));
+      void navigator.clipboard
+        .writeText(entry.path)
+        .then(() => showToast(t('ssh.toast.pathCopied')));
     },
-    [showToast]
+    [showToast, t]
   );
 
   const handleDownload = useCallback(
@@ -154,18 +159,19 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
   const nameRequest: NameRequest | null = useMemo(() => {
     if (dialog?.kind === 'new-folder') {
       return {
-        title: 'New folder',
-        label: `Created in ${pane?.cwd ?? ''}`,
+        titleKey: 'ssh.name.title.newFolder',
+        labelKey: 'ssh.name.label.createdIn',
+        labelParams: { path: pane?.cwd ?? '' },
         initialValue: '',
-        confirmLabel: 'Create'
+        confirmLabelKey: 'ssh.action.create'
       };
     }
     if (dialog?.kind === 'rename') {
       return {
-        title: 'Rename',
-        label: 'New name',
+        titleKey: 'ssh.name.title.rename',
+        labelKey: 'ssh.name.label.newName',
         initialValue: dialog.entry.name,
-        confirmLabel: 'Rename'
+        confirmLabelKey: 'ssh.action.rename'
       };
     }
     return null;
@@ -231,7 +237,7 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
     return (
       <div className="h-full w-full flex items-center justify-center gap-2 bg-neutral-900 text-neutral-400 text-sm">
         <Loader2 className="animate-spin" size={16} />
-        Connecting to {host.label}…
+        {t('ssh.status.connecting', { host: host.label })}
       </div>
     );
   }
@@ -260,24 +266,28 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
     >
       {/* Toolbar: navigation on the left, view controls on the right */}
       <div className="flex-shrink-0 flex items-center gap-1 px-2 h-8 border-b border-neutral-800 bg-neutral-950/60">
-        <ToolbarButton onClick={() => void goBack(paneId)} title="Back" disabled={!canBack}>
+        <ToolbarButton
+          onClick={() => void goBack(paneId)}
+          titleKey="ssh.action.back"
+          disabled={!canBack}
+        >
           <ArrowLeft size={13} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => void goForward(paneId)}
-          title="Forward"
+          titleKey="ssh.action.forward"
           disabled={!canForward}
         >
           <ArrowRight size={13} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => void goUp(paneId)}
-          title="Parent folder"
+          titleKey="ssh.action.parentFolder"
           disabled={pane.cwd === '/'}
         >
           <ArrowUpFromLine size={13} />
         </ToolbarButton>
-        <ToolbarButton onClick={() => void refresh(paneId)} title="Refresh">
+        <ToolbarButton onClick={() => void refresh(paneId)} titleKey="ssh.action.refresh">
           <RefreshCw size={13} className={pane.loading ? 'animate-spin' : ''} />
         </ToolbarButton>
 
@@ -294,10 +304,13 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
 
         <div className="w-px h-3.5 bg-neutral-700 mx-1" />
 
-        <ToolbarButton onClick={() => setDialog({ kind: 'new-folder' })} title="New folder">
+        <ToolbarButton
+          onClick={() => setDialog({ kind: 'new-folder' })}
+          titleKey="ssh.action.newFolder"
+        >
           <FolderPlus size={13} />
         </ToolbarButton>
-        <ToolbarButton onClick={() => void handleUploadClick()} title="Upload files here">
+        <ToolbarButton onClick={() => void handleUploadClick()} titleKey="ssh.action.uploadFiles">
           <Upload size={13} />
         </ToolbarButton>
 
@@ -305,14 +318,14 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
 
         <ToolbarButton
           onClick={() => setView(paneId, 'list')}
-          title="List view"
+          titleKey="ssh.action.listView"
           active={pane.view === 'list'}
         >
           <List size={13} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => setView(paneId, 'grid')}
-          title="Grid view"
+          titleKey="ssh.action.gridView"
           active={pane.view === 'grid'}
         >
           <LayoutGrid size={13} />
@@ -329,18 +342,18 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
             onClick={() => void refresh(paneId)}
           >
             <RefreshCw size={12} />
-            Try again
+            {t('ssh.action.tryAgain')}
           </button>
         </div>
       ) : pane.loading && pane.entries.length === 0 ? (
         <div className="flex-1 min-h-0 flex items-center justify-center gap-2 text-neutral-500 text-sm">
           <Loader2 className="animate-spin" size={16} />
-          Loading…
+          {t('ssh.status.loading')}
         </div>
       ) : pane.entries.length === 0 ? (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 text-sm">
           <FolderOpen size={28} className="text-neutral-700" />
-          <div className="text-neutral-400">This folder is empty</div>
+          <div className="text-neutral-400">{t('ssh.status.empty')}</div>
         </div>
       ) : (
         <RemoteEntryList
@@ -365,7 +378,9 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
       {/* Status bar */}
       <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-neutral-950/80 border-t border-neutral-800 text-xs text-neutral-500">
         <span>
-          {pane.entries.length} {pane.entries.length === 1 ? 'item' : 'items'}
+          {t(pane.entries.length === 1 ? 'ssh.status.item' : 'ssh.status.items', {
+            count: pane.entries.length
+          })}
         </span>
         <span className="font-mono truncate min-w-0 ml-auto" title={pane.cwd}>
           {pane.cwd}
@@ -378,7 +393,9 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
       {dragging && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-neutral-950/80 border-2 border-dashed border-teal-500/60 pointer-events-none">
           <Upload size={28} className="text-teal-400" />
-          <div className="text-sm text-neutral-200">Upload to {host.label}</div>
+          <div className="text-sm text-neutral-200">
+            {t('ssh.status.uploadTo', { host: host.label })}
+          </div>
           <div className="text-xs font-mono text-neutral-500">{pane.cwd}</div>
         </div>
       )}
@@ -401,16 +418,19 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
 function ToolbarButton({
   children,
   onClick,
-  title,
+  titleKey,
   disabled,
   active
 }: {
   children: React.ReactNode;
   onClick: () => void;
-  title: string;
+  titleKey: MessageKey;
   disabled?: boolean;
   active?: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+  const title = t(titleKey);
+
   return (
     <button
       className={`px-1.5 py-1 rounded transition-colors active:scale-[0.97] disabled:opacity-30 disabled:pointer-events-none disabled:active:scale-100 ${

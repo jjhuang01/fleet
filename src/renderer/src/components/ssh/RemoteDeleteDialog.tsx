@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, TriangleAlert } from 'lucide-react';
 import type { RemoteDirEntry } from '../../../../shared/remote-ssh-types';
+import { useTranslation } from '../../lib/i18n';
 import { Overlay } from '../Overlay';
 
 type Props = {
@@ -24,6 +25,7 @@ export function RemoteDeleteDialog({
   onConfirm,
   onClose
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   // Held copy so the name stays put through the exit animation.
@@ -51,6 +53,12 @@ export function RemoteDeleteDialog({
   };
 
   const isDir = shown?.kind === 'dir';
+  const errorText =
+    error === null
+      ? null
+      : error === 'This browser pane is no longer open.'
+        ? t('ssh.error.paneGone')
+        : error;
 
   return (
     <Overlay open={entry !== null} onClose={onClose} closeOnBackdrop={!busy}>
@@ -59,19 +67,27 @@ export function RemoteDeleteDialog({
           <TriangleAlert size={16} className="mt-0.5 shrink-0 text-red-400" />
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-neutral-200">
-              Delete {isDir ? 'folder' : shown?.kind === 'symlink' ? 'link' : 'file'}?
+              {t(
+                isDir
+                  ? 'ssh.delete.title.folder'
+                  : shown?.kind === 'symlink'
+                    ? 'ssh.delete.title.link'
+                    : 'ssh.delete.title.file'
+              )}
             </h3>
             <p className="mt-1 text-xs text-neutral-400 break-words">
-              <span className="font-mono text-neutral-300">{shown?.name}</span>
-              {isDir && ' and everything inside it'} will be removed from {hostLabel}.
+              {t(isDir ? 'ssh.delete.body.folder' : 'ssh.delete.body.entry', {
+                name: shown?.name,
+                host: hostLabel
+              })}
             </p>
-            <p className="mt-1.5 text-xs text-neutral-500">
-              There is no trash on the remote host. This cannot be undone.
-            </p>
+            <p className="mt-1.5 text-xs text-neutral-500">{t('ssh.delete.warning')}</p>
           </div>
         </div>
 
-        {error !== null && <div className="mt-3 text-xs text-red-400 break-words">{error}</div>}
+        {errorText !== null && (
+          <div className="mt-3 text-xs text-red-400 break-words">{errorText}</div>
+        )}
 
         <div className="mt-4 flex justify-end gap-2">
           <button
@@ -80,7 +96,7 @@ export function RemoteDeleteDialog({
             onClick={onClose}
             disabled={busy}
           >
-            Cancel
+            {t('ssh.action.cancel')}
           </button>
           <button
             className="flex items-center gap-1.5 text-xs px-3 py-1 rounded bg-red-700 transition hover:bg-red-600 active:scale-[0.97] disabled:opacity-50"
@@ -88,7 +104,7 @@ export function RemoteDeleteDialog({
             disabled={busy}
           >
             {busy && <Loader2 size={12} className="animate-spin" />}
-            Delete
+            {t('ssh.action.delete')}
           </button>
         </div>
       </div>

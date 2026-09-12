@@ -6,10 +6,12 @@ import { LearningsBrowser } from './LearningsBrowser';
 import { useSessionsStore } from '../../store/sessions-store';
 import { useToastStore } from '../../store/toast-store';
 import type { Learning } from '../../../../shared/learnings';
+import { useTranslation } from '../../lib/i18n';
 
 type View = 'sessions' | 'learnings';
 
 export function SessionsTab(): React.JSX.Element {
+  const { t } = useTranslation();
   const load = useSessionsStore((s) => s.load);
   const sessions = useSessionsStore((s) => s.sessions);
   const select = useSessionsStore((s) => s.select);
@@ -32,9 +34,14 @@ export function SessionsTab(): React.JSX.Element {
       void select(match);
       setView('sessions');
     } else {
-      useToastStore.getState().show('That source session no longer exists.');
+      useToastStore.getState().show(t('dialogs.sessions.sourceMissing'));
     }
   }
+
+  const viewLabels = {
+    sessions: 'dialogs.sessions.tab.sessions',
+    learnings: 'dialogs.sessions.tab.learnings'
+  } as const;
 
   return (
     <div className="flex h-full flex-col">
@@ -49,7 +56,7 @@ export function SessionsTab(): React.JSX.Element {
                 : 'text-fleet-text-subtle hover:bg-fleet-surface-2/50'
             }`}
           >
-            {v}
+            {t(viewLabels[v])}
           </button>
         ))}
       </div>

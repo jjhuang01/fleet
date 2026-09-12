@@ -14,6 +14,7 @@ import { basename } from '../../lib/path-utils';
 import type { NoteReadResult } from '../../../../shared/notes-types';
 import type { PathContext } from '../../../../shared/shell-profiles';
 import { createCancellation } from '../../lib/cancellation';
+import { useTranslation } from '../../lib/i18n';
 
 type Layout = 'split' | 'editor' | 'preview';
 
@@ -45,6 +46,7 @@ export function NotesModal({
   paneId: string | null;
   pathContext?: PathContext;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [scopePath, setScopePath] = useState<string | undefined>(undefined);
@@ -102,13 +104,13 @@ export function NotesModal({
         setExternalChange(false);
       } catch (e) {
         if (scopeRef.current === scope) {
-          setError(e instanceof Error ? e.message : 'Failed to save note');
+          setError(e instanceof Error ? e.message : t('dialogs.notes.saveFailed'));
         }
       } finally {
         setSaving(false);
       }
     },
-    [pathContext]
+    [pathContext, t]
   );
 
   // On open (and if the pane later moves to a different project): resolve the
@@ -156,7 +158,9 @@ export function NotesModal({
         if (run.isCancelled()) return;
         applyLoadedNote(res);
       } catch (e) {
-        if (!run.isCancelled()) setError(e instanceof Error ? e.message : 'Failed to load note');
+        if (!run.isCancelled()) {
+          setError(e instanceof Error ? e.message : t('dialogs.notes.loadFailed'));
+        }
       } finally {
         if (!run.isCancelled()) setLoading(false);
       }
@@ -164,7 +168,7 @@ export function NotesModal({
     return () => {
       run.cancel();
     };
-  }, [isOpen, cwd, paneId, pathContext, save, applyLoadedNote]);
+  }, [isOpen, cwd, paneId, pathContext, save, applyLoadedNote, t]);
 
   useEffect(() => {
     if (isOpen && layout !== 'preview') textareaRef.current?.focus();
@@ -239,7 +243,7 @@ export function NotesModal({
         <div className="flex items-center gap-3 border-b border-neutral-800 px-5 py-3">
           <div className="flex items-center gap-2 text-neutral-100">
             <NotebookPen size={16} className="text-neutral-400" />
-            <h2 className="text-base font-semibold">Notes</h2>
+            <h2 className="text-base font-semibold">{t('dialogs.notes.title')}</h2>
           </div>
           {scopePath && (
             <div
@@ -255,13 +259,13 @@ export function NotesModal({
           <div className="flex min-w-[76px] items-center gap-1.5 text-xs">
             {saving ? (
               <span className="flex items-center gap-1.5 text-neutral-400">
-                <Loader2 size={12} className="animate-spin" /> Saving…
+                <Loader2 size={12} className="animate-spin" /> {t('dialogs.notes.saving')}
               </span>
             ) : dirty ? (
-              <span className="text-amber-400">● Unsaved</span>
+              <span className="text-amber-400">● {t('dialogs.notes.unsaved')}</span>
             ) : text.length > 0 ? (
               <span className="flex items-center gap-1 text-neutral-500">
-                <Check size={12} /> Saved
+                <Check size={12} /> {t('dialogs.notes.saved')}
               </span>
             ) : null}
           </div>
@@ -270,20 +274,20 @@ export function NotesModal({
           <div className="ml-auto flex overflow-hidden rounded-md border border-neutral-700 text-xs">
             {(
               [
-                ['editor', Code, 'Editor'],
-                ['split', Columns2, 'Split'],
-                ['preview', Eye, 'Preview']
+                ['editor', Code, 'dialogs.notes.layout.editor'],
+                ['split', Columns2, 'dialogs.notes.layout.split'],
+                ['preview', Eye, 'dialogs.notes.layout.preview']
               ] as const
             ).map(([id, Icon, label]) => (
               <button
                 key={id}
                 onClick={() => setLayout(id)}
-                title={label}
+                title={t(label)}
                 className={`flex items-center gap-1 px-2.5 py-1 transition active:scale-95 ${
                   layout === id ? 'bg-blue-600 text-white' : 'text-neutral-400 hover:bg-neutral-800'
                 }`}
               >
-                <Icon size={12} /> {label}
+                <Icon size={12} /> {t(label)}
               </button>
             ))}
           </div>
@@ -291,7 +295,7 @@ export function NotesModal({
           <button
             onClick={() => void requestClose()}
             className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-white active:scale-90"
-            aria-label="Close notes"
+            aria-label={t('dialogs.notes.close')}
           >
             <X size={16} />
           </button>
@@ -300,15 +304,15 @@ export function NotesModal({
         {externalChange && (
           <div className="flex items-center gap-2 border-b border-amber-800 bg-amber-950/40 px-4 py-2 text-xs text-amber-300">
             <AlertTriangle size={13} />
-            This note changed elsewhere.
+            {t('dialogs.notes.externalChanged')}
             <button onClick={() => void reload()} className="font-medium underline active:scale-95">
-              Reload
+              {t('dialogs.notes.reload')}
             </button>
             <button
               onClick={() => void save(true)}
               className="font-medium underline active:scale-95"
             >
-              Overwrite
+              {t('dialogs.notes.overwrite')}
             </button>
           </div>
         )}
@@ -327,7 +331,7 @@ export function NotesModal({
               onChange={(e) => onChange(e.target.value)}
               spellCheck={false}
               disabled={loading || !scopePath}
-              placeholder="Type Markdown…"
+              placeholder={t('dialogs.notes.placeholder')}
               className={`min-h-0 flex-1 resize-none bg-neutral-950 p-5 font-mono text-[13px] leading-relaxed text-neutral-200 outline-none placeholder:text-neutral-600 ${
                 showPreview ? 'border-r border-neutral-800' : ''
               }`}
@@ -339,11 +343,12 @@ export function NotesModal({
                 <div className="flex h-full flex-col items-center justify-center gap-2 px-8 text-center">
                   <NotebookPen size={26} className="text-neutral-600" />
                   <p className="text-sm font-medium text-neutral-300">
-                    {projectName ? `Notes for ${projectName}` : 'Project notes'}
+                    {projectName
+                      ? t('dialogs.notes.emptyTitleWithProject', { project: projectName })
+                      : t('dialogs.notes.emptyTitle')}
                   </p>
                   <p className="max-w-xs text-xs text-neutral-500">
-                    Jot Markdown notes scoped to this project. They stay here when you switch
-                    projects, and reappear from any subfolder.
+                    {t('dialogs.notes.emptyDescription')}
                   </p>
                 </div>
               ) : (

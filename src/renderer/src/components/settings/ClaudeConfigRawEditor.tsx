@@ -22,6 +22,8 @@ import { isKnownTopLevelKey } from '../../../../shared/claude-settings-schema';
 import { claudeSettingsLintSource } from '../../lib/claude-settings-lint';
 import { claudeSettingsCompletions } from '../../lib/claude-settings-completion';
 import type { ClaudeFileKind } from '../../../../shared/claude-config';
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
 
 /**
  * The raw text view of whichever file the page is on.
@@ -56,7 +58,7 @@ function languageSupport(
   ];
 }
 
-const READONLY_HINT = 'Hooks are managed on the Copilot page and are not written from here.';
+const READONLY_HINT: MessageKey = 'settings.claudeConfig.raw.readOnlyHint';
 
 export function ClaudeConfigRawEditor({
   path,
@@ -65,6 +67,7 @@ export function ClaudeConfigRawEditor({
   path: string;
   kind: ClaudeFileKind;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const edit = useClaudeConfigStore((s) => s.edit);
@@ -149,7 +152,7 @@ export function ClaudeConfigRawEditor({
             </div>
           ))}
           {blocked ? null : (
-            <div className="text-[11px] text-fleet-text-subtle">{READONLY_HINT}</div>
+            <div className="text-[11px] text-fleet-text-subtle">{t(READONLY_HINT)}</div>
           )}
         </div>
       ) : null}

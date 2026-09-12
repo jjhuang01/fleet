@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import { useTranslation } from '../lib/i18n';
 
 type SearchBarProps = {
   isOpen: boolean;
@@ -14,6 +15,7 @@ export function SearchBar({
   onSearch,
   onSearchPrevious
 }: SearchBarProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -46,20 +48,20 @@ export function SearchBar({
             onClose();
           }
         }}
-        placeholder="Search..."
+        placeholder={t('panes.search.placeholder')}
         className="bg-transparent text-sm text-fleet-text outline-none w-48 rounded placeholder-fleet-text-subtle focus-ring"
       />
       <button
         onClick={() => onSearchPrevious(query)}
         className="p-0.5 text-fleet-text-muted hover:text-fleet-text rounded hover:bg-fleet-surface-3 transition-colors active:scale-90"
-        title="Previous match (Shift+Enter)"
+        title={t('panes.search.previous')}
       >
         <ChevronUp size={14} />
       </button>
       <button
         onClick={() => onSearch(query)}
         className="p-0.5 text-fleet-text-muted hover:text-fleet-text rounded hover:bg-fleet-surface-3 transition-colors active:scale-90"
-        title="Next match (Enter)"
+        title={t('panes.search.next')}
       >
         <ChevronDown size={14} />
       </button>

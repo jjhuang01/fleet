@@ -1,4 +1,5 @@
 import { Clock, Repeat, X } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n';
 import type { ScheduleRow } from './schedule-view';
 import { SideColumnCard } from './SideColumnCard';
 
@@ -26,7 +27,11 @@ export function AgentSchedulePanel({
   if (rows.length === 0) return null;
 
   return (
-    <SideColumnCard label="Schedules" name="Scheduled check-ins" count={String(rows.length)}>
+    <SideColumnCard
+      label="agent.schedule.panelLabel"
+      name="agent.schedule.panelName"
+      count={String(rows.length)}
+    >
       <ul className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-1.5 pb-2">
         {rows.map((row) => (
           <Row key={row.id} row={row} onCancel={onCancel} />
@@ -51,6 +56,9 @@ function Row({
   row: ScheduleRow;
   onCancel: (id: string) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+  const when = t(row.when.key, row.when.params);
+
   return (
     <li className="flex flex-col gap-0.5 rounded px-1.5 py-1">
       <div className="flex items-center gap-1.5">
@@ -58,16 +66,20 @@ function Row({
         {/* Shimmering only once its moment has been claimed, which is the one
             state where something is actually about to happen. */}
         <span className={`min-w-0 truncate text-xs ${row.due ? 'fleet-shimmer-text' : ''}`}>
-          {row.when}
+          {when}
         </span>
         {row.recurring && (
-          <Repeat size={11} className="shrink-0 text-fleet-text-subtle" aria-label="Repeats" />
+          <Repeat
+            size={11}
+            className="shrink-0 text-fleet-text-subtle"
+            aria-label={t('agent.schedule.repeats')}
+          />
         )}
         <button
           type="button"
           onClick={() => onCancel(row.id)}
-          aria-label={`Cancel the check-in ${row.when}`}
-          title="Cancel this check-in"
+          aria-label={t('agent.schedule.cancelNamed', { when })}
+          title={t('agent.schedule.cancel')}
           className="ml-auto shrink-0 text-fleet-text-subtle transition-colors hover:text-fleet-text focus-ring"
         >
           <X size={12} />

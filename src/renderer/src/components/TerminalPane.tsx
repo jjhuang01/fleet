@@ -16,6 +16,7 @@ import { useWorkspaceStore, getPaneContextById } from '../store/workspace-store'
 import type { TerminalThemeId } from '../../../shared/theme-presets';
 import type { TerminalBackground } from '../../../shared/types';
 import { resolveTerminalTheme } from '../lib/theme';
+import { useTranslation } from '../lib/i18n';
 
 type TerminalPaneProps = {
   paneId: string;
@@ -59,6 +60,7 @@ export function TerminalPane({
   shellProfileId,
   cmd
 }: TerminalPaneProps): React.JSX.Element {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const workspaceId = useWorkspaceStore((s) => s.workspace.id);
@@ -228,7 +230,7 @@ export function TerminalPane({
               focus();
             }}
             tabIndex={-1}
-            aria-label="Scroll to bottom"
+            aria-label={t('panes.terminal.scrollToBottom')}
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path
@@ -239,13 +241,13 @@ export function TerminalPane({
                 strokeLinejoin="round"
               />
             </svg>
-            <span>Bottom</span>
+            <span>{t('panes.terminal.bottom')}</span>
           </button>
         )}
         {isDragOver && (
           <div className="absolute inset-0 z-50 flex items-center justify-center fleet-accent-bg-soft border-2 border-dashed fleet-accent-border rounded pointer-events-none">
             <span className="fleet-accent-text text-sm font-medium">
-              {isRemote ? 'Drop to upload to the remote folder' : 'Drop to paste file path'}
+              {t(isRemote ? 'panes.terminal.dropUpload' : 'panes.terminal.dropPath')}
             </span>
           </div>
         )}

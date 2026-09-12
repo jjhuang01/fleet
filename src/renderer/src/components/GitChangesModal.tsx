@@ -2,8 +2,10 @@ import { Suspense, lazy, useState, useEffect, useRef, useCallback, useMemo } fro
 import { X, Loader2, GitBranch, AlertCircle } from 'lucide-react';
 import type { GitStatusPayload, GitFileStatus } from '../../../shared/ipc-api';
 import type { PathContext } from '../../../shared/shell-profiles';
+import type { MessageKey } from '../../../shared/i18n';
 import { Overlay } from './Overlay';
 import type { DiffViewMode } from './git-diff/DiffContent';
+import { useTranslation } from '../lib/i18n';
 
 // `@git-diff-view` and its shiki highlighter are the heaviest thing this modal
 // draws, and the modal stays mounted for the whole session. Overlay renders
@@ -30,6 +32,7 @@ export function GitChangesModal({
   compareRef,
   pathContext
 }: GitChangesModalProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<GitStatusPayload | null>(null);
   const [filterText, setFilterText] = useState('');
@@ -153,7 +156,7 @@ export function GitChangesModal({
       <ModalShell open={isOpen} onClose={onClose} onKeyDown={handleKeyDown} modalRef={modalRef}>
         <StateMessage
           icon={<AlertCircle size={32} />}
-          message="Working directory not available"
+          message={{ key: 'panes.git.noCwd' }}
           onClose={onClose}
         />
       </ModalShell>
@@ -165,7 +168,7 @@ export function GitChangesModal({
       <ModalShell open={isOpen} onClose={onClose} onKeyDown={handleKeyDown} modalRef={modalRef}>
         <StateMessage
           icon={<Loader2 size={32} className="animate-spin" />}
-          message="Loading changes..."
+          message={{ key: 'panes.git.loading' }}
         />
       </ModalShell>
     );
@@ -176,7 +179,7 @@ export function GitChangesModal({
       <ModalShell open={isOpen} onClose={onClose} onKeyDown={handleKeyDown} modalRef={modalRef}>
         <StateMessage
           icon={<AlertCircle size={32} className="text-red-400" />}
-          message={data.error}
+          message={{ raw: data.error }}
           onClose={onClose}
         />
       </ModalShell>
@@ -188,7 +191,7 @@ export function GitChangesModal({
       <ModalShell open={isOpen} onClose={onClose} onKeyDown={handleKeyDown} modalRef={modalRef}>
         <StateMessage
           icon={<GitBranch size={32} />}
-          message="Not a git repository"
+          message={{ key: 'panes.git.notRepo' }}
           onClose={onClose}
         />
       </ModalShell>
@@ -198,7 +201,11 @@ export function GitChangesModal({
   if (data?.files.length === 0) {
     return (
       <ModalShell open={isOpen} onClose={onClose} onKeyDown={handleKeyDown} modalRef={modalRef}>
-        <StateMessage icon={<GitBranch size={32} />} message="No changes" onClose={onClose} />
+        <StateMessage
+          icon={<GitBranch size={32} />}
+          message={{ key: 'panes.git.noChanges' }}
+          onClose={onClose}
+        />
       </ModalShell>
     );
   }
@@ -219,10 +226,12 @@ export function GitChangesModal({
         <div className="flex items-center gap-3">
           <GitBranch size={16} className="text-neutral-400" />
           <span className="text-sm font-medium text-white">
-            {data?.branch || 'Working Changes'}
+            {data?.branch || t('panes.git.workingChanges')}
           </span>
           <span className="text-xs text-neutral-500">
-            {data?.files.length} file{data?.files.length !== 1 ? 's' : ''} changed
+            {t(data?.files.length === 1 ? 'panes.git.changedOne' : 'panes.git.changedMany', {
+              count: data?.files.length ?? 0
+            })}
             {totalInsertions > 0 && <span className="text-green-400 ml-2">+{totalInsertions}</span>}
             {totalDeletions > 0 && (
               <span className="text-red-400 ml-1">&minus;{totalDeletions}</span>
@@ -234,7 +243,7 @@ export function GitChangesModal({
             onClick={() => setDiffMode(diffMode === 'unified' ? 'split' : 'unified')}
             className="px-2 py-1 text-xs text-neutral-400 hover:text-white rounded hover:bg-neutral-700 transition active:scale-[0.97]"
           >
-            {diffMode === 'unified' ? 'Split' : 'Unified'}
+            {t(diffMode === 'unified' ? 'panes.git.split' : 'panes.git.unified')}
           </button>
           <button
             onClick={onClose}
@@ -253,7 +262,7 @@ export function GitChangesModal({
             <input
               ref={filterInputRef}
               type="text"
-              placeholder="Filter files..."
+              placeholder={t('panes.git.filterPlaceholder')}
               value={filterText}
               onChange={(e) => {
                 setFilterText(e.target.value);
@@ -263,7 +272,12 @@ export function GitChangesModal({
             />
             {filterText && (
               <span className="text-[10px] text-neutral-500 mt-1 block">
-                {filteredFiles.length} of {data?.files.length} files
+                {t(
+                  data?.files.length === 1
+                    ? 'panes.git.filterCountOne'
+                    : 'panes.git.filterCountMany',
+                  { shown: filteredFiles.length, total: data?.files.length ?? 0 }
+                )}
               </span>
             )}
           </div>
@@ -290,7 +304,7 @@ export function GitChangesModal({
             </Suspense>
           ) : (
             <div className="flex items-center justify-center h-full text-neutral-600 text-sm">
-              No diff content
+              {t('panes.git.noDiff')}
             </div>
           )}
         </div>
@@ -349,19 +363,21 @@ function StateMessage({
   onClose
 }: {
   icon: React.ReactNode;
-  message: string;
+  message: { key: MessageKey } | { raw: string };
   onClose?: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col items-center justify-center h-full gap-3 text-neutral-500">
       {icon}
-      <span className="text-sm">{message}</span>
+      <span className="text-sm">{'key' in message ? t(message.key) : message.raw}</span>
       {onClose && (
         <button
           onClick={onClose}
           className="text-xs text-neutral-600 hover:text-white mt-2 transition active:scale-[0.97]"
         >
-          Close
+          {t('panes.git.close')}
         </button>
       )}
     </div>

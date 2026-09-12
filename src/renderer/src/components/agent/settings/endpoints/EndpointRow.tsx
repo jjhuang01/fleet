@@ -6,6 +6,7 @@ import type {
 } from '../../../../../../shared/agent-endpoints';
 import { endpointLabel } from '../../../../../../shared/agent-endpoints';
 import { hostPort as toHostPort } from '../../../../../../shared/agent-endpoint-url';
+import { useTranslation } from '../../../../lib/i18n';
 import { Toggle } from '../Toggle';
 import { MenuItem, RowMenu } from '../RowMenu';
 import { failureHint, statusText, statusTone, type StatusTone } from './endpoint-copy';
@@ -44,11 +45,14 @@ export function EndpointRow({
   onRemove: () => void;
   onRecheck: () => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const address = toHostPort(endpoint.baseUrl);
   const name = endpointLabel(endpoint, address);
   const state = endpoint.enabled ? (status?.state ?? 'unchecked') : 'disabled';
   const tone = statusTone(state);
+  const statusCopy = statusText(status);
+  const hint = failureHint(status?.reason ?? null, address);
 
   // The names from the last probe that succeeded, which is what the picker is
   // offering right now whether or not the server is answering.
@@ -88,23 +92,29 @@ export function EndpointRow({
           <span
             className={`min-w-0 truncate text-xs ${tone === 'warn' ? 'text-amber-400' : 'text-fleet-text-muted'}`}
           >
-            {endpoint.enabled ? statusText(status) : 'Off'}
+            {endpoint.enabled
+              ? t(statusCopy.key, statusCopy.params)
+              : t('agentSettings.common.off')}
           </span>
         </button>
 
         {busy && <Loader2 size={14} className="shrink-0 animate-spin text-fleet-text-subtle" />}
-        <Toggle checked={endpoint.enabled} onChange={onToggle} ariaLabel={`Enable ${name}`} />
+        <Toggle
+          checked={endpoint.enabled}
+          onChange={onToggle}
+          ariaLabel={t('agentSettings.endpoint.row.enable', { name })}
+        />
         <RowMenu label={name}>
           {(pick) => (
             <>
               <MenuItem icon={<Pencil size={13} />} onClick={pick(onEdit)}>
-                Edit…
+                {t('agentSettings.endpoint.row.edit')}
               </MenuItem>
               <MenuItem icon={<RefreshCw size={13} />} onClick={pick(onRecheck)}>
-                Check again
+                {t('agentSettings.endpoint.row.recheck')}
               </MenuItem>
               <MenuItem icon={<Trash2 size={13} />} danger onClick={pick(onRemove)}>
-                Remove
+                {t('agentSettings.common.remove')}
               </MenuItem>
             </>
           )}
@@ -118,20 +128,20 @@ export function EndpointRow({
           {state === 'unreachable' && (
             <div className="flex items-start gap-2 rounded-md border border-amber-500/25 bg-amber-500/10 px-2.5 py-2 text-xs text-amber-200">
               <TriangleAlert size={13} className="mt-px shrink-0" />
-              <span>{failureHint(status?.reason ?? null, address)}</span>
+              <span>{t(hint.key, hint.params)}</span>
             </div>
           )}
 
           {models.length === 0 ? (
             <p className="text-xs text-fleet-text-muted">
               {state === 'ready' || state === 'sleeping'
-                ? 'This server has no model loaded.'
-                : 'Nothing seen here yet.'}
+                ? t('agentSettings.endpoint.row.noModel')
+                : t('agentSettings.endpoint.row.nothingSeen')}
             </p>
           ) : (
             <div className="space-y-1">
               <p className="text-[11px] font-medium uppercase tracking-wider text-fleet-text-subtle">
-                Models
+                {t('agentSettings.endpoint.row.models')}
               </p>
               {models.map((model) => (
                 <p key={model.wireId} className="truncate text-xs text-fleet-text">
@@ -146,7 +156,7 @@ export function EndpointRow({
               */}
               {state === 'unreachable' && (
                 <p className="pt-0.5 text-[11px] text-fleet-text-muted">
-                  Still listed while the server is down, so your choice is kept.
+                  {t('agentSettings.endpoint.row.savedWhileDown')}
                 </p>
               )}
             </div>

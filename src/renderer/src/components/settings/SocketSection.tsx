@@ -1,13 +1,15 @@
 import { useSettingsStore } from '../../store/settings-store';
 import { SettingRow } from './SettingRow';
+import { useTranslation } from '../../lib/i18n';
 
 export function SocketSection(): React.JSX.Element | null {
+  const { t } = useTranslation();
   const { settings, updateSettings } = useSettingsStore();
   if (!settings) return null;
 
   return (
     <div className="space-y-4">
-      <SettingRow label="Socket API Enabled">
+      <SettingRow label={t('settings.socket.enabled')}>
         <input
           type="checkbox"
           checked={settings.socketApi.enabled}
@@ -19,7 +21,7 @@ export function SocketSection(): React.JSX.Element | null {
           className="fleet-accent-input"
         />
       </SettingRow>
-      <SettingRow label="Socket Path">
+      <SettingRow label={t('settings.socket.path')}>
         <input
           type="text"
           value={settings.socketApi.socketPath || '~/.fleet/fleet.sock'}

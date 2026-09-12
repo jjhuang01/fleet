@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { billedInput, hasSpend, type AgentSessionSpend } from '../../../../shared/agent-spend';
+import type { MessageKey } from '../../../../shared/i18n';
+import { useTranslation } from '../../lib/i18n';
 import { popperAnim } from '../../lib/motion';
 import { formatTokens, formatUsd } from './settings/format';
 
@@ -27,6 +29,7 @@ export function AgentSpendMeter({
   model: string | null;
   provider: string | null;
 }): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   if (!hasSpend(spend)) return null;
 
@@ -35,14 +38,14 @@ export function AgentSpendMeter({
       <Popover.Trigger asChild>
         <button
           type="button"
-          title="What this session has cost so far"
+          title={t('agent.spend.title')}
           className="shrink-0 rounded px-1 py-0.5 tabular-nums text-fleet-text-subtle transition-colors hover:text-fleet-text-secondary focus-ring"
         >
           {/*
            * A session on a free model has spent tokens and no money, and has to
            * say so in words - "$0" would be a price, and no price was quoted.
            */}
-          {spend.costUsd === null ? 'unpriced' : formatUsd(spend.costUsd)}
+          {spend.costUsd === null ? t('agent.spend.unpriced') : formatUsd(spend.costUsd)}
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -53,9 +56,9 @@ export function AgentSpendMeter({
           className={`z-50 w-64 rounded-md border border-fleet-border-strong bg-fleet-surface-2 p-3 text-[11px] shadow-xl ${popperAnim}`}
         >
           <div className="flex items-baseline justify-between gap-2 pb-2">
-            <span className="text-fleet-text-muted">Session cost</span>
+            <span className="text-fleet-text-muted">{t('agent.spend.sessionCost')}</span>
             <span className="text-sm tabular-nums text-fleet-text">
-              {spend.costUsd === null ? 'not priced' : formatUsd(spend.costUsd)}
+              {spend.costUsd === null ? t('agent.spend.notPriced') : formatUsd(spend.costUsd)}
             </span>
           </div>
 
@@ -66,16 +69,18 @@ export function AgentSpendMeter({
              * that explains the money is its complement: a 200k prompt charged
              * for 12k of it is the whole reason a long session stays cheap.
              */}
-            <Row label="Input" value={formatTokens(billedInput(spend))}>
-              {spend.cachedTokens > 0 && `${formatTokens(spend.cachedTokens)} cached`}
+            <Row label="agent.spend.input" value={formatTokens(billedInput(spend))}>
+              {spend.cachedTokens > 0 &&
+                t('agent.spend.cached', { tokens: formatTokens(spend.cachedTokens) })}
             </Row>
             {spend.cacheWriteTokens > 0 && (
-              <Row label="Cache writes" value={formatTokens(spend.cacheWriteTokens)} />
+              <Row label="agent.spend.cacheWrites" value={formatTokens(spend.cacheWriteTokens)} />
             )}
-            <Row label="Output" value={formatTokens(spend.completionTokens)}>
-              {spend.reasoningTokens > 0 && `${formatTokens(spend.reasoningTokens)} reasoning`}
+            <Row label="agent.spend.output" value={formatTokens(spend.completionTokens)}>
+              {spend.reasoningTokens > 0 &&
+                t('agent.spend.reasoning', { tokens: formatTokens(spend.reasoningTokens) })}
             </Row>
-            <Row label="Calls" value={String(spend.calls)} />
+            <Row label="agent.spend.calls" value={String(spend.calls)} />
           </dl>
 
           {model !== null && (
@@ -99,14 +104,16 @@ function Row({
   value,
   children
 }: {
-  label: string;
+  label: MessageKey;
   value: string;
   /** The qualifier, when there is one. `false` renders nothing. */
   children?: React.ReactNode;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-fleet-text-muted">{label}</dt>
+      <dt className="text-fleet-text-muted">{t(label)}</dt>
       <dd className="flex items-baseline gap-2 tabular-nums">
         {children && <span className="text-fleet-text-subtle">{children}</span>}
         <span className="text-fleet-text">{value}</span>

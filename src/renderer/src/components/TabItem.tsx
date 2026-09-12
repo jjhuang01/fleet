@@ -16,6 +16,7 @@ import { popperAnim } from '../lib/motion';
 import { TabStatusIndicator } from './TabStatusIndicator';
 import { COLOR_MAP } from './sidebar-constants';
 import { hasPanePayload } from '../lib/pane-drag';
+import type { MessageKey } from '../../../shared/i18n';
 import { useTranslation, type Translator } from '../lib/i18n';
 
 type TabItemProps = {
@@ -56,7 +57,7 @@ type TabItemProps = {
   /** Called when user selects "Create Worktree" from context menu */
   onCreateWorktree?: () => void;
   /** null = enabled, string = disabled with this reason shown as subtitle. undefined = don't show item at all (non-terminal tabs). */
-  worktreeDisabledReason?: string | null;
+  worktreeDisabledReason?: MessageKey | null;
   /** Branch name to show as subtitle for worktree tabs */
   worktreeBranch?: string;
   /** Path semantics for rendering the auto-label. Undefined = treat as POSIX. */
@@ -325,7 +326,7 @@ export function TabItem({
                   className="flex-shrink-0 rounded bg-purple-500/20 px-1 py-px text-[9px] font-medium uppercase leading-none tracking-wide text-purple-300"
                   aria-label={t('tabItem.remoteSession')}
                 >
-                  remote
+                  {t('panes.tabItem.remote')}
                 </span>
               )}
               <span className="ml-auto min-w-0 truncate text-[11px] leading-tight text-fleet-text-muted">
@@ -412,7 +413,7 @@ export function TabItem({
                 </div>
                 {worktreeDisabledReason && (
                   <div className="text-xs text-fleet-text-subtle mt-0.5 ml-6">
-                    {worktreeDisabledReason}
+                    {t(worktreeDisabledReason)}
                   </div>
                 )}
               </ContextMenu.Item>

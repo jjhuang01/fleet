@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DEFAULT_AGENT_SETTINGS } from '../../../../../shared/agent-types';
 import { COMPACT_THRESHOLD_MAX, COMPACT_THRESHOLD_MIN } from '../../../../../shared/agent-context';
+import { useTranslation } from '../../../lib/i18n';
 import { Toggle } from './Toggle';
 
 const DEFAULT_THRESHOLD = DEFAULT_AGENT_SETTINGS.compactThreshold ?? 0.8;
@@ -19,6 +20,7 @@ export function CompactionField({
   value: number | null;
   onChange: (value: number | null) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   // The slider emits a change per pixel, so it tracks locally and persists on release.
   const [dragging, setDragging] = useState<number | null>(null);
   const shown = dragging ?? percent(value ?? DEFAULT_THRESHOLD);
@@ -33,24 +35,29 @@ export function CompactionField({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <span className="text-sm text-fleet-text-secondary">Compact automatically</span>
+          <span className="text-sm text-fleet-text-secondary">
+            {t('agentSettings.compaction.enabled.label')}
+          </span>
           <p className="mt-0.5 text-xs text-fleet-text-muted">
-            Summarize the earlier messages once the conversation fills this much of the model&apos;s
-            context window. The last few exchanges are always kept word for word.
+            {t('agentSettings.compaction.enabled.hint')}
           </p>
         </div>
         <Toggle
           checked={value !== null}
           onChange={(next) => onChange(next ? DEFAULT_THRESHOLD : null)}
-          ariaLabel="Compact automatically"
+          ariaLabel={t('agentSettings.compaction.enabled.label')}
         />
       </div>
 
       {value !== null && (
         <div className="space-y-1.5">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="text-xs text-fleet-text-muted">Compact at</span>
-            <span className="text-sm tabular-nums text-fleet-text">{shown}% full</span>
+            <span className="text-xs text-fleet-text-muted">
+              {t('agentSettings.compaction.at')}
+            </span>
+            <span className="text-sm tabular-nums text-fleet-text">
+              {t('agentSettings.compaction.percentFull', { percent: shown })}
+            </span>
           </div>
           <input
             type="range"
@@ -58,7 +65,7 @@ export function CompactionField({
             max={percent(COMPACT_THRESHOLD_MAX)}
             step={5}
             value={shown}
-            aria-label="Compact at"
+            aria-label={t('agentSettings.compaction.at')}
             onChange={(e) => setDragging(Number(e.target.value))}
             onPointerUp={commit}
             onKeyUp={commit}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { backgroundLegibilityHint, contrastRatio, hexToRgb, relativeLuminance } from '../contrast';
+import {
+  backgroundLegibilityIssues,
+  contrastRatio,
+  hexToRgb,
+  relativeLuminance
+} from '../contrast';
 
 describe('hexToRgb', () => {
   it('parses 6-digit hex with hash', () => {
@@ -71,50 +76,47 @@ describe('contrastRatio', () => {
   });
 });
 
-describe('backgroundLegibilityHint', () => {
+describe('backgroundLegibilityIssues', () => {
   const goodTheme = { themeForeground: '#ffffff', themeBackground: '#000000' };
   // Low-contrast theme: luminance diff is small
   const badTheme = { themeForeground: '#888888', themeBackground: '#999999' };
 
-  it('returns null at low opacity (no risk)', () => {
-    expect(backgroundLegibilityHint({ opacity: 0.15, blur: 0, ...goodTheme })).toBeNull();
-    expect(backgroundLegibilityHint({ opacity: 0.5, blur: 0, ...goodTheme })).toBeNull();
+  it('reports nothing at low opacity (no risk)', () => {
+    expect(backgroundLegibilityIssues({ opacity: 0.15, blur: 0, ...goodTheme })).toEqual([]);
+    expect(backgroundLegibilityIssues({ opacity: 0.5, blur: 0, ...goodTheme })).toEqual([]);
   });
 
-  it('returns null when blur is sufficient (≥4), even at high opacity', () => {
-    expect(backgroundLegibilityHint({ opacity: 0.9, blur: 4, ...goodTheme })).toBeNull();
-    expect(backgroundLegibilityHint({ opacity: 0.8, blur: 10, ...goodTheme })).toBeNull();
+  it('reports nothing when blur is sufficient (≥4), even at high opacity', () => {
+    expect(backgroundLegibilityIssues({ opacity: 0.9, blur: 4, ...goodTheme })).toEqual([]);
+    expect(backgroundLegibilityIssues({ opacity: 0.8, blur: 10, ...goodTheme })).toEqual([]);
   });
 
-  it('returns a message at opacity 0.8 / blur 0 (strong warning)', () => {
-    const result = backgroundLegibilityHint({ opacity: 0.8, blur: 0, ...goodTheme });
-    expect(result).not.toBeNull();
-    expect(result).toContain('High image opacity');
+  it('reports the strong warning at opacity 0.8 / blur 0', () => {
+    expect(backgroundLegibilityIssues({ opacity: 0.8, blur: 0, ...goodTheme })).toEqual([
+      'highOpacity'
+    ]);
   });
 
-  it('returns a milder message in the 0.5–0.75 opacity band (blur 0)', () => {
-    const result = backgroundLegibilityHint({ opacity: 0.6, blur: 0, ...goodTheme });
-    expect(result).not.toBeNull();
-    expect(result).not.toContain('High image opacity');
-    expect(result).toContain('moderate');
+  it('reports the milder warning in the 0.5–0.75 opacity band (blur 0)', () => {
+    expect(backgroundLegibilityIssues({ opacity: 0.6, blur: 0, ...goodTheme })).toEqual([
+      'moderateOpacity'
+    ]);
   });
 
-  it('includes low-contrast theme warning in strong message', () => {
-    const result = backgroundLegibilityHint({ opacity: 0.8, blur: 0, ...badTheme });
-    expect(result).not.toBeNull();
-    expect(result).toContain('High image opacity');
-    expect(result).toContain('low text contrast');
+  it('reports the image problem and the low-contrast theme together, worst first', () => {
+    expect(backgroundLegibilityIssues({ opacity: 0.8, blur: 0, ...badTheme })).toEqual([
+      'highOpacity',
+      'lowThemeContrast'
+    ]);
+    expect(backgroundLegibilityIssues({ opacity: 0.6, blur: 0, ...badTheme })).toEqual([
+      'moderateOpacity',
+      'lowThemeContrast'
+    ]);
   });
 
-  it('includes low-contrast theme warning in moderate message', () => {
-    const result = backgroundLegibilityHint({ opacity: 0.6, blur: 0, ...badTheme });
-    expect(result).not.toBeNull();
-    expect(result).toContain('low text contrast');
-  });
-
-  it('warns about low theme contrast alone when opacity is safe', () => {
-    const result = backgroundLegibilityHint({ opacity: 0.2, blur: 0, ...badTheme });
-    expect(result).not.toBeNull();
-    expect(result).toContain('low text contrast');
+  it('reports low theme contrast alone when opacity is safe', () => {
+    expect(backgroundLegibilityIssues({ opacity: 0.2, blur: 0, ...badTheme })).toEqual([
+      'lowThemeContrast'
+    ]);
   });
 });

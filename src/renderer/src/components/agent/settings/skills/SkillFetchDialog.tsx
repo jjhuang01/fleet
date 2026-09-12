@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { CloudDownload, Loader2, TriangleAlert } from 'lucide-react';
 import { toCloneUrl } from '../../../../../../shared/agent-skill-install';
 import { Overlay } from '../../../Overlay';
+import { useTranslation } from '../../../../lib/i18n';
 import { defaultPicks, useAgentSkillsStore } from '../../../../store/agent-skills-store';
 import { SkillPickList } from './SkillPickList';
 
@@ -23,6 +24,7 @@ export function SkillFetchDialog({
   onClose: () => void;
   onInstall: (picked: Array<{ name: string; path: string }>) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const { fetched, fetching, fetchError } = useAgentSkillsStore();
   const store = useAgentSkillsStore;
   const [from, setFrom] = useState('');
@@ -61,9 +63,11 @@ export function SkillFetchDialog({
           <CloudDownload size={17} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-fleet-text">Get skills from a repository</h2>
+          <h2 className="text-sm font-semibold text-fleet-text">
+            {t('agentSettings.skills.fetchDialog.title')}
+          </h2>
           <p className="text-xs text-fleet-text-muted">
-            Fleet clones it, shows what is inside, and keeps only what you pick.
+            {t('agentSettings.skills.fetchDialog.description')}
           </p>
         </div>
       </div>
@@ -88,7 +92,9 @@ export function SkillFetchDialog({
           disabled={url === null || fetching}
           className="shrink-0 rounded-md fleet-accent-bg px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-40 focus-ring-offset"
         >
-          {fetching ? 'Cloning…' : 'Clone'}
+          {fetching
+            ? t('agentSettings.skills.fetchDialog.cloning')
+            : t('agentSettings.skills.fetchDialog.clone')}
         </button>
       </form>
 
@@ -96,7 +102,7 @@ export function SkillFetchDialog({
         {fetching ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-fleet-text-muted">
             <Loader2 size={15} className="animate-spin" />
-            Cloning {from.trim()}…
+            {t('agentSettings.skills.fetchDialog.cloningRepo', { repo: from.trim() })}
           </div>
         ) : fetchError !== null ? (
           <div className="px-5 py-16 text-center">
@@ -106,10 +112,10 @@ export function SkillFetchDialog({
         ) : fetched === null ? (
           <div className="px-5 py-16 text-center">
             <p className="text-sm text-fleet-text-muted">
-              A repository with <code>SKILL.md</code> folders in it.
+              {t('agentSettings.skills.fetchDialog.empty')}
             </p>
             <p className="mt-1 text-xs text-fleet-text-subtle">
-              <code>owner/repo</code>, an https URL, or an ssh one.
+              {t('agentSettings.skills.fetchDialog.emptyHint')}
             </p>
           </div>
         ) : (
@@ -128,7 +134,7 @@ export function SkillFetchDialog({
           onClick={close}
           className="rounded-md border border-fleet-border-strong px-3 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 focus-ring"
         >
-          Cancel
+          {t('agentSettings.common.cancel')}
         </button>
         <button
           type="button"
@@ -136,7 +142,9 @@ export function SkillFetchDialog({
           onClick={() => onInstall(chosen.map((f) => ({ name: f.name, path: f.origin.path })))}
           className="rounded-md fleet-accent-bg px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-40 focus-ring-offset"
         >
-          {chosen.length === 1 ? 'Install 1 skill' : `Install ${chosen.length} skills`}
+          {chosen.length === 1
+            ? t('agentSettings.skills.fetchDialog.submit.one')
+            : t('agentSettings.skills.fetchDialog.submit.many', { count: chosen.length })}
         </button>
       </div>
     </Overlay>

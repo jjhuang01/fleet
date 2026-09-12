@@ -20,10 +20,12 @@ import {
 import { Overlay } from '../Overlay';
 import { useWorkspaceStore } from '../../store/workspace-store';
 import { fuzzyMatch } from '../../lib/commands';
+import { useTranslation } from '../../lib/i18n';
 import { basename } from '../../lib/path-utils';
 import { shortenPath } from '../../lib/shorten-path';
 import { crumbTrail, parentDir, type Crumb } from './folder-crumbs';
 import { rerootIntoWorktree } from './worktree-target';
+import type { MessageKey } from '../../../../shared/i18n';
 
 /** How many recent folders ride above the listing. */
 const RECENT_LIMIT = 5;
@@ -86,6 +88,7 @@ export function AgentFolderDialog({
   onCancel,
   onConfirm
 }: AgentFolderDialogProps): React.JSX.Element {
+  const { t } = useTranslation();
   const homeDir = window.fleet.homeDir;
   const recentFolders = useWorkspaceStore((s) => s.recentFolders);
   const [dir, setDir] = useState(homeDir);
@@ -246,7 +249,7 @@ export function AgentFolderDialog({
       setError(null);
       try {
         const { root } = await window.fleet.git.repoRoot(path);
-        if (!root) throw new Error('Not a git repository.');
+        if (!root) throw new Error(t('agent.folder.notGitRepo'));
         const created = await window.fleet.worktree.create({ repoPath: root });
         onConfirm(rerootIntoWorktree(path, root, created.worktreePath), {
           path: created.worktreePath,
@@ -261,7 +264,7 @@ export function AgentFolderDialog({
         setCreating(false);
       }
     },
-    [onConfirm]
+    [onConfirm, t]
   );
 
   const browse = useCallback(async () => {
@@ -331,10 +334,8 @@ export function AgentFolderDialog({
             <Bot size={18} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-fleet-text">New Agent</h2>
-            <p className="text-xs text-fleet-text-muted">
-              Choose the folder this agent will work in.
-            </p>
+            <h2 className="text-sm font-semibold text-fleet-text">{t('agent.folder.newAgent')}</h2>
+            <p className="text-xs text-fleet-text-muted">{t('agent.folder.newAgentDescription')}</p>
           </div>
         </div>
 
@@ -349,7 +350,7 @@ export function AgentFolderDialog({
               setSelectedIndex(0);
             }}
             spellCheck={false}
-            placeholder="Search recent and nearby folders..."
+            placeholder={t('agent.folder.searchPlaceholder')}
             className="flex-1 bg-transparent text-sm text-fleet-text outline-none placeholder:text-fleet-text-subtle"
           />
         </div>
@@ -365,7 +366,7 @@ export function AgentFolderDialog({
         <div ref={listRef} className="no-scrollbar min-h-0 flex-1 overflow-y-auto py-1.5">
           {recents.length > 0 && (
             <>
-              <GroupLabel>Recent</GroupLabel>
+              <GroupLabel title="agent.folder.recent" />
               {recents.map((choice, i) => (
                 <Row
                   key={`recent-${choice.path}`}
@@ -376,18 +377,18 @@ export function AgentFolderDialog({
                   onEnterFolder={enterFolder}
                 />
               ))}
-              <GroupLabel>Folders</GroupLabel>
+              <GroupLabel title="agent.folder.folders" />
             </>
           )}
 
           {listing.status === 'error' ? (
             <div className="px-5 py-5 text-sm text-fleet-text-muted">
-              Can&rsquo;t open this folder.
+              {t('agent.folder.cannotOpen')}
               <span className="mt-0.5 block text-xs text-fleet-text-subtle">{listing.message}</span>
             </div>
           ) : listing.status === 'ready' && folders.length === 0 ? (
             <div className="px-5 py-5 text-sm text-fleet-text-muted">
-              {filter ? 'No matching folders here' : 'No subfolders here'}
+              {filter ? t('agent.folder.noMatching') : t('agent.folder.noSubfolders')}
             </div>
           ) : (
             folders.map((choice, i) => (
@@ -405,7 +406,7 @@ export function AgentFolderDialog({
 
         {error && (
           <div className="border-t border-fleet-border bg-red-500/10 px-5 py-2 text-xs text-red-300">
-            Couldn&rsquo;t create the worktree.
+            {t('agent.folder.worktreeFailed')}
             <span className="mt-0.5 block text-[11px] text-red-300/70">{error}</span>
           </div>
         )}
@@ -418,15 +419,11 @@ export function AgentFolderDialog({
               className="flex shrink-0 items-center gap-2 rounded-md border border-fleet-border-strong px-3 py-1.5 text-xs text-fleet-text-secondary transition-colors hover:bg-fleet-surface-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40 focus-ring"
             >
               <FolderOpen size={14} />
-              Browse...
+              {t('agent.folder.browse')}
             </button>
             <label
               onMouseDown={keepFocus}
-              title={
-                targetIsRepo
-                  ? 'Give the agent its own branch and working tree'
-                  : 'Not a git repository'
-              }
+              title={targetIsRepo ? t('agent.folder.worktreeHint') : t('agent.folder.notGitRepo')}
               className={`flex shrink-0 items-center gap-2 text-xs ${
                 targetIsRepo && !creating
                   ? 'cursor-pointer text-fleet-text-secondary'
@@ -441,7 +438,7 @@ export function AgentFolderDialog({
                 className="size-3.5 shrink-0 fleet-accent-input focus-ring"
               />
               <GitBranch size={13} className="shrink-0" />
-              New worktree
+              {t('agent.folder.newWorktree')}
             </label>
           </div>
           <div className="flex min-w-0 items-center gap-3">
@@ -453,18 +450,18 @@ export function AgentFolderDialog({
               disabled={creating}
               className="shrink-0 rounded-md fleet-accent-bg px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-60 focus-ring-offset"
             >
-              {creating ? 'Creating worktree...' : 'Open Agent'}
+              {creating ? t('agent.folder.creatingWorktree') : t('agent.folder.openAgent')}
             </button>
           </div>
         </div>
 
         <div className="flex items-center gap-3 border-t border-fleet-border bg-fleet-bg/40 px-5 py-1.5 text-[10px] text-fleet-text-subtle">
-          <span>↑↓ select</span>
-          <span>↵ open agent</span>
-          {targetIsRepo && <span>⌥↵ in worktree</span>}
-          <span>→ enter folder</span>
-          <span>← go up</span>
-          <span>esc cancel</span>
+          <span>{t('agent.folder.shortcutSelect')}</span>
+          <span>{t('agent.folder.shortcutOpen')}</span>
+          {targetIsRepo && <span>{t('agent.folder.shortcutWorktree')}</span>}
+          <span>{t('agent.folder.shortcutEnter')}</span>
+          <span>{t('agent.folder.shortcutUp')}</span>
+          <span>{t('agent.folder.shortcutCancel')}</span>
         </div>
       </div>
     </Overlay>
@@ -490,13 +487,15 @@ function Breadcrumbs({
   isTarget: boolean;
   onNavigate: (path: string) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center gap-1 border-y border-fleet-border px-3 py-1.5">
       <button
         disabled={!parent}
         onMouseDown={keepFocus}
         onClick={() => parent && onNavigate(parent)}
-        title="Go up a folder (←)"
+        title={t('agent.folder.goUp')}
         className="shrink-0 rounded p-1 text-fleet-text-subtle transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text disabled:pointer-events-none disabled:opacity-30 focus-ring"
       >
         <ChevronLeft size={14} />
@@ -529,10 +528,12 @@ function Breadcrumbs({
   );
 }
 
-function GroupLabel({ children }: { children: React.ReactNode }): React.JSX.Element {
+function GroupLabel({ title }: { title: MessageKey }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="truncate px-5 pb-1 pt-1.5 text-[10px] font-medium uppercase tracking-wider text-fleet-text-subtle">
-      {children}
+      {t(title)}
     </div>
   );
 }
@@ -556,6 +557,8 @@ function Row({
   onSelect: (index: number) => void;
   onEnterFolder: (path: string) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div
       data-index={index}
@@ -585,7 +588,7 @@ function Row({
       <button
         onMouseDown={keepFocus}
         onClick={() => onEnterFolder(choice.path)}
-        title={`Browse ${choice.name}`}
+        title={t('agent.folder.browseNamed', { name: choice.name })}
         className={`mr-3 shrink-0 rounded p-1 text-fleet-text-subtle transition-colors hover:bg-fleet-surface-3 hover:text-fleet-text focus-ring ${
           isSelected ? '' : 'opacity-0 group-hover:opacity-100'
         }`}

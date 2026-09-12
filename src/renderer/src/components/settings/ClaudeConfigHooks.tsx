@@ -6,6 +6,7 @@ import {
   type ClaudeHooks,
   type ClaudeHookEntry
 } from '../../../../shared/claude-hooks';
+import { useTranslation } from '../../lib/i18n';
 
 /**
  * The hooks editor.
@@ -92,10 +93,12 @@ function cloneHooks(hooks: ClaudeHooks): ClaudeHooks {
 }
 
 function FleetBadge(): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <span
       className="rounded border border-fleet-border-strong px-1.5 py-px text-[10px] text-fleet-text-subtle"
-      title="Fleet installs this hook so the Copilot can follow your sessions. Manage it from the Copilot page."
+      title={t('settings.claudeConfig.hooks.fleetBadgeTitle')}
     >
       Fleet
     </span>
@@ -113,6 +116,7 @@ function EventCard({
   showFleet: boolean;
   onChange: (next: ClaudeHookEntry[]) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const rows = rowsFor(event, entries).filter((row) => showFleet || !row.locked);
   const hasMatcher = !MATCHERLESS.has(event);
   const hiddenFleet = rowsFor(event, entries).length - rows.length;
@@ -160,21 +164,40 @@ function EventCard({
           {event}
         </span>
         <span className="text-[11px] text-fleet-text-subtle">
-          {rows.length === 1 ? '1 hook' : `${rows.length} hooks`}
-          {hiddenFleet > 0 ? ` · ${hiddenFleet} hidden` : ''}
+          {hiddenFleet > 0
+            ? t(
+                rows.length === 1
+                  ? 'settings.claudeConfig.hooks.countOneHidden'
+                  : 'settings.claudeConfig.hooks.countOtherHidden',
+                { count: rows.length, hidden: hiddenFleet }
+              )
+            : t(
+                rows.length === 1
+                  ? 'settings.claudeConfig.hooks.countOne'
+                  : 'settings.claudeConfig.hooks.countOther',
+                { count: rows.length }
+              )}
         </span>
       </div>
 
       <div className="px-3 py-2">
         {rows.length === 0 ? (
           <div className="py-1 text-xs text-fleet-text-subtle">
-            No hooks for this event{hiddenFleet > 0 ? ' that you own' : ''}.
+            {t(
+              hiddenFleet > 0
+                ? 'settings.claudeConfig.hooks.emptyOwned'
+                : 'settings.claudeConfig.hooks.emptyEvent'
+            )}
           </div>
         ) : (
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-[10px] uppercase tracking-wide text-fleet-text-subtle">
-              {hasMatcher ? <span className="w-[110px] flex-none">Matcher</span> : null}
-              <span className="flex-1">Command</span>
+              {hasMatcher ? (
+                <span className="w-[110px] flex-none">
+                  {t('settings.claudeConfig.hooks.matcher')}
+                </span>
+              ) : null}
+              <span className="flex-1">{t('settings.claudeConfig.hooks.command')}</span>
               <span className="w-[76px] flex-none text-right">&nbsp;</span>
             </div>
             {rows.map((row) => (
@@ -190,9 +213,9 @@ function EventCard({
                         // cell reads as missing data rather than as a fact.
                         <span
                           className="text-fleet-text-subtle"
-                          title="No matcher: runs every time"
+                          title={t('settings.claudeConfig.hooks.noMatcherTitle')}
                         >
-                          any
+                          {t('settings.claudeConfig.hooks.anyMatcher')}
                         </span>
                       ) : (
                         row.matcher
@@ -203,7 +226,9 @@ function EventCard({
                       className={`${fieldCls} w-[110px] flex-none`}
                       value={row.matcher}
                       placeholder="*"
-                      aria-label={`${row.event} matcher`}
+                      aria-label={t('settings.claudeConfig.hooks.matcherAria', {
+                        event: row.event
+                      })}
                       onChange={(e) => editEntry(row.entryIndex, { matcher: e.target.value })}
                     />
                   )
@@ -216,9 +241,11 @@ function EventCard({
                   <input
                     className={`${fieldCls} flex-1`}
                     value={row.command}
-                    placeholder="/path/to/script.sh"
+                    placeholder={t('settings.claudeConfig.hooks.commandPlaceholder')}
                     title={row.command}
-                    aria-label={`${row.event} command`}
+                    aria-label={t('settings.claudeConfig.hooks.commandAria', {
+                      event: row.event
+                    })}
                     onChange={(e) => editCommand(row.entryIndex, row.hookIndex, e.target.value)}
                   />
                 )}
@@ -230,7 +257,7 @@ function EventCard({
                       onClick={() => removeRow(row.entryIndex, row.hookIndex)}
                       className="text-xs text-red-400 transition active:scale-[0.97]"
                     >
-                      Remove
+                      {t('settings.claudeConfig.hooks.remove')}
                     </button>
                   )}
                 </span>
@@ -243,7 +270,7 @@ function EventCard({
           onClick={addRow}
           className="mt-2 rounded border border-fleet-border-strong px-2 py-0.5 text-xs text-fleet-text-secondary transition hover:text-fleet-text active:scale-[0.97]"
         >
-          Add hook
+          {t('settings.claudeConfig.hooks.addHook')}
         </button>
       </div>
     </div>
@@ -257,6 +284,7 @@ export function ClaudeConfigHooks({
   document: Record<string, unknown>;
   onChange: (next: ClaudeHooks | undefined) => void;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [showFleet, setShowFleet] = useState(true);
   const [adding, setAdding] = useState(false);
 
@@ -278,7 +306,9 @@ export function ClaudeConfigHooks({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-fleet-text">Hooks</h3>
+        <h3 className="text-sm font-medium text-fleet-text">
+          {t('settings.claudeConfig.hooks.title')}
+        </h3>
         {fleetRows > 0 ? (
           <label className="flex items-center gap-2 text-[11px] text-fleet-text-subtle">
             <input
@@ -286,21 +316,22 @@ export function ClaudeConfigHooks({
               checked={showFleet}
               onChange={(e) => setShowFleet(e.target.checked)}
             />
-            Show Fleet&apos;s own hooks
+            {t('settings.claudeConfig.hooks.showFleet')}
           </label>
         ) : null}
       </div>
 
       <p className="text-[11px] text-fleet-text-subtle">
-        Shell commands Claude Code runs at each event. Rows marked Fleet are installed by the
-        Copilot; Fleet always writes those from disk, so your edits here never remove them.
+        {t('settings.claudeConfig.hooks.description')}
       </p>
 
       {events.length === 0 ? (
         <div className="rounded border border-fleet-border bg-fleet-surface-2/40 px-3 py-6 text-center">
-          <div className="text-sm text-fleet-text">No hooks in this file</div>
+          <div className="text-sm text-fleet-text">
+            {t('settings.claudeConfig.hooks.emptyTitle')}
+          </div>
           <div className="mt-1 text-[11px] text-fleet-text-subtle">
-            Add an event below to run a command when Claude Code reaches it.
+            {t('settings.claudeConfig.hooks.emptyBody')}
           </div>
         </div>
       ) : (
@@ -333,7 +364,7 @@ export function ClaudeConfigHooks({
           }}
           onBlur={() => setAdding(false)}
         >
-          <option value="">Choose an event...</option>
+          <option value="">{t('settings.claudeConfig.hooks.chooseEvent')}</option>
           {available.map((event) => (
             <option key={event} value={event}>
               {event}
@@ -346,7 +377,7 @@ export function ClaudeConfigHooks({
           disabled={available.length === 0}
           className="rounded border border-fleet-border-strong px-2 py-0.5 text-xs text-fleet-text-secondary transition hover:text-fleet-text active:scale-[0.97] disabled:opacity-40"
         >
-          Add event
+          {t('settings.claudeConfig.hooks.addEvent')}
         </button>
       )}
     </div>

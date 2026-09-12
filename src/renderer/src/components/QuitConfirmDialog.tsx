@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { TriangleAlert } from 'lucide-react';
 import type { QuitWorkItem } from '../../../shared/quit-confirm';
+import type { MessageKey } from '../../../shared/i18n';
 import { useNotificationStore } from '../store/notification-store';
 import { useWorkspaceStore } from '../store/workspace-store';
 import { findPaneLocation, paneLabel } from '../lib/palette-items';
 import { PaneStatusGlyph } from './PaneStatusGlyph';
 import { Overlay } from './Overlay';
+import { useTranslation } from '../lib/i18n';
 
 /** A pane blocked on a question is the one most easily forgotten, so it leads. */
 const URGENCY: Record<string, number> = {
@@ -19,10 +21,9 @@ function rankOf(item: QuitWorkItem): number {
   return URGENCY[item.state ?? item.kind] ?? 4;
 }
 
-const KIND_NOTE: Record<QuitWorkItem['kind'], string> = {
-  pane: '',
-  subagent: 'subagent',
-  background: 'background'
+const KIND_NOTE: Record<Exclude<QuitWorkItem['kind'], 'pane'>, MessageKey> = {
+  subagent: 'panes.quit.subagent',
+  background: 'panes.quit.background'
 };
 
 /**
@@ -39,6 +40,7 @@ const KIND_NOTE: Record<QuitWorkItem['kind'], string> = {
  * through rather than showing an empty list.
  */
 export function QuitConfirmDialog(): React.JSX.Element {
+  const { t } = useTranslation();
   const [pending, setPending] = useState<{ requestId: string; items: QuitWorkItem[] } | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -83,11 +85,11 @@ export function QuitConfirmDialog(): React.JSX.Element {
         <div className="flex items-start gap-2.5">
           <TriangleAlert size={16} className="mt-0.5 shrink-0 text-amber-400" />
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-fleet-text">Close Fleet?</h3>
+            <h3 className="text-sm font-semibold text-fleet-text">{t('panes.quit.title')}</h3>
             <p className="mt-1 text-xs text-fleet-text-muted">
-              {pending?.items.length === 1
-                ? 'One thing is still running. Closing stops it.'
-                : `${pending?.items.length ?? 0} things are still running. Closing stops all of them.`}
+              {t(pending?.items.length === 1 ? 'panes.quit.oneRunning' : 'panes.quit.manyRunning', {
+                count: pending?.items.length ?? 0
+              })}
             </p>
           </div>
         </div>
@@ -100,13 +102,13 @@ export function QuitConfirmDialog(): React.JSX.Element {
             >
               <PaneStatusGlyph state={item.state ?? 'working'} />
               <span className="truncate text-fleet-text-secondary">{item.label}</span>
-              {KIND_NOTE[item.kind] !== '' && (
+              {item.kind !== 'pane' && (
                 <span className="ml-auto shrink-0 text-fleet-text-subtle">
-                  {KIND_NOTE[item.kind]}
+                  {t(KIND_NOTE[item.kind])}
                 </span>
               )}
               {item.state === 'needs_me' && (
-                <span className="ml-auto shrink-0 text-amber-400">waiting on you</span>
+                <span className="ml-auto shrink-0 text-amber-400">{t('panes.quit.waiting')}</span>
               )}
             </li>
           ))}
@@ -118,13 +120,13 @@ export function QuitConfirmDialog(): React.JSX.Element {
             className="focus-ring rounded px-3 py-1 text-xs text-fleet-text-muted transition hover:bg-fleet-surface-3 hover:text-fleet-text active:scale-[0.97]"
             onClick={() => decide(false)}
           >
-            Cancel
+            {t('panes.quit.cancel')}
           </button>
           <button
             className="rounded bg-amber-700 px-3 py-1 text-xs text-white transition hover:bg-amber-600 active:scale-[0.97]"
             onClick={() => decide(true)}
           >
-            Close anyway
+            {t('panes.quit.closeAnyway')}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronRight, Server } from 'lucide-react';
+import { useTranslation } from '../../lib/i18n';
 import { popperAnim } from '../../lib/motion';
 import { toCrumbs } from './remote-path-crumbs';
 
@@ -20,6 +21,7 @@ export function RemoteBreadcrumbs({
   connected,
   onNavigate
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   const [overflowOpen, setOverflowOpen] = useState(false);
   const crumbs = toCrumbs(path);
 
@@ -31,12 +33,14 @@ export function RemoteBreadcrumbs({
 
   return (
     <nav
-      aria-label="Remote path"
+      aria-label={t('ssh.breadcrumb.remotePath')}
       className="flex items-center gap-0.5 min-w-0 text-xs text-neutral-400"
     >
       <span
         className="flex items-center gap-1.5 pr-1.5 text-neutral-300 shrink-0"
-        title={connected ? `Connected to ${hostLabel}` : `Not connected to ${hostLabel}`}
+        title={t(connected ? 'ssh.breadcrumb.connected' : 'ssh.breadcrumb.disconnected', {
+          host: hostLabel
+        })}
       >
         <Server size={12} />
         <span className="font-medium truncate max-w-[10rem]">{hostLabel}</span>
@@ -61,7 +65,7 @@ export function RemoteBreadcrumbs({
                   <Popover.Trigger asChild>
                     <button
                       className="px-1 rounded hover:bg-white/10 hover:text-neutral-200 transition-colors"
-                      aria-label="Show hidden path segments"
+                      aria-label={t('ssh.breadcrumb.showHidden')}
                     >
                       …
                     </button>

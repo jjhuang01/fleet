@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, GitBranch, GitCommitHorizontal } from 'lucide-react';
 import { headName, truncateBranch, type AgentGitHead } from '../../../../shared/agent-git';
+import { useTranslation } from '../../lib/i18n';
 
 /**
  * Where the agent is working: the folder, and the branch inside it.
@@ -53,6 +54,7 @@ function BranchChip({
   op: AgentGitHead['op'];
   detached: boolean;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const Icon = copied ? Check : detached ? GitCommitHorizontal : GitBranch;
 
@@ -68,7 +70,9 @@ function BranchChip({
       onClick={copy}
       // The full name, because the one on screen may have had its middle taken
       // out, and a branch you cannot read in full is one you cannot check.
-      title={`${name}${op === null ? '' : ` (${op})`} - click to copy`}
+      title={t('agent.location.copyBranch', {
+        label: `${name}${op === null ? '' : ` (${op})`}`
+      })}
       className="flex min-w-0 items-center gap-1 rounded px-1 py-0.5 transition-colors hover:text-fleet-text-secondary focus-ring"
     >
       <Icon size={11} className="shrink-0" />

@@ -16,7 +16,7 @@ let deferWrites: boolean;
 let pendingWrites: Array<() => void>;
 let announce: Mock<() => void>;
 let reload: Mock<() => Promise<void>>;
-let onError: Mock<(message: string) => void>;
+let onError: Mock<(failure: { dir: string; detail: string }) => void>;
 let choice: ConfigFolderChoice;
 
 function build(): void {
@@ -188,7 +188,7 @@ describe('createConfigFolderChoice', () => {
     pendingDirs[0]({ ok: false, error: 'read-only volume' });
     await done;
 
-    expect(onError).toHaveBeenCalledWith('Could not create /configs/a: read-only volume');
+    expect(onError).toHaveBeenCalledWith({ dir: '/configs/a', detail: 'read-only volume' });
     expect(writes).toEqual([]);
   });
 

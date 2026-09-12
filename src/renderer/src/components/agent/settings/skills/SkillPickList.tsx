@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import type { FoundSkill, SkillStatus } from '../../../../../../shared/agent-skill-install';
+import type { MessageKey } from '../../../../../../shared/i18n';
+import { useTranslation } from '../../../../lib/i18n';
 import { shortenPath } from '../../../../lib/shorten-path';
 
 /**
@@ -14,18 +16,37 @@ import { shortenPath } from '../../../../lib/shorten-path';
  * apart is the folder above them.
  */
 
-const FOUND_IN_LABEL: Record<FoundSkill['origin']['foundIn'], string> = {
-  fleet: 'Fleet',
-  'claude-code': 'Claude Code',
-  opencode: 'OpenCode',
-  agents: 'Agents',
-  git: 'Repository'
+const FOUND_IN_LABEL: Record<
+  FoundSkill['origin']['foundIn'],
+  { allProjects: MessageKey; thisProject: MessageKey }
+> = {
+  fleet: {
+    allProjects: 'agentSettings.skills.source.fleet.allProjects',
+    thisProject: 'agentSettings.skills.source.fleet.thisProject'
+  },
+  'claude-code': {
+    allProjects: 'agentSettings.skills.source.claudeCode.allProjects',
+    thisProject: 'agentSettings.skills.source.claudeCode.thisProject'
+  },
+  opencode: {
+    allProjects: 'agentSettings.skills.source.openCode.allProjects',
+    thisProject: 'agentSettings.skills.source.openCode.thisProject'
+  },
+  agents: {
+    allProjects: 'agentSettings.skills.source.agents.allProjects',
+    thisProject: 'agentSettings.skills.source.agents.thisProject'
+  },
+  git: {
+    allProjects: 'agentSettings.skills.source.repository',
+    thisProject: 'agentSettings.skills.source.repository'
+  }
 };
 
 /** One skills root's worth of findings. */
 type Group = {
   key: string;
   label: string;
+  labelKey: MessageKey | null;
   /** True when the label is a repository, which is written as its author wrote it. */
   verbatim: boolean;
   path: string;
@@ -50,6 +71,7 @@ export function SkillPickList({
    */
   within?: string;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const groups = useMemo(() => groupByRoot(found, within), [found, within]);
 
   const toggle = (path: string): void => {
@@ -81,7 +103,7 @@ export function SkillPickList({
                     group.verbatim ? 'font-mono' : 'uppercase tracking-wider'
                   }`}
                 >
-                  {group.label}
+                  {group.labelKey === null ? group.label : t(group.labelKey)}
                 </p>
                 <p className="truncate text-[11px] text-fleet-text-subtle/80" title={group.path}>
                   {group.verbatim ? group.path : shortenPath(group.path)}
@@ -93,7 +115,7 @@ export function SkillPickList({
                   onClick={() => setGroup(group, !allOn)}
                   className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-fleet-text-muted transition-colors hover:bg-fleet-surface-2 hover:text-fleet-text focus-ring"
                 >
-                  {allOn ? 'None' : 'All'}
+                  {allOn ? t('agentSettings.common.none') : t('agentSettings.common.all')}
                 </button>
               )}
             </div>
@@ -151,9 +173,13 @@ function FoundRow({
  * and a badge that appears on nearly every row stops being read.
  */
 function Marker({ status }: { status: SkillStatus }): React.JSX.Element {
+  const { t } = useTranslation();
+
   if (status === 'known') {
     return (
-      <span className="mt-1 w-14 shrink-0 text-right text-[10px] text-fleet-text-subtle">have</span>
+      <span className="mt-1 w-14 shrink-0 text-right text-[10px] text-fleet-text-subtle">
+        {t('agentSettings.skills.status.known')}
+      </span>
     );
   }
   const look =
@@ -164,7 +190,9 @@ function Marker({ status }: { status: SkillStatus }): React.JSX.Element {
     <span
       className={`mt-0.5 w-14 shrink-0 rounded border px-1.5 py-px text-center text-[10px] font-medium ${look}`}
     >
-      {status}
+      {status === 'new'
+        ? t('agentSettings.skills.status.new')
+        : t('agentSettings.skills.status.changed')}
     </span>
   );
 }
@@ -183,9 +211,12 @@ function groupByRoot(found: FoundSkill[], within: string | undefined): Group[] {
       key: root,
       // A clone says which repository it is; a folder on disk says whose it is
       // and whether it follows the user or belongs to this project.
-      label: fromRepo
-        ? from
-        : `${FOUND_IN_LABEL[foundIn]} · ${scope === 'user' ? 'all projects' : 'this project'}`,
+      label: fromRepo ? from : '',
+      labelKey: fromRepo
+        ? null
+        : scope === 'user'
+          ? FOUND_IN_LABEL[foundIn].allProjects
+          : FOUND_IN_LABEL[foundIn].thisProject,
       verbatim: fromRepo,
       path: fromRepo ? inside(root, within) : root,
       found: [skill]
