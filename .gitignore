@@ -17,3 +17,6 @@ hooks/bin/
 
 # Superpowers brainstorm scratch
 .superpowers/
+
+# omo plugin state/evidence
+.omo/

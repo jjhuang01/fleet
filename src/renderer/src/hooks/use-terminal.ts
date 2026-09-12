@@ -393,9 +393,10 @@ function createTerminal(
   };
   // Document capture, not the textarea: xterm's own keydown listener sits on the
   // textarea, and where the two run relative to each other has to be certain, not
-  // left to registration order. The guard only counts keys, so seeing every key
-  // in the window costs nothing.
-  const onKeyDown = (): void => {
+  // left to registration order. The target check keeps it to this pane, so
+  // typing in another terminal cannot close this one's composition episode.
+  const onKeyDown = (event: KeyboardEvent): void => {
+    if (event.target !== compositionTextarea) return;
     compositionGuard.userKeystroke();
   };
   compositionTextarea?.addEventListener('compositionupdate', onCompositionUpdate);

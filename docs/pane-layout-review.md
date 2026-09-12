@@ -4,7 +4,7 @@
 - 评审对象：`fleet-pane-dev` 的两次提交 `24b98df0`（布局功能）与 `aeb309f3`（本次修复）
 - 涉及文件：`PaneGrid.tsx`、`PaneHeader.tsx`、`Sidebar.tsx`、`TabItem.tsx`、`workspace-store.ts`、`use-terminal.ts`、`lib/composition-guard.ts`、`lib/terminal-keybindings.ts`
 - 参考实现：`otty-shell/otty` `main` @ `4c6dc38`（Rust + iced 0.14），并核对了 `gpui` 分支 @ `4d1bb43`
-- 外部评审：Claude Code（`claude-fable-5-1`，独立 worktree）与 Codex CLI（`agentrouter/gpt-6-astra`）；Codex 侧因上游 provider 报错退出，结论以 Claude 侧与本机实测为准
+- 外部评审：Codex CLI（`agentrouter/gpt-6-astra`）在 13 万 token 后因上游 provider 报错（`Encrypted content could not be decrypted`）退出；Claude Code（`claude-fable-5-1`）跑了 50 分钟仍停在模型侧无输出。最终交叉评审改由两路只读子代理完成（代码逻辑 `lazycodex-code-reviewer`、设计保真 `lazycodex-clone-fidelity-reviewer`），结论见下，原始报告在 `.omo/evidence/pane-layout-code-review.md` 与 `.omo/evidence/pane-layout-design-fidelity-clone-fidelity.md`
 
 ## 结论
 
@@ -33,8 +33,10 @@
 
 ## 还没修的问题（按优先级）
 
-- **P1：Pane 不能在 Tab 之间移动**。`movePane` 只在同一个 Tab 内生效，而 Tab 合并是单向门：合过去就分不回来。布局手势缺少「Pane → 侧栏 Tab」这一条。
-- **P2：合并与排序共用同一块可投放区域**。Tab 行的中部（`edgeHeight` 之外的 14px）现在是合并区，想插到两个 Tab 之间只能瞄准上下各 7px。功能成立，但误合并的概率取决于行高，值得灰度观察。
+- **P1：Pane 不能在 Tab 之间移动**。`movePane` 只在同一个 Tab 内生效（`workspace-store.ts` 里源/目标必须同 Tab），而 Tab 合并是单向门：合过去就分不回来。代码评审把它列为不批准的唯一 HIGH。布局手势缺少「Pane → 侧栏 Tab」这一条。
+- **P2：合并与排序共用同一块可投放区域**。Tab 行的中部（`edgeHeight` 之外的 14px）现在是合并区，想插到两个 Tab 之间只能瞄准上下各 7px。功能成立，但误合并的概率取决于行高，值得灰度观察；另外 `Sidebar.handleDrop` 在 `mergeTabs` 返回 false 时会继续走重排，理论上仍存在「看到合并预览、结果变成排序」的窗口。
+- **P2：网格内的关键操作没有键盘路径**。分隔条、交点手柄、Pane 标题栏都不可聚焦（无 `tabIndex`、无 `focus-visible`）。设计评审把它列为 HIGH；对纯鼠标的 mac 桌面习惯影响有限，但导出的可访问性结论是「不可达」。
+- **P3：交点共线判据是字符串相等**。`computeLayout` 用 `toCSS(rect.top/left)` 给共线分隔线分组，所以只有当两条线的 ratio 数值一致时才会一起动。手动把左列内部线拖到 0.6、右列保持 0.5 之后，再拖交点只会带动左列那条（整行的水平线仍可用根分隔条单独拖整齐）。这是「各列已不同」时的预期行为，但代码评审认为该判据脆弱，值得在实现跨 Tab 拖动前先想清楚。
 - **P3：抓取带偏窄**。分隔条可抓区域 6px（±3px），Otty 走 iced 的 12px leeway（约 ±6.5px）。手感和「拖不动」的抱怨多半来自这里。
 - **P3：交点手柄可发现性弱**。`CORNER_PX = 14` 的命中区里只有一个 10px、16% 白的圆点，且只在悬停该手柄时出现；在知道交点能拖之前，用户看不到任何提示。
 
@@ -69,3 +71,8 @@
 - 真实中文输入法（RIME / Squirrel）下的行为，测试用的是 CDP `Input.imeSetComposition` 合成事件
 - 打包产物（本次只跑 dev 窗口）
 - 合并/排序热区在实际使用中的误触率（需要人手试用，无法用脚本判定）
+- 拖拽、交点、双击改名没有自动化 DOM/E2E 覆盖；本次全部靠一次性 CDP 脚本人工驱动，脚本未入库。两路评审都把这一点列为应补项
+
+已在评审后修掉的风险：
+
+- 每个终端在 `document` 捕获阶段监听 keydown，会受其它 Pane 按键影响（可能把当前 Pane 的重复提交放行）。现在监听器只处理 `event.target === compositionTextarea` 的按键，顺序保证不变。
