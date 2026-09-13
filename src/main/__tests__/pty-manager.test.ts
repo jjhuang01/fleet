@@ -306,6 +306,56 @@ describe('PtyManager batching and cleanup', () => {
 
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it('stays paused until every byte it sent while paused is acknowledged', () => {
+    manager.create({ paneId: 'pane-1', cwd: '/tmp', shell: '/bin/zsh' });
+
+    const received: Array<{ data: string; paused: boolean }> = [];
+    manager.onData('pane-1', (data, paused) => received.push({ data, paused }));
+
+    const mockPty = (ptyModule.spawn as ReturnType<typeof vi.fn>).mock.results[0].value;
+    const ptyDataCallback = mockPty.onData.mock.calls[0][0];
+
+    const overflow = 'x'.repeat(257 * 1024);
+    ptyDataCallback(overflow);
+
+    expect(mockPty.pause).toHaveBeenCalled();
+    expect(received).toHaveLength(1);
+    expect(received[0].paused).toBe(true);
+
+    // Most of it consumed: the pane stays paused, because the rest is unread.
+    manager.drain('pane-1', 256 * 1024);
+    expect(mockPty.resume).not.toHaveBeenCalled();
+
+    // The remainder: now the shell may run again.
+    manager.drain('pane-1', overflow.length - 256 * 1024);
+    expect(mockPty.resume).toHaveBeenCalled();
+  });
+
+  it('resumes at the ceiling when the acknowledgement never arrives', () => {
+    manager.create({ paneId: 'pane-1', cwd: '/tmp', shell: '/bin/zsh' });
+    manager.onData('pane-1', vi.fn());
+
+    const mockPty = (ptyModule.spawn as ReturnType<typeof vi.fn>).mock.results[0].value;
+    const ptyDataCallback = mockPty.onData.mock.calls[0][0];
+
+    ptyDataCallback('x'.repeat(257 * 1024));
+    expect(mockPty.pause).toHaveBeenCalled();
+
+    // A renderer that never acknowledges must not freeze the shell.
+    vi.advanceTimersByTime(2000 + 16);
+    expect(mockPty.resume).toHaveBeenCalled();
+  });
+
+  it('ignores an acknowledgement for a pane that is not paused', () => {
+    manager.create({ paneId: 'pane-1', cwd: '/tmp', shell: '/bin/zsh' });
+    manager.onData('pane-1', vi.fn());
+
+    const mockPty = (ptyModule.spawn as ReturnType<typeof vi.fn>).mock.results[0].value;
+
+    manager.drain('pane-1', 4096);
+    expect(mockPty.resume).not.toHaveBeenCalled();
+  });
 });
 
 describe('PtyManager profile-aware spawn', () => {

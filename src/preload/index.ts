@@ -195,15 +195,13 @@ function getHomeDir(): string {
 
 // Single IPC listener that routes PTY data to per-pane callbacks via Map lookup (O(1))
 // instead of broadcasting to all N terminal listeners (O(N)).
-const ptyDataListeners = new Map<string, (data: string) => void>();
-// Track which panes have been paused by the main process so the renderer
-// only sends ptyDrain IPC when actually needed (avoids no-op resume() calls).
-const pausedPanes = new Set<string>();
+const ptyDataListeners = new Map<string, (data: string, paused: boolean) => void>();
 ipcRenderer.on(
   IPC_CHANNELS.PTY_DATA,
   (_event: Electron.IpcRendererEvent, payload: PtyDataPayload) => {
-    if (payload.paused) pausedPanes.add(payload.paneId);
-    ptyDataListeners.get(payload.paneId)?.(payload.data);
+    // The paused flag travels with the batch: it is what tells the renderer it
+    // now owes an acknowledgement for these bytes, and how many it owes.
+    ptyDataListeners.get(payload.paneId)?.(payload.data, payload.paused);
   }
 );
 
@@ -217,7 +215,10 @@ const fleetApi = {
     gc: (activePaneIds: string[]): void => ipcRenderer.send(IPC_CHANNELS.PTY_GC, activePaneIds),
     attach: async (paneId: string): Promise<{ data: string }> =>
       typedInvoke(IPC_CHANNELS.PTY_ATTACH, { paneId }),
-    registerPaneData: (paneId: string, callback: (data: string) => void): Unsubscribe => {
+    registerPaneData: (
+      paneId: string,
+      callback: (data: string, paused: boolean) => void
+    ): Unsubscribe => {
       ptyDataListeners.set(paneId, callback);
       return () => {
         if (ptyDataListeners.get(paneId) === callback) {
@@ -332,11 +333,12 @@ const fleetApi = {
   },
   showFolderPicker: async (): Promise<string | null> =>
     typedInvoke(IPC_CHANNELS.SHOW_FOLDER_PICKER),
-  ptyDrain: (paneId: string) => {
-    if (pausedPanes.has(paneId)) {
-      pausedPanes.delete(paneId);
-      ipcRenderer.send(IPC_CHANNELS.PTY_DRAIN, { paneId });
-    }
+  // `bytes` is what the renderer has handed to xterm since the pause; main
+  // resumes once everything it sent while paused has been acknowledged. Sending
+  // it unconditionally is deliberate - the renderer's own counter is the only
+  // copy of that state, and a second copy here could only disagree with it.
+  ptyDrain: (paneId: string, bytes: number) => {
+    ipcRenderer.send(IPC_CHANNELS.PTY_DRAIN, { paneId, bytes });
   },
   file: {
     read: async (

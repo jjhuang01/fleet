@@ -349,17 +349,28 @@ function createTerminal(
   let attachResolved = !isPreCreated || options.attachOnly;
   const pendingLiveData: string[] = [];
 
-  const writeToTerm = (data: string): void => {
-    if (!data) {
-      window.fleet.ptyDrain(options.paneId);
-      return;
-    }
+  // Output the main process sent while it had this pane's PTY paused, and is
+  // waiting to hear has reached xterm. It sends a batch the moment one exists,
+  // so by the time a write finishes this can cover more than one batch.
+  let owedBytes = 0;
 
+  const writeToTerm = (data: string): void => {
+    if (!data) return;
+
+    // What this write is answerable for. Capped by the length being written
+    // because the counter can also hold bytes from a batch queued behind this
+    // one, and the two sides only need a throttle rather than an audit: crediting
+    // a little early costs one early resume, while crediting too late would hold
+    // the shell.
+    const acknowledged = Math.min(owedBytes, data.length);
     term.write(data, () => {
       if (pinnedToBottom) {
         term.scrollToBottom();
       }
-      window.fleet.ptyDrain(options.paneId);
+      if (acknowledged > 0) {
+        owedBytes -= acknowledged;
+        window.fleet.ptyDrain(options.paneId, acknowledged);
+      }
     });
   };
   // Hidden-pane write coalescing. Background-workspace (and inactive) tabs stay
@@ -386,8 +397,13 @@ function createTerminal(
   };
 
   log.debug('registerPaneData', { paneId: options.paneId });
-  const ipcUnsubscribe = window.fleet.pty.registerPaneData(options.paneId, (data) => {
+  const ipcUnsubscribe = window.fleet.pty.registerPaneData(options.paneId, (data, paused) => {
     shellIsReady(options.paneId);
+    // A batch sent while the PTY is paused is owed an acknowledgement, and the
+    // acknowledgement is not sent until it has been handed to xterm below. A
+    // hidden pane therefore holds the shell paused for at most one flush
+    // interval, which is the backpressure doing its job rather than a delay.
+    if (paused) owedBytes += data.length;
     if (!attachResolved) {
       pendingLiveData.push(data);
       return;
@@ -395,9 +411,6 @@ function createTerminal(
     // offsetParent is null inside a display:none subtree — the idiom used
     // throughout this file to detect a hidden pane.
     if (container.offsetParent === null) {
-      // Take the data off the IPC path now (resumes the PTY if backpressure
-      // paused it) but defer the costly xterm write to the slow flush.
-      window.fleet.ptyDrain(options.paneId);
       hiddenBuffer += data;
       hiddenFlushTimer ??= setTimeout(flushHiddenBuffer, HIDDEN_FLUSH_INTERVAL_MS);
       return;

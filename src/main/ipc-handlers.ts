@@ -346,9 +346,12 @@ export function registerIpcHandlers(
   });
 
   // PTY drain — renderer signals it has consumed a batch; resume the PTY
-  ipcMain.on(IPC_CHANNELS.PTY_DRAIN, (_event, { paneId }: { paneId: string }) => {
-    ptyManager.resume(paneId);
-  });
+  ipcMain.on(
+    IPC_CHANNELS.PTY_DRAIN,
+    (_event, { paneId, bytes }: { paneId: string; bytes: number }) => {
+      ptyManager.drain(paneId, bytes);
+    }
+  );
 
   // Attach to a pre-created PTY: drain its buffered output so the renderer
   // can replay what arrived before the terminal component mounted.

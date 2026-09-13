@@ -39,6 +39,12 @@ type PtyEntry = {
   cwd: string;
   outputBuffer: string;
   paused: boolean;
+  /**
+   * Output handed to the renderer since the pause that it has not acknowledged
+   * yet. `resume` waits for this to reach zero, which is what makes the pause a
+   * real end-to-end backpressure rather than a fixed delay.
+   */
+  unackedBytes: number;
   /** When the pause started, for the self-heal in `flushAll`. Null when running. */
   pausedAt: number | null;
   dataDisposable: pty.IDisposable | null;
@@ -50,25 +56,22 @@ const FLUSH_INTERVAL_MS = 16;
 const BUFFER_OVERFLOW_BYTES = 256 * 1024;
 
 /**
- * How long a pane may stay paused waiting for the renderer to say it has caught
- * up, before this side resumes it anyway.
+ * The longest a pane may stay paused waiting for an acknowledgement.
  *
- * Pausing is renderer-driven by design and that is the right default: the
- * renderer acknowledges a batch once xterm has actually parsed it, which is the
- * only honest signal that the output was consumed rather than merely sent. The
- * problem is that it was also the *only* signal. Nothing on this side cleared
- * `paused`, so a renderer busy enough to be late with the acknowledgement -
- * rendering a streaming agent reply, say - left the shell stopped mid-write for
- * as long as it stayed busy, and the person watching saw a terminal that had
- * frozen. Worse, the pause is entered when this process is too busy to flush on
- * time, so the two halves could hold each other there.
+ * Pausing is renderer-driven: the renderer acknowledges the bytes it has handed
+ * to xterm, and this side resumes once every byte it sent while paused has been
+ * acknowledged. That is the honest signal - output consumed, not merely sent -
+ * and it is what keeps a flood from piling up in the renderer's write queue.
  *
- * With this, the acknowledgement is an optimisation rather than a requirement:
- * it resumes immediately when it arrives, and the shell runs again shortly
- * after regardless. A quarter second is long enough that a renderer keeping up
- * is never second-guessed, and short enough that nobody reads it as a hang.
+ * Waiting forever is not safe, because a renderer that never acknowledges would
+ * freeze the shell: a pane whose terminal has not attached yet buffers into
+ * `pendingLiveData` and acknowledges nothing, and a renderer busy enough to be
+ * late is exactly when a person is watching the terminal not move. So the
+ * acknowledgement is the normal path and this is the escape from it. It has to
+ * clear the renderer's own slowest normal path, which is a hidden pane flushing
+ * its buffer every 250 ms, so it is several times that rather than a hair above.
  */
-const RESUME_WITHOUT_DRAIN_MS = 250;
+const DRAIN_CEILING_MS = 2000;
 
 export class PtyManager {
   private ptys = new Map<string, PtyEntry>();
@@ -147,6 +150,7 @@ export class PtyManager {
       cwd: opts.cwd,
       outputBuffer: '',
       paused: false,
+      unackedBytes: 0,
       pausedAt: null,
       dataDisposable: null,
       exitDisposable: null,
@@ -170,6 +174,9 @@ export class PtyManager {
         });
         entry.paused = true;
         entry.pausedAt = Date.now();
+        // Fresh accounting: everything handed over from here until the renderer
+        // catches up is owed an acknowledgement.
+        entry.unackedBytes = 0;
         this.flushPane(opts.paneId);
         proc.pause();
       }
@@ -291,15 +298,35 @@ export class PtyManager {
     this.flushTimer ??= setInterval(() => this.flushAll(), FLUSH_INTERVAL_MS);
   }
 
-  /** Resume a paused PTY (called by renderer after consuming a batch). */
+  /**
+   * Resume a paused PTY.
+   *
+   * Called when the renderer has acknowledged everything this side sent while
+   * paused, and by the ceiling in `flushAll` when it has not.
+   */
   resume(paneId: string): void {
     const entry = this.ptys.get(paneId);
     if (entry) {
       log.debug('resume', { paneId });
       entry.paused = false;
       entry.pausedAt = null;
+      entry.unackedBytes = 0;
       entry.process.resume();
     }
+  }
+
+  /**
+   * The renderer has taken `bytes` of the output it was sent while paused.
+   *
+   * Resuming here rather than on the first acknowledgement is the point of the
+   * counter: a batch is sent as soon as it exists, so the renderer can be a
+   * flush or two behind and still be catching up.
+   */
+  drain(paneId: string, bytes: number): void {
+    const entry = this.ptys.get(paneId);
+    if (!entry?.paused) return;
+    entry.unackedBytes = Math.max(0, entry.unackedBytes - bytes);
+    if (entry.unackedBytes === 0) this.resume(paneId);
   }
 
   onExit(paneId: string, callback: (exitCode: number) => void): void {
@@ -336,6 +363,9 @@ export class PtyManager {
     if (!entry?.outputBuffer) return;
     const callback = this.dataCallbacks.get(paneId);
     if (callback) {
+      // Everything sent while paused is owed an acknowledgement, counted in the
+      // same unit as the overflow guard above so the two sides agree.
+      if (entry.paused) entry.unackedBytes += entry.outputBuffer.length;
       callback(entry.outputBuffer, entry.paused);
       entry.outputBuffer = '';
     }
@@ -358,13 +388,17 @@ export class PtyManager {
    * than the renderer, the next burst simply pauses it again, which is the
    * behaviour wanted: output arrives in bursts rather than stopping dead.
    *
-   * See RESUME_WITHOUT_DRAIN_MS for why this exists at all.
+   * See DRAIN_CEILING_MS for why this exists at all.
    */
   private resumeIfStuck(paneId: string): void {
     const entry = this.ptys.get(paneId);
     if (entry === undefined || !entry.paused || entry.pausedAt === null) return;
-    if (Date.now() - entry.pausedAt < RESUME_WITHOUT_DRAIN_MS) return;
-    log.debug('resuming without a drain', { paneId, pausedMs: Date.now() - entry.pausedAt });
+    if (Date.now() - entry.pausedAt < DRAIN_CEILING_MS) return;
+    log.debug('resuming without a drain', {
+      paneId,
+      pausedMs: Date.now() - entry.pausedAt,
+      unackedBytes: entry.unackedBytes
+    });
     this.resume(paneId);
   }
 }
