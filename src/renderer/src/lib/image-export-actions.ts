@@ -1,5 +1,6 @@
 import { toFleetImageUrl } from '../../../shared/path-platform';
 import { useToastStore } from '../store/toast-store';
+import { translateNow } from './i18n';
 
 /**
  * Taking a generated picture out of Fleet.
@@ -20,7 +21,7 @@ import { useToastStore } from '../store/toast-store';
 
 function report(result: { success: boolean; error?: string }, done: string | null): void {
   if (!result.success) {
-    useToastStore.getState().show(result.error ?? 'That did not work');
+    useToastStore.getState().show(result.error ?? translateNow('toasts.action.failed'));
     return;
   }
   if (done !== null) useToastStore.getState().show(done);
@@ -33,7 +34,7 @@ export async function saveImageAs(path: string): Promise<void> {
   // purpose, so telling them it did not save would be answering a question
   // nobody asked.
   if (result.success && result.path === undefined) return;
-  report(result, 'Image saved');
+  report(result, translateNow('toasts.image.saved'));
 }
 
 /** Open the file manager with this picture selected. */
@@ -58,13 +59,13 @@ export async function copyImageToClipboard(path: string): Promise<void> {
   try {
     const png = await toPng(path);
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
-    useToastStore.getState().show('Image copied');
+    useToastStore.getState().show(translateNow('toasts.image.copied'));
   } catch {
     // An SVG is the one thing that lands here: it has no intrinsic size, so
     // Chromium will not make a bitmap of it. Saying so beats leaving an empty
     // clipboard in front of someone who pastes nothing and wonders which end
     // broke.
-    useToastStore.getState().show('That image cannot be copied as pixels');
+    useToastStore.getState().show(translateNow('toasts.image.copyFailed'));
   }
 }
 
@@ -77,16 +78,24 @@ export async function copyImageToClipboard(path: string): Promise<void> {
 async function toPng(path: string, longestSide?: number): Promise<Blob> {
   const response = await fetch(toFleetImageUrl(path));
   const bitmap = await createImageBitmap(await response.blob());
-  const scale =
-    longestSide === undefined
-      ? 1
-      : Math.min(1, longestSide / Math.max(bitmap.width, bitmap.height));
-  const canvas = new OffscreenCanvas(
-    Math.max(1, Math.round(bitmap.width * scale)),
-    Math.max(1, Math.round(bitmap.height * scale))
-  );
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  return canvas.convertToBlob({ type: 'image/png' });
+  try {
+    const scale =
+      longestSide === undefined
+        ? 1
+        : Math.min(1, longestSide / Math.max(bitmap.width, bitmap.height));
+    const canvas = new OffscreenCanvas(
+      Math.max(1, Math.round(bitmap.width * scale)),
+      Math.max(1, Math.round(bitmap.height * scale))
+    );
+    canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    // `await` here so the `finally` below runs before the caller gets the blob.
+    return await canvas.convertToBlob({ type: 'image/png' });
+  } finally {
+    // Decoded pixels are held outside the JS heap until this is called, so a
+    // few of these in a row - copying several generated pictures - would show
+    // up as renderer memory that no collection brings back down.
+    bitmap.close();
+  }
 }
 
 /** How big the picture under the cursor is while it is being dragged. */

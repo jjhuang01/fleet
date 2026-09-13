@@ -827,6 +827,16 @@ type AbsoluteResizeHandleProps = {
   gridRef: React.RefObject<HTMLDivElement | null>;
 };
 
+/**
+ * Whether a drag's own element has been hidden or removed mid-gesture.
+ *
+ * `offsetParent` is null inside a `display:none` subtree, which is what an
+ * inactive tab is.
+ */
+function isGone(handle: HTMLElement | null): boolean {
+  return handle === null || !handle.isConnected || handle.offsetParent === null;
+}
+
 function AbsoluteResizeHandle({
   direction,
   path,
@@ -838,6 +848,15 @@ function AbsoluteResizeHandle({
   const { t } = useTranslation();
   const isH = direction === 'horizontal';
   const resizeSplit = useWorkspaceStore((s) => s.resizeSplit);
+  /** Ends a drag that is in progress; set only while one is running. */
+  const releaseDrag = useRef<(() => void) | null>(null);
+
+  // The drag listens on `document`, so leaving the grid in the middle of one -
+  // the workspace closing under the cursor - would otherwise strand those
+  // listeners along with the `col-resize` cursor and `user-select: none` they
+  // set on the body.
+  useEffect(() => () => releaseDrag.current?.(), []);
+
   // Grow the hit strip past the seam it draws, in the one axis that matters.
   const overhang = (HANDLE_HIT_PX - HANDLE_PX) / 2;
   const hitRect: Rect = isH
@@ -873,10 +892,19 @@ function AbsoluteResizeHandle({
       document.body.style.userSelect = 'none';
 
       const target = e.currentTarget;
-      const inner = target instanceof HTMLElement ? target.querySelector('div') : null;
+      const handle = target instanceof HTMLElement ? target : null;
+      const inner = handle?.querySelector('div') ?? null;
       if (inner) inner.classList.add('fleet-accent-bg', 'opacity-100');
 
       const onMouseMove = (moveEvent: MouseEvent): void => {
+        // A drag survives the pointer leaving the window, but not the handle
+        // being hidden: switching tabs leaves this grid `display:none`, and
+        // `resizeSplit` acts on whichever tab is active now, so carrying on
+        // would resize the layout the user just switched to.
+        if (isGone(handle)) {
+          release();
+          return;
+        }
         const ratio = ratioAtPoint(
           splitRect,
           isH ? 'x' : 'y',
@@ -886,15 +914,25 @@ function AbsoluteResizeHandle({
         if (ratio !== null) resizeSplit(path, ratio);
       };
 
-      const onMouseUp = (): void => {
+      const release = (): void => {
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         if (inner) inner.classList.remove('fleet-accent-bg', 'opacity-100');
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+        releaseDrag.current = null;
+      };
+
+      const onMouseUp = (): void => {
+        release();
         log.debug('resize complete', { splitNodePath: path });
       };
 
+      // The listeners are on `document`, so a drag that never sees its mouseup
+      // - the pane closed under the cursor, a workspace switch, the pointer
+      // leaving for another window - would otherwise keep them and the frozen
+      // body cursor for the life of the renderer.
+      releaseDrag.current = release;
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
     },
@@ -946,6 +984,10 @@ type GridCornerHandleProps = {
 function GridCornerHandle({ corner, gridRef }: GridCornerHandleProps): React.JSX.Element {
   const resizeSplits = useWorkspaceStore((s) => s.resizeSplits);
   const { anchor, linked } = corner;
+  /** Ends a drag that is in progress; set only while one is running. */
+  const releaseDrag = useRef<(() => void) | null>(null);
+
+  useEffect(() => () => releaseDrag.current?.(), []);
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -964,10 +1006,16 @@ function GridCornerHandle({ corner, gridRef }: GridCornerHandleProps): React.JSX
       document.body.style.userSelect = 'none';
 
       const target = e.currentTarget;
-      const inner = target instanceof HTMLElement ? target.querySelector('div') : null;
+      const handle = target instanceof HTMLElement ? target : null;
+      const inner = handle?.querySelector('div') ?? null;
       if (inner) inner.classList.add('fleet-accent-bg', 'opacity-100');
 
       const onMouseMove = (moveEvent: MouseEvent): void => {
+        // Same guard as the divider grip, for the same reason.
+        if (isGone(handle)) {
+          release();
+          return;
+        }
         const point = {
           x: moveEvent.clientX - gridRect.left,
           y: moveEvent.clientY - gridRect.top
@@ -983,15 +1031,21 @@ function GridCornerHandle({ corner, gridRef }: GridCornerHandleProps): React.JSX
         resizeSplits(updates);
       };
 
-      const onMouseUp = (): void => {
+      const release = (): void => {
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         if (inner) inner.classList.remove('fleet-accent-bg', 'opacity-100');
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+        releaseDrag.current = null;
+      };
+
+      const onMouseUp = (): void => {
+        release();
         log.debug('corner resize complete', { splitNodePath: anchor.path });
       };
 
+      releaseDrag.current = release;
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
     },

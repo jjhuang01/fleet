@@ -3,6 +3,16 @@ import { createPortal } from 'react-dom';
 import { usePresence } from '../hooks/use-presence';
 import { overlayExitMs, overlayTiming } from '../lib/motion';
 
+/**
+ * The overlays that are open, oldest first.
+ *
+ * Every overlay listens for Escape on `document`, so with a dialog stacked on a
+ * dialog one press used to reach both listeners and take the whole stack down -
+ * the workflow underneath went with the panel the user actually dismissed.
+ * Only the last one opened answers now.
+ */
+const escapeStack: Array<(e: KeyboardEvent) => void> = [];
+
 type OverlayProps = {
   open: boolean;
   onClose: () => void;
@@ -49,15 +59,30 @@ export function Overlay({
   // it - dragging a zoomed image, selecting to the end of a line - dismisses
   // the thing the user was working in.
   const pressedBackdrop = useRef(false);
+  // Read through a ref so the listener below does not have to be torn down and
+  // re-registered - which would send this overlay to the top of the stack - on
+  // every render that happens to pass a new closure.
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
 
   useEffect(() => {
-    if (!open || !closeOnEscape) return;
+    if (!open) return;
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      // Still on top: an overlay opened on top of this one answers instead.
+      if (escapeStack[escapeStack.length - 1] !== onKey) return;
+      if (closeOnEscape) close.current();
     };
+    escapeStack.push(onKey);
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, closeOnEscape, onClose]);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      const at = escapeStack.indexOf(onKey);
+      if (at !== -1) escapeStack.splice(at, 1);
+    };
+  }, [open, closeOnEscape]);
 
   if (!mounted) return null;
 
