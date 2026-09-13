@@ -28,6 +28,7 @@ import type {
   FileGrepResponse,
   RecentImagesResponse,
   ClipboardHistoryResponse,
+  ClipboardPaste,
   LogEntry,
   DiagnosticsInfo,
   ActivityStatePayload,
@@ -404,7 +405,8 @@ const fleetApi = {
     getHistory: async (): Promise<ClipboardHistoryResponse> =>
       typedInvoke(IPC_CHANNELS.CLIPBOARD_HISTORY),
     readText: async (): Promise<string> => typedInvoke(IPC_CHANNELS.CLIPBOARD_READ_TEXT),
-    readImage: async (): Promise<string | null> => typedInvoke(IPC_CHANNELS.CLIPBOARD_READ_IMAGE),
+    readPaste: async (): Promise<ClipboardPaste | null> =>
+      typedInvoke(IPC_CHANNELS.CLIPBOARD_READ_PASTE),
     onChanged: (callback: (payload: ClipboardHistoryResponse) => void): Unsubscribe =>
       onChannel(IPC_CHANNELS.CLIPBOARD_CHANGED, callback)
   },

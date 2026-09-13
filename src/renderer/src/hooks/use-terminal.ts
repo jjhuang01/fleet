@@ -16,6 +16,8 @@ import { resolveXtermTheme } from '../lib/theme';
 import { CompositionGuard } from '../lib/composition-guard';
 import { terminalKeyInput } from '../lib/terminal-keybindings';
 import { ALL_SHORTCUTS, matchesShortcut } from '../lib/shortcuts';
+import { useRemoteStore } from '../store/remote-store';
+import { uploadLocalFilesToRemotePane } from './use-terminal-drop';
 
 /**
  * The pane-move shortcuts, read from the one table that defines them.
@@ -476,18 +478,28 @@ function createTerminal(
    */
   const pasteFromClipboard = (): void => {
     void (async () => {
-      const text = await window.fleet.clipboard.readText();
-      if (text !== '') {
+      // One call, one moment: main decides text-or-picture from a single read of
+      // the clipboard, so a copy landing between two calls cannot lose the paste.
+      const paste = await window.fleet.clipboard.readPaste();
+      if (paste === null) return;
+      if (paste.kind === 'text') {
         // Normalize CRLF — Windows clipboard uses \r\n, and a bare \r in
         // bash/zsh submits the line before the rest of the paste arrives.
         compositionGuard.paste();
-        term.paste(text.replace(/\r\n/g, '\n'));
+        term.paste(paste.text.replace(/\r\n/g, '\n'));
         return;
       }
-      const path = await window.fleet.clipboard.readImage();
-      if (path === null) return;
+      // A remote shell cannot read a file on this machine, so the picture has to
+      // travel first and the prompt gets the path it can actually open.
+      if (useRemoteStore.getState().remotes.has(options.paneId)) {
+        await uploadLocalFilesToRemotePane(options.paneId, [paste.path]);
+        return;
+      }
+      // A temp path with a space in it - the Windows one has the user's name in
+      // it - would reach the shell as two arguments. Everything else is handed
+      // over bare, which is the shape the agent CLIs parse as a file.
       compositionGuard.paste();
-      term.paste(path);
+      term.paste(/\s/.test(paste.path) ? `"${paste.path}"` : paste.path);
     })();
   };
 
@@ -550,14 +562,15 @@ function createTerminal(
       }
     }
 
-    // Cmd+V on macOS, Ctrl+Shift+V elsewhere. Taken over rather than left to the
-    // browser because the clipboard may hold a picture: the browser's paste
+    // Cmd+V on macOS, Ctrl+Shift+V everywhere. Taken over rather than left to
+    // the browser because the clipboard may hold a picture: the browser's paste
     // event carries no text then, so xterm has nothing to insert and the
-    // screenshot is silently dropped.
+    // screenshot is silently dropped. The meta branch is macOS-only - elsewhere
+    // that key is Super, which belongs to someone else.
     const isPasteChord =
       event.key.toLowerCase() === 'v' &&
       !event.altKey &&
-      ((event.metaKey && !event.ctrlKey && !event.shiftKey) ||
+      ((window.fleet.platform === 'darwin' && event.metaKey && !event.ctrlKey && !event.shiftKey) ||
         (event.ctrlKey && event.shiftKey && !event.metaKey));
     if (isPasteChord) {
       pasteFromClipboard();

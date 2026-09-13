@@ -13,8 +13,9 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { execInContext } from './run-in-context';
 import { enrichProcessEnv } from './shell-env';
-import { writePastedImage } from './paste-image';
+import { PASTE_DIR_NAME, choosePaste, prunePastedImages, writePastedImage } from './paste-image';
 import { resolveLocale, translate, type MessageKey } from '../shared/i18n';
+import type { ClipboardPaste } from '../shared/ipc-api';
 
 const execAsync = promisify(exec);
 
@@ -848,15 +849,20 @@ export function registerIpcHandlers(
   // main process has no such gate.
   ipcMain.handle(IPC_CHANNELS.CLIPBOARD_READ_TEXT, () => clipboard.readText());
 
-  // The image branch of the same paste. A pane is text, so this is what turns a
-  // screenshot into something a pane can be given: a file, and its path.
-  ipcMain.handle(IPC_CHANNELS.CLIPBOARD_READ_IMAGE, () => {
-    const image = clipboard.readImage();
-    // Empty means the clipboard holds text (or nothing), and the text path
-    // above is the one to use.
-    if (image.isEmpty()) return null;
-    return writePastedImage(join(app.getPath('temp'), 'fleet-paste'), image.toPNG(), Date.now());
+  // What a pane paste should insert, decided from one read of the clipboard. A
+  // pane is text, so a clipboard picture becomes a file and that file's path.
+  const pasteDir = (): string => join(app.getPath('temp'), PASTE_DIR_NAME);
+  ipcMain.handle(IPC_CHANNELS.CLIPBOARD_READ_PASTE, async (): Promise<ClipboardPaste | null> => {
+    const choice = choosePaste(clipboard.readText(), clipboard.readImage());
+    if (choice === null) return null;
+    if (choice.kind === 'text') return choice;
+    const path = await writePastedImage(pasteDir(), choice.bytes, Date.now());
+    return { kind: 'image', path };
   });
+
+  // Pasted pictures outlive the prompt that named them, so the sweep is by age
+  // and only touches this directory.
+  void prunePastedImages(pasteDir(), Date.now()).catch(() => {});
 
   startClipboardMonitor();
 

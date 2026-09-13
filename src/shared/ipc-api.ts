@@ -241,6 +241,13 @@ export type ClipboardHistoryResponse = {
   entries: ClipboardEntry[];
 };
 
+/**
+ * What one paste should put in a pane. The clipboard is read once and answered
+ * once, because text-then-image as two calls can land on either side of another
+ * program taking the clipboard.
+ */
+export type ClipboardPaste = { kind: 'text'; text: string } | { kind: 'image'; path: string };
+
 export interface LogEntry {
   tag: string;
   level: 'debug' | 'info' | 'warn' | 'error';

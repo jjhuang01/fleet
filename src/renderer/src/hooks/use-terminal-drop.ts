@@ -39,15 +39,21 @@ function basename(filePath: string): string {
 }
 
 /**
- * Upload each dropped file into the directory the remote shell is standing in,
- * then type the remote paths at the prompt.
+ * Upload local files into the directory the remote shell is standing in, then
+ * type the remote paths at the prompt.
  *
- * The local path a drop carries names a file the far side cannot see, so typing
- * it - which is what a local pane does - is worse than useless there. Uploads run
- * one at a time so the transfer strip reads as a queue rather than a scramble,
- * and each path is typed only after its own bytes have landed.
+ * A local path names a file the far side cannot see, so typing it - which is
+ * what a local pane does - is worse than useless there. Both callers need this:
+ * dropping files onto a remote pane, and pasting a picture into one, where the
+ * picture is written locally and only the far side can read the prompt that
+ * names it. Uploads run one at a time so the transfer strip reads as a queue
+ * rather than a scramble, and each path is typed only after its own bytes have
+ * landed.
  */
-async function dropOntoRemote(paneId: string, winPaths: string[]): Promise<void> {
+export async function uploadLocalFilesToRemotePane(
+  paneId: string,
+  localPaths: string[]
+): Promise<void> {
   const toast = useToastStore.getState();
 
   const detected = await window.fleet.remoteSsh.detectHost(paneId);
@@ -67,7 +73,7 @@ async function dropOntoRemote(paneId: string, winPaths: string[]): Promise<void>
   const host = toRemoteHost(detected.data);
   const store = useRemoteSshStore.getState();
 
-  for (const localPath of winPaths) {
+  for (const localPath of localPaths) {
     const remotePath = remoteChildPath(cwd, basename(localPath));
     const ok = await store.startTransfer('upload', { paneId, host, localPath, remotePath });
     if (!ok) return;
@@ -155,7 +161,7 @@ export function useTerminalDrop(
           winPaths.push(window.fleet.utils.getFilePath(files[i]));
         }
         if (useRemoteStore.getState().remotes.has(paneId)) {
-          void dropOntoRemote(paneId, winPaths).then(() => onAfterDrop?.());
+          void uploadLocalFilesToRemotePane(paneId, winPaths).then(() => onAfterDrop?.());
           return;
         }
         const ctx = getPaneContextById(paneId);
