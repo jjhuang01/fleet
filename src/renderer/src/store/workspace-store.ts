@@ -1202,6 +1202,11 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     if (isPinnedTab(targetTab)) return false;
     // The tool's own pane is the tool; a split beside it may leave.
     if (isToolPane(sourceTab, sourcePaneId)) return false;
+    // Closing a worktree tab deletes its checkout, and a pane that left the tab
+    // would still be sitting in it: its shell's cwd would be pulled out from
+    // under it. Only a teardown that can see every user of the tree may take it
+    // away, so the panes stay together for now.
+    if (sourceTab.worktreePath) return false;
 
     const sourceLeaf = findLeaf(sourceTab.splitRoot, sourcePaneId);
     const rootWithoutSource = removePaneFromTree(sourceTab.splitRoot, sourcePaneId);
@@ -1243,6 +1248,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       collectPaneIds(tab.splitRoot).includes(sourcePaneId)
     );
     if (!sourceTab || isToolPane(sourceTab, sourcePaneId)) return false;
+    // See `movePaneToTab`: a pane must not outlive the worktree it is sitting in.
+    if (sourceTab.worktreePath) return false;
 
     const sourceLeaf = findLeaf(sourceTab.splitRoot, sourcePaneId);
     const rootWithoutSource = removePaneFromTree(sourceTab.splitRoot, sourcePaneId);

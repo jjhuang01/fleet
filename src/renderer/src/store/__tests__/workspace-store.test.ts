@@ -1033,6 +1033,23 @@ describe('movePaneToTab', () => {
     expect(useWorkspaceStore.getState().movePaneToTab('pane-move', 'tab-src', 'right')).toBe(false);
     expect(useWorkspaceStore.getState().workspace).toBe(before);
   });
+
+  it('refuses to take a pane out of the worktree the tab owns', () => {
+    // Closing the tab deletes its checkout, so a pane that left would lose the
+    // directory its shell is sitting in.
+    useWorkspaceStore.setState((state) => ({
+      workspace: {
+        ...state.workspace,
+        tabs: state.workspace.tabs.map((tab) =>
+          tab.id === 'tab-src' ? { ...tab, worktreePath: '/repo/wt', worktreeBranch: 'wt' } : tab
+        )
+      }
+    }));
+    const owned = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().movePaneToTab('pane-move', 'tab-dst', 'right')).toBe(false);
+    expect(useWorkspaceStore.getState().workspace).toBe(owned);
+  });
 });
 
 describe('detachPaneToTab', () => {
@@ -1099,6 +1116,22 @@ describe('detachPaneToTab', () => {
     // The tab it became is the one on screen, with the pane still focused.
     expect(state.activeTabId).toBe(state.workspace.tabs[1]?.id);
     expect(state.activePaneId).toBe('pane-leaving');
+  });
+
+  it('refuses to detach a pane out of the worktree the tab owns', () => {
+    // Same reason as `movePaneToTab`: the checkout goes away with the tab.
+    useWorkspaceStore.setState((state) => ({
+      workspace: {
+        ...state.workspace,
+        tabs: state.workspace.tabs.map((tab) =>
+          tab.id === 'tab-host' ? { ...tab, worktreePath: '/repo/wt', worktreeBranch: 'wt' } : tab
+        )
+      }
+    }));
+    const owned = useWorkspaceStore.getState().workspace;
+
+    expect(useWorkspaceStore.getState().detachPaneToTab('pane-leaving')).toBe(false);
+    expect(useWorkspaceStore.getState().workspace).toBe(owned);
   });
 
   it('names the new tab after the folder when the pane has no title of its own', () => {
