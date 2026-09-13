@@ -79,6 +79,8 @@ npx eslint --no-cache <files you changed>
 npm run build:mac
 ```
 
+`better-sqlite3` is compiled for one architecture at a time, and the repository copy is left wherever the last command put it: `npm run build:mac` leaves an x86_64 build of the native module in `node_modules` while the host Node is arm64, so the vitest line above fails until `npm run rebuild:node` runs. `npm test` performs that rebuild through its `pretest` hook, which is also the reason it must not run while a dev window is open. The packaged app is unaffected — it carries its own copy.
+
 Layout work has a live pass that drives a real window — start `npm run dev`, then `npm run qa:panes`. It snapshots the tabs you have open and asserts they come back untouched.
 
 Not covered by any of the above: real IMEs (RIME/Squirrel were never driven), automated drag-and-drop end-to-end (the QA script needs a dev window and is not wired into CI), and Windows or Linux.
