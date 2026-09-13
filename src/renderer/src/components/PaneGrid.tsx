@@ -125,6 +125,35 @@ type CornerEntry = {
 };
 type Layout = { leaves: LeafEntry[]; handles: HandleEntry[]; corners: CornerEntry[] };
 
+function sameCV(a: CalcValue, b: CalcValue): boolean {
+  return Math.abs(a.pct - b.pct) < 1e-9 && Math.abs(a.px - b.px) < 1e-9;
+}
+
+/**
+ * Whether a divider running the other way actually reaches this one.
+ *
+ * Two dividers cross only where they meet. A perpendicular one nested deeper
+ * than a single level - three columns where the rightmost is split top to
+ * bottom - stops inside its own column, short of the divider between the first
+ * two. A grip placed at that crossing would sit where no divider runs and would
+ * drag a divider the user never pointed at.
+ */
+function bandReachesDivider(
+  band: Rect,
+  divider: Rect,
+  isH: boolean,
+  side: 'start' | 'end'
+): boolean {
+  if (isH) {
+    return side === 'start'
+      ? sameCV(addCV(band.left, band.width), divider.left)
+      : sameCV(band.left, addCV(divider.left, divider.width));
+  }
+  return side === 'start'
+    ? sameCV(addCV(band.top, band.height), divider.top)
+    : sameCV(band.top, addCV(divider.top, divider.height));
+}
+
 function computeLayout(node: PaneNode, rect: Rect, path: number[]): Layout {
   if (node.type === 'leaf') {
     return { leaves: [{ id: node.id, node, rect }], handles: [], corners: [] };
@@ -158,26 +187,40 @@ function computeLayout(node: PaneNode, rect: Rect, path: number[]): Layout {
   const left = computeLayout(node.children[0], leftRect, [...path, 0]);
   const right = computeLayout(node.children[1], rightRect, [...path, 1]);
 
-  // Dividers running at right angles to this one cross it somewhere inside this
-  // band. Those that share a line are grouped first, so a corner drag keeps the
-  // row line straight instead of leaving one column behind.
-  const groups = new Map<string, HandleEntry[]>();
-  for (const handle of [...left.handles, ...right.handles]) {
+  // Dividers running at right angles to this one, grouped by the line they sit
+  // on: a corner drag moves every divider on that line together, so the row
+  // stays straight instead of leaving one column behind. A line only earns a
+  // grip where it actually runs into this divider - see `bandReachesDivider`.
+  const groups = new Map<string, { handles: HandleEntry[]; reaches: boolean }>();
+  const perpendicular: Array<{ handle: HandleEntry; side: 'start' | 'end' }> = [
+    ...left.handles.map((handle) => ({ handle, side: 'start' as const })),
+    ...right.handles.map((handle) => ({ handle, side: 'end' as const }))
+  ];
+  for (const { handle, side } of perpendicular) {
     if (handle.direction === node.direction) continue;
     const lineKey = lineKeyOf(isH ? handle.rect.top : handle.rect.left);
+    const reaches = bandReachesDivider(handle.rect, handleRect, isH, side);
     const group = groups.get(lineKey);
-    if (group) group.push(handle);
-    else groups.set(lineKey, [handle]);
+    if (group) {
+      group.handles.push(handle);
+      group.reaches = group.reaches || reaches;
+    } else {
+      groups.set(lineKey, { handles: [handle], reaches });
+    }
   }
 
   const offset = cv(0, HALF_HANDLE - CORNER_PX / 2);
   const corners: CornerEntry[] = [];
   for (const [lineKey, group] of groups) {
-    const line = isH ? group[0].rect.top : group[0].rect.left;
+    // A group no member of which runs into this divider never crosses it. A
+    // divider nested two levels down stops inside its own column, and a grip
+    // anchored there would sit on bare divider and drag the wrong thing.
+    if (!group.reaches) continue;
+    const line = isH ? group.handles[0].rect.top : group.handles[0].rect.left;
     corners.push({
       key: `${path.join('-') || 'root'}:${lineKey}`,
       anchor: { path, direction: node.direction, rect },
-      linked: group.map((handle) => ({ path: handle.path, rect: handle.splitRect })),
+      linked: group.handles.map((handle) => ({ path: handle.path, rect: handle.splitRect })),
       rect: isH
         ? {
             top: addCV(line, offset),
@@ -862,6 +905,7 @@ function AbsoluteResizeHandle({
     <div
       onMouseDown={onMouseDown}
       onKeyDown={onKeyDown}
+      data-grid-handle={path.join('-') || 'root'}
       role="separator"
       // A separator that moves left and right splits left from right, which
       // ARIA spells `vertical` - the axis it runs along, not the one it moves.
