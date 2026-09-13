@@ -1,5 +1,7 @@
 # Epic: Chat as an Agentic Workbench
 
+> **Paths in this document are historical.** `src/main/chat/` no longer exists; the OpenRouter tool loop this document describes now lives under `src/main/agent/`. Read it as the record of the architecture decision, not as a plan against the current tree.
+
 Turn the Chat tool from a single-tool chat UI into a configurable agentic workbench: local file/shell access, MCP servers, Agent Skills, and self-naming sessions — all surfaced and editable in Chat settings.
 
 ## Architecture decision

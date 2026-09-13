@@ -8,7 +8,7 @@ Fleet gives you a single window to manage all your terminal sessions with vertic
 >
 > It also speaks more than one language: **Settings > General > Language** (or `Cmd+K` and type "language") switches the whole interface between English and Simplified Chinese, and the default follows the OS locale. The document language, date formats and font stack follow that choice rather than the machine's, and so do the terminal's right-click menu, the window title and desktop notifications. Text your models, tools and servers send back stays as they wrote it; [docs/i18n.md](docs/i18n.md) lists what is and is not translated, and why.
 >
-> On top of upstream, this fork adds the pane layout Otty users keep asking for: drag a pane onto another pane's edge to re-dock it, drop a pane on a sidebar tab to merge the two into one tab (and drop it back out to un-merge), drag a grid intersection to move a whole row and column at once, per-pane custom titles, `Cmd+Shift+B` to balance a tab, and `Cmd+Alt+Arrow` to move a pane without the mouse. [docs/pane-layout-review.md](docs/pane-layout-review.md) records what upstream has, what this fork added, and what neither has; [docs/blocks-plan.md](docs/blocks-plan.md) is the next planned project.
+> On top of upstream, this fork adds the pane layout Otty users keep asking for: drag a pane onto another pane's edge to re-dock it, drop a pane on a sidebar tab to merge the two into one tab (and drop it back out to un-merge), drag a grid intersection to move a whole row and column at once, `Cmd+Shift+B` to balance a tab, and `Cmd+Alt+Arrow` to move a pane without the mouse. [docs/pane-layout-review.md](docs/pane-layout-review.md) records what upstream has, what this fork added, and what neither has; [docs/blocks-plan.md](docs/blocks-plan.md) is the next planned project. [docs/status.md](docs/status.md) is the fork's status board: what each round shipped, what was verified and how, what is known-broken, and what comes next.
 
 ## Download
 
@@ -51,7 +51,13 @@ When no tab is active, Fleet shows a dashboard with an ASCII header, recent file
 
 ### Split Panes
 
-Split any tab horizontally or vertically. Drag dividers to resize. The recursive split tree supports arbitrary nesting so you can arrange panes however you want. Navigate between panes with `Cmd+[` / `Cmd+]`.
+Split any tab horizontally or vertically (`Cmd+D` / `Cmd+Shift+D`) and drag a divider to resize. The recursive split tree supports arbitrary nesting, so the layout is a grid you build rather than a fixed set of slots. Navigate between panes with `Cmd+[` / `Cmd+]`.
+
+Two dividers that meet at a grid intersection move together: grab the crossing point and the whole row and the whole column follow, which is how a 2×2 grid trades a corner instead of only its width or only its height. The strip that answers the pointer is 12px wide while the seam it draws stays 6px, so a divider is catchable without widening the gutter between cards. `Cmd+Shift+B` balances the panes in a tab, and splitting equalizes the panes the split divides rather than leaving the new one at an arbitrary fraction.
+
+Panes are re-arrangeable without closing their shells. Drag a pane onto another pane's edge to re-dock it there — the half of the target you drop on is where it lands. Drag it onto a sidebar tab to merge that pane into that tab, or onto the empty sidebar below the tabs to pull it back out into a tab of its own, so merging is reversible rather than a one-way door. The PTY is never rebuilt, so a running agent keeps its session and its scrollback through any of these moves. `Cmd+Alt+Arrow` is the keyboard version of the same re-arrangement.
+
+Terminal panes carry their own title, set by double-clicking the pane header or pressing `Shift+F2`, so `Claude`, `Codex`, `Server` and `Logs` read as what they are instead of as four indistinguishable shells.
 
 ### Notification Badges & Activity Tracking
 
@@ -70,7 +76,7 @@ A floating overlay panel that monitors active Claude Code sessions across all yo
 
 ### Command Palette
 
-Open the command palette with `Cmd+Shift+P` to quickly access any action — new tabs, splits, settings, git changes, and more.
+Open the command palette with `Cmd+K` to quickly access any action — new tabs, splits, settings, git changes, and more.
 
 ### Git Integration
 
@@ -87,6 +93,10 @@ Open files in a built-in editor with syntax highlighting (JavaScript, TypeScript
 ### Markdown Preview
 
 Markdown files open in a dedicated preview pane with preview and raw sub-tabs — GFM, syntax-highlighted code blocks, and the same rendering whether you open them from the sidebar, `Cmd+O`, or `fleet open`.
+
+### Notes
+
+The pane toolbar opens a Markdown scratchpad bound to that pane's project — the repository root, or the folder itself when it is not a repo — stored under `~/.fleet/notes/`. It autosaves as you type and switches between editor, split and preview layouts, so a pasted log, a URL or a command you are about to run has somewhere to live that is not your shell history. The same note opens from any subfolder of the project, and a file changed in another program is reported with the choice to reload or overwrite rather than silently clobbered.
 
 ### Telescope Finder
 
@@ -123,7 +133,7 @@ echo '{"command":"subscribe"}' | nc -U ~/.fleet/fleet.sock
 
 ### Fleet CLI
 
-Fleet installs a `fleet` command to `~/.fleet/bin` for opening files, images, and managing panes from the terminal. It also auto-installs skill files for Claude Code integration (`Cmd+Shift+.` to inject skills into a session).
+Fleet installs a `fleet` command to `~/.fleet/bin` for opening files, images, and managing panes from the terminal. Agent skills are managed separately, in Settings > Agent, where a skill is imported from a folder or a URL and copied into `~/.fleet/skills`.
 
 ### Settings
 
@@ -160,7 +170,6 @@ Fleet checks GitHub Releases on launch and prompts you to install new versions.
 | Settings             | `Cmd+,`          | `Ctrl+,`            |
 | Show shortcuts       | `Cmd+/`          | `Ctrl+/`            |
 | Switch to tab 1–9    | `Cmd+1`–`Cmd+9`  | `Ctrl+1`–`Ctrl+9`   |
-| Inject Fleet skills  | `Cmd+Shift+.`    | `Ctrl+Shift+.`      |
 
 ## Development
 

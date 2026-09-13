@@ -2,6 +2,8 @@
 
 Verified audit of the Fleet codebase conducted 2026-03-23. Each issue was independently verified by a research agent against the actual code.
 
+> **Scope.** This file records the 2026-03-23 pass. Every finding sits in code that predates this fork, and nothing here has been re-verified since. The fork's own audit round (2026-09-13), its per-item evidence and the live list of known issues are in [docs/status.md](status.md); where the two disagree, that file is current.
+
 ---
 
 ## Confirmed Bugs
@@ -102,13 +104,13 @@ const setActiveTab = useWorkspaceStore((s) => s.setActiveTab);
 
 ---
 
-### 3. ~~CWD Store Broad Subscription (High Impact)~~ ✅ Fixed
+### 3. CWD Store Broad Subscription (High Impact) — ⚠️ Partly Fixed
 
-**Files:** `src/renderer/src/store/cwd-store.ts:11-16`, `src/renderer/src/components/Sidebar.tsx:167`
+**Files:** `src/renderer/src/store/cwd-store.ts:15-20`, `src/renderer/src/components/Sidebar.tsx:875`
 
-`setCwd` creates `new Map(state.cwds)` on every update (every 5s per pane from CWD poller). Sidebar subscribes with `const { cwds } = useCwdStore()` — re-renders on any pane's CWD change, not just the active one.
+`setCwd` creates `new Map(state.cwds)` on every update (every 5s per pane from the CWD poller), so the Map's identity changes on every pane's tick. The broad destructuring this audit originally found is gone, but the sidebar still subscribes to the whole Map — `useCwdStore((s) => s.cwds)` — in order to read one pane's directory out of it, so it still re-renders whenever an unrelated pane reports a new cwd.
 
-**Fix:** Use a granular selector in Sidebar: `useCwdStore(s => s.cwds.get(activePaneId))`.
+**Remaining fix:** select the single value the sidebar reads, derived from the pane id it already computes, rather than the Map that value comes out of. Carried as a known issue in [docs/status.md](status.md).
 
 ---
 

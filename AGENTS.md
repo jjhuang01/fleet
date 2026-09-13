@@ -15,7 +15,8 @@ Past mistakes and fixes are documented in `docs/learnings/`. **After every mista
 ## Verification Commands
 
 - **Type check:** `npm run typecheck` (runs both `typecheck:node` and `typecheck:web`)
-- **Lint:** `npm run lint`
+- **Lint:** `npx eslint --no-cache <files you changed>` — scoped lint beats `npm run lint`, which sweeps the whole repo and writes a cache
+- **Tests:** `npx vitest run <test files you touched>` — never bare `npm test` while a dev window is open, because its `pretest` hook runs `npm rebuild better-sqlite3`, recompiling the native module for Node and breaking the running Electron app
 - **Build:** `npm run build` (runs typecheck first, then electron-vite build)
 
 ## Release Notes
@@ -54,7 +55,7 @@ Do NOT use PixelLab MCP tools (`create_character`, etc.) - the results are poor 
 
 - **ESM output:** The main and preload processes output ESM (`.mjs`). Use `import.meta.url` instead of `__dirname`.
 - **node-pty macOS bug:** `spawn-helper` needs `chmod +x` — handled by postinstall script.
-- **xterm.js + StrictMode:** Track PTY creation in a module-level Set to prevent duplicates. Use Canvas addon (not WebGL) to avoid disposal errors.
+- **xterm.js + StrictMode:** Track PTY creation in a module-level Set to prevent duplicates. The terminal renders with xterm's default DOM renderer — no Canvas/WebGL addon is used (rendering addons caused disposal errors on teardown).
 - **xterm.js container sizing:** Mount xterm into an inner div, put padding on an outer wrapper div. Otherwise `fit` addon miscalculates dimensions.
 
 ## Behavioral Guidelines

@@ -1,6 +1,6 @@
 # 多窗格布局二开评审（对照 Otty 官方）
 
-- 日期：2026-09-12
+- 日期：2026-09-12（最后同步：2026-09-13，第三轮之后）
 - 评审对象：`fleet-pane-dev` 的两次提交 `24b98df0`（布局功能）与 `aeb309f3`（本次修复）
 - 涉及文件：`PaneGrid.tsx`、`PaneHeader.tsx`、`Sidebar.tsx`、`TabItem.tsx`、`workspace-store.ts`、`use-terminal.ts`、`lib/composition-guard.ts`、`lib/terminal-keybindings.ts`
 - 参考实现：`otty-shell/otty` `main` @ `4c6dc38`（Rust + iced 0.14），并核对了 `gpui` 分支 @ `4d1bb43`
@@ -12,14 +12,14 @@
 
 ## 事实核对：Otty 官方到底有什么
 
-| 能力               | Otty `main`（iced）                                                                                   | Otty `gpui` 分支                                                   | Fleet 现状                                      |
-| ------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------- |
-| Pane 拖拽重组      | 无。`PaneGrid` 只挂 `on_resize`，没有 `TitleBar` / `on_drag` / `on_drop`                              | 无（`otty/src/widgets/terminal_workspace` 内同样没有拖拽相关调用） | 有，四向边缘投放 + 半区预览                     |
-| Tab 合并           | 无。`tabs` 只有激活、关闭、打开                                                                       | 无                                                                 | 有，拖到 Tab 中部合并，PTY 不重建               |
-| 分隔条拖拽         | 有，`iced` 的 `on_resize(PANE_RESIZE_GRAB = 12.0)`                                                    | 同 iced                                                            | 有，抓取带 6px（`HANDLE_PX`）                   |
-| 交点对角拖拽       | 无。iced 一次只动一条 `Split`                                                                         | 无                                                                 | 有，拖交点同时动本轴线 + 交叉线的所有同轴分隔线 |
-| 分屏并均分         | 有。`Cmd+D` 分割后把同轴同组比率重算为等宽（`specs/2026-08-13-cmd-d-equal-panes`、`pane_balance.rs`） | 无                                                                 | 无。`splitPane` 只给新节点 0.5，不重算兄弟      |
-| 拖拽中的分割线高亮 | 有。iced 的 `hovered_split` / `picked_split` 线样式                                                   | 无                                                                 | 无。分隔条默认透明，按下才显形                  |
+| 能力               | Otty `main`（iced）                                                                                   | Otty `gpui` 分支                                                   | Fleet 现状                                                         |
+| ------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| Pane 拖拽重组      | 无。`PaneGrid` 只挂 `on_resize`，没有 `TitleBar` / `on_drag` / `on_drop`                              | 无（`otty/src/widgets/terminal_workspace` 内同样没有拖拽相关调用） | 有，四向边缘投放 + 半区预览                                        |
+| Tab 合并           | 无。`tabs` 只有激活、关闭、打开                                                                       | 无                                                                 | 有，拖到 Tab 中部合并，PTY 不重建                                  |
+| 分隔条拖拽         | 有，`iced` 的 `on_resize(PANE_RESIZE_GRAB = 12.0)`                                                    | 同 iced                                                            | 有，缝 6px / 命中带 12px（`HANDLE_PX` / `HANDLE_HIT_PX`）          |
+| 交点对角拖拽       | 无。iced 一次只动一条 `Split`                                                                         | 无                                                                 | 有，拖交点同时动本轴线 + 交叉线的所有同轴分隔线                    |
+| 分屏并均分         | 有。`Cmd+D` 分割后把同轴同组比率重算为等宽（`specs/2026-08-13-cmd-d-equal-panes`、`pane_balance.rs`） | 无                                                                 | 有，`splitPane` 重算被分割那一组，另有 `Cmd+Shift+B`（`d41adb96`） |
+| 拖拽中的分割线高亮 | 有。iced 的 `hovered_split` / `picked_split` 线样式                                                   | 无                                                                 | 有，悬停/聚焦即显形，按下走 accent（`d41adb96`）                   |
 
 用户记忆中的「Otty 能拖 Pane、能合并 Tab、能对角调格子」，在官方两个分支上都找不到实现；这两个能力是本次二开新做的，不是复刻。
 
@@ -31,7 +31,20 @@
 4. **死代码（已删）**。`TabItem` 往 dataTransfer 里写的 `application/x-fleet-tab-id` 没有任何读取方，拖拽身份一直来自 React 状态。
 5. **两套投放预览视觉语言不同（已修）**。Tab 合并预览是硬编码 `border-blue-400 bg-blue-500/15`，Pane 投放预览走 `fleet-accent-*`；同一个拖拽在手势两端换了颜色体系，非蓝色 accent 主题下尤其跳。现在两者共用 accent 令牌，实测取色为 `rgb(16, 185, 129)`，跟随主题。同时给 Tab 行补了 `select-none`，与 Pane 标题栏一致。
 
-## 还没修的问题（按优先级）
+## 第三轮（`d41adb96`、`5e09dac6`）与性能收尾（2026-09-13）
+
+上一节「值得做」的前三条已落地，表格里 `aeb309f3` 时点的三处「无 / 6px」也随之改写：
+
+- **Pane 拖回侧栏（`d41adb96`）**。合并从单向门变成可逆：拖到侧栏 Tab 行合并进那个 Tab，拖到 Tab 下方的空白投放区拆回独立 Tab，由 `workspace-store.ts` 的 `movePaneToTab` / `detachPaneToNewTab` 搬运，PTY 不重建。这条是两路评审共同列出的最高优先级。
+- **分割即均分 + 一键均分（`d41adb96`）**。`splitPane` 现在调用 `balancePaneGroup` 重算被分割那一组的比率，`Cmd+Shift+B` 走 `balancePanes` 复位整个 Tab；`lib/pane-balance.ts` 对照 Otty 的 `pane_balance.rs` 重写，语义对齐，代码没有交叉。
+- **抓取带 6px → 12px（`d41adb96`）**。`HANDLE_PX` 仍是 6px 的缝，指针命中由 `HANDLE_HIT_PX = 12` 承担；多出的 6px 各向外悬 3px，落在邻格自己的 1px padding 上，所以每个格子真正让出的只有贴边 2px。
+- **键盘路径（`d41adb96`、`5e09dac6`）**。`Cmd+Alt+Arrow` 复刻拖拽投放，邻居由 `pane-neighbour.ts` 纯函数算出（7 例单测）；分隔条与交点带 `focus-visible` 高亮，悬停也显形。
+- **回归脚本（`5e09dac6`）**。`npm run qa:panes` 驱动真实窗口跑 9 个场景，结束前核对用户原有 Tab 未被改动。
+- **收尾性能轮（2026-09-13）**。退出路径改为等子进程（上限 2s）后 `process.exit`；关窗与自然退出都补发 `pane-closed`；PTY 自然退出前 flush 尾部；MCP 重叠连接按代次戳自关并弃读 stderr；Overlay 的 Escape 只作用于栈顶；图片导出走 `finally { bitmap.close() }`；约 12 条硬编码 toast 进入词表。逐条证据与仍未修的项见 `docs/status.md`。
+
+## 评审当时还没修的问题（`aeb309f3` 时点）
+
+下面六条是 2026-09-12 那次评审的原始清单，保留当时的判断。其中 P1（Pane 跨 Tab 移动）、键盘路径、抓取带偏窄、交点共线判据四条已在第三轮关闭；剩下两条保留原判断，第三轮未再复核。
 
 - **P1：Pane 不能在 Tab 之间移动**。`movePane` 只在同一个 Tab 内生效（`workspace-store.ts` 里源/目标必须同 Tab），而 Tab 合并是单向门：合过去就分不回来。代码评审把它列为不批准的唯一 HIGH。布局手势缺少「Pane → 侧栏 Tab」这一条。
 - **P2：合并与排序共用同一块可投放区域**。Tab 行的中部（`edgeHeight` 之外的 14px）现在是合并区，想插到两个 Tab 之间只能瞄准上下各 7px。功能成立，但误合并的概率取决于行高，值得灰度观察；另外 `Sidebar.handleDrop` 在 `mergeTabs` 返回 false 时会继续走重排，理论上仍存在「看到合并预览、结果变成排序」的窗口。
