@@ -1,4 +1,4 @@
-# Otty parity notes: colour, images, Markdown
+# Otty parity notes: colour, images, scrolling, Markdown
 
 What Fleet looks like next to [Otty](https://otty.app) on this machine, why the two
 differ, and what of it Fleet can and cannot close. Written from the two binaries
@@ -64,17 +64,76 @@ Fleet's **agent composer** is a different story — it already attaches a pasted
 image (`AgentThread.tsx` `onPaste` → `attachFiles`, with `main/agent/attachments.ts`
 storing a screenshot that has no file of its own).
 
-**Not yet implemented.** The shape it should take, matching Otty:
+**Fixed**, in `src/main/paste-image.ts`, the `clipboard:read-image` IPC channel
+and the pane's own paste chord. `Cmd+V` is claimed by the pane (`Ctrl+Shift+V`
+elsewhere), the clipboard is read as text first and as a picture only when there
+is no text, and a picture is written to `$TMPDIR/fleet-paste/image-<ms>.png` and
+inserted as its absolute path - the interface the agent CLIs already accept (Codex
+and Claude Code take an image path in the prompt, and `pi` documents
+`@image.png`).
 
-1. `main` gains an IPC that reads `clipboard.readImage()`, writes a PNG under the
-   app's cache directory, and returns the path; empty clipboard → no path.
-2. The terminal pane, on `paste` with **no text** and an image present, inserts the
-   quoted path into the focused pane instead of doing nothing. Text paste keeps
-   today's behaviour.
-3. A palette command ("Paste image as path") for the same thing from the keyboard
-   alone, and an i18n key for both.
+Measured with a 2400x1600 screenshot on the clipboard, in a pane driven over CDP:
 
-## 3. Markdown
+| Chord | What the pane's input line got | What landed on disk |
+| --- | --- | --- |
+| `Cmd+V` | `/var/folders/.../T/fleet-paste/image-1789328612168.png` | the same file, 114034 bytes |
+| `Ctrl+Shift+V` | a second path of the same shape | `image-1789328629373.png`, 114034 bytes |
+
+Plain `Ctrl+V` is deliberately left alone: it still sends `\x16`, which is what
+lets a CLI that reads the clipboard itself - Codex does, it shows `[Image #1]`
+without being handed a file - keep working for the people who learned that key
+here. Otty's other three Edit actions (`insert_file_path`, `paste_file_base64`,
+`paste_continue_composer`) are still absent; only the screenshot path is closed.
+
+The text branch is unchanged code (`readText` → `term.paste`), so it was not
+re-driven: the machine's clipboard held the screenshot and was left alone.
+
+## 3. Scrolling
+
+**Symptom.** Scrolling a pane reads as a series of jumps rather than as movement.
+
+**Cause.** The two terminals disagree about what a scroll is. Otty ships
+`terminal-scroll-smooth` (label "Smooth Scroll (Terminal)", `defaultValue: true`,
+category `controls`): "Scroll the viewport at pixel granularity instead of
+snapping row by row; the offset snaps back to a row boundary when the gesture ends
+so glyphs stay pixel-aligned. Default on for macOS-native scroll feel." Fleet's
+panes are xterm.js 6.0.0 with the **DOM renderer**, and that renderer has no
+sub-row offset at all: the visible band is a fixed list of row elements whose
+*text* is replaced, so `viewportY` is the only position that exists and every step
+is a whole row. Measured in a live pane: the row elements carry
+`transform: none` with `scrollTop: 0`, the viewport reports
+`scrollHeight === clientHeight`, and scrolling swaps row contents
+(`first row 1964 → 1936`). Nothing can be animated below one row.
+
+**Fixed as far as this renderer goes** in `src/renderer/src/hooks/use-terminal.ts`:
+`Terminal` now takes `smoothScrollDuration: 125`. xterm animates its virtual
+scroll offset over that duration and commits rows as the offset crosses them, so
+the same rows arrive spread over the animation instead of in one frame. This is
+the value VS Code's terminal uses for `terminal.integrated.smoothScrolling`
+(`RenderConstants.SmoothScrollDuration = 125` in `xtermTerminal.ts`).
+
+Measured against the same xterm 6.0.0 build, in Chromium, on the path a wheel
+notch takes (`Viewport.scrollLines` → `setScrollPosition({reuseAnimation: true})`):
+
+| `smoothScrollDuration` | `viewportY` after one notch | Time to settle |
+| --- | --- | --- |
+| `0` | `376 → 373`, one step | one frame |
+| `125` | `376 → 375 → 374 → 373` | 57ms |
+| `125`, seven rows | `376 → 374 → 372 → 371 → 370` | 81ms |
+
+Frame pacing during a burst of 20 notches 30ms apart: median 16.7ms, p95 17.7ms,
+max 17.8ms, no frame over 33ms - the extra row repaints do not cost a frame.
+
+One consequence worth knowing: a smooth animation is cancelled by the content
+itself. xterm stops animating and snaps when the buffer's `y` position changes for
+any other reason - output arriving, a resize - which is what keeps a pane that is
+following its output pinned to the bottom.
+
+**What is left.** Pixel granularity itself. It needs a renderer that can offset
+the whole grid by a fraction of a row, which the DOM renderer cannot, so this is
+the same class of project as the inline images below rather than a setting.
+
+## 4. Markdown
 
 Both render it, in different places.
 
@@ -91,7 +150,7 @@ program in it prints. Where the two genuinely differ is *inside a pane running a
 agent*: Otty's own chrome names the session and its state, and — see below — Otty's
 terminal can draw inline images.
 
-## 4. Not closeable cheaply, or not at all
+## 5. Not closeable cheaply, or not at all
 
 | Otty capability | Evidence in the bundle | Fleet today |
 | --- | --- | --- |
@@ -114,6 +173,9 @@ printf '\033[31mRED \033[32mGREEN \033[34mBLUE \033[38;2;255;128;0mTRUE\033[0m\n
 
 # What the app was started with (macOS):
 ps eww -p "$(pgrep -f 'Fleet.app/Contents/MacOS/Fleet')" | tr ' ' '\n' | grep -E '^(NO_COLOR|COLORTERM|TERM_PROGRAM|OTTY_)='
+
+# Otty's smooth-scroll setting, out of its own settings bundle:
+python3 -c "import io;s=io.open('/Applications/Otty.app/Contents/Resources/settings-ui.html',encoding='utf-8',errors='replace').read();i=s.find('terminal-scroll-smooth');print(s[i-50:i+400])"
 
 # Otty's own view of its panes:
 /Applications/Otty.app/Contents/MacOS/otty-cli pane list          # agent, session id, agent state per pane
