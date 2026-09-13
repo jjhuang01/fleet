@@ -219,6 +219,31 @@ describe('PtyManager batching and cleanup', () => {
     expect(dataDisposable.dispose).toHaveBeenCalled();
   });
 
+  it('flushes the tail of the output before reporting a natural exit', () => {
+    manager.create({ paneId: 'pane-1', cwd: '/tmp', shell: '/bin/zsh' });
+
+    const received: string[] = [];
+    manager.onData('pane-1', (data) => received.push(data));
+
+    const mockPty = (ptyModule.spawn as ReturnType<typeof vi.fn>).mock.results[0].value;
+    const ptyDataCallback = mockPty.onData.mock.calls[0][0];
+
+    const registeredCallbacks: Array<(e: { exitCode: number }) => void> = [];
+    mockPty.onExit.mockImplementation((cb: (e: { exitCode: number }) => void) => {
+      registeredCallbacks.push(cb);
+      return { dispose: vi.fn() };
+    });
+    const exitCallback = vi.fn();
+    manager.onExit('pane-1', exitCallback);
+
+    // Arrives after the last flush tick and before the process is gone.
+    ptyDataCallback('last line before exit');
+    registeredCallbacks[0]({ exitCode: 0 });
+
+    expect(received).toEqual(['last line before exit']);
+    expect(exitCallback).toHaveBeenCalledWith(0);
+  });
+
   it('clears flush timer when last PTY is killed individually', () => {
     manager.create({ paneId: 'pane-1', cwd: '/tmp', shell: '/bin/zsh' });
     manager.create({ paneId: 'pane-2', cwd: '/tmp', shell: '/bin/zsh' });

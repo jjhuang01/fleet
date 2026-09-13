@@ -310,6 +310,11 @@ export class PtyManager {
       entry.exitDisposable = entry.process.onExit(({ exitCode }) => {
         log.debug('exit', { paneId, exitCode });
         entry.dataDisposable?.dispose();
+        // Whatever arrived between the last flush tick and this exit is still in
+        // the buffer, and dropping the callbacks below would drop it with them.
+        // It is the tail of the command's own output - a compiler's last error,
+        // a test summary - which is exactly the part worth reading.
+        this.flushPane(paneId);
         this.dataCallbacks.delete(paneId);
         this.ptys.delete(paneId);
         this.protectedPtys.delete(paneId);
