@@ -69,6 +69,21 @@ describe('CompositionGuard', () => {
     expect(guard.shouldForward(COMPOSITION, 1_002)).toBe(false);
   });
 
+  it('keeps the text an update reports no data for', () => {
+    // Chromium leaves `CompositionEvent.data` empty for some IMEs on later
+    // updates, as `null` or as `''`; treating either as "the text is now
+    // nothing" is what let the duplicate through, so the last text we saw has to
+    // survive both.
+    const guard = new CompositionGuard();
+    guard.compositionUpdate(COMPOSITION);
+    guard.compositionUpdate(null);
+    guard.compositionUpdate('');
+    expect(guard.shouldForward(COMPOSITION, 1_000)).toBe(true);
+
+    guard.compositionEnd(null, 1_001);
+    expect(guard.shouldForward(COMPOSITION, 1_002)).toBe(false);
+  });
+
   it('drops the repeat even when the flushing key arrives between the copies', () => {
     // Regression: the `\r` the flushing Enter sends lands between the two copies
     // of the text. Counting keystrokes or treating different data as the end of

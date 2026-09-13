@@ -40,7 +40,11 @@ export class CompositionGuard {
   private windowClosesAt = 0;
 
   compositionUpdate(text: string | null): void {
-    this.text = text;
+    // An update that reports no text is not news about the text: Chromium leaves
+    // `CompositionEvent.data` empty - `null` or `''`, depending on the IME - and
+    // erasing what we know here would leave the duplicate this guard exists for
+    // unrecognisable. That is exactly how the duplicate came back after shipping.
+    if (text) this.text = text;
     this.composing = true;
     this.forwarded = false;
     this.pasted = false;

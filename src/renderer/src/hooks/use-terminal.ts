@@ -448,11 +448,22 @@ function createTerminal(
   // early, so the guard owns the decision to drop the repeated copy.
   const compositionGuard = new CompositionGuard();
   const compositionTextarea = term.textarea;
+  // Where the composition began in the textarea. xterm sends the text between
+  // there and the end - twice, for the bug this guard exists for - so that range,
+  // not `CompositionEvent.data`, is what the guard has to match.
+  let compositionStart = 0;
+  const onCompositionStart = (): void => {
+    compositionStart = compositionTextarea?.value.length ?? 0;
+  };
   const onCompositionUpdate = (event: CompositionEvent): void => {
     compositionGuard.compositionUpdate(event.data);
   };
   const onCompositionEnd = (event: CompositionEvent): void => {
-    compositionGuard.compositionEnd(event.data, performance.now());
+    // `event.data` is null for some IMEs on Chromium (xterm says so itself, and
+    // re-reads the textarea for exactly that reason), so prefer the range xterm
+    // will send and fall back to the event when the flush has already cleared it.
+    const committed = compositionTextarea?.value.slice(compositionStart) ?? '';
+    compositionGuard.compositionEnd(committed || event.data, performance.now());
   };
   // A paste is the one thing a duplicate commit cannot be, so it ends the
   // episode: pasting the very text the composition just committed, inside the
@@ -460,6 +471,7 @@ function createTerminal(
   const onPaste = (): void => {
     compositionGuard.paste();
   };
+  compositionTextarea?.addEventListener('compositionstart', onCompositionStart);
   compositionTextarea?.addEventListener('compositionupdate', onCompositionUpdate);
   compositionTextarea?.addEventListener('compositionend', onCompositionEnd);
   compositionTextarea?.addEventListener('paste', onPaste, true);
@@ -879,6 +891,7 @@ function createTerminal(
   };
 
   const compositionCleanup = (): void => {
+    compositionTextarea?.removeEventListener('compositionstart', onCompositionStart);
     compositionTextarea?.removeEventListener('compositionupdate', onCompositionUpdate);
     compositionTextarea?.removeEventListener('compositionend', onCompositionEnd);
     compositionTextarea?.removeEventListener('paste', onPaste, true);
