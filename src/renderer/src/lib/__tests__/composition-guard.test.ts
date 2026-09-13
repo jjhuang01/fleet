@@ -57,7 +57,7 @@ describe('CompositionGuard', () => {
     expect(guard.shouldForward('a', 1_050)).toBe(true);
   });
 
-  it('drops the repeat whichever side of it the flushing key lands on', () => {
+  it('drops a repeat that follows the committed text directly', () => {
     // The two copies of one commit are indistinguishable from the user typing
     // the same text again, so the guard does not try: it drops the repeat while
     // the window is open, and only a new composition or a paste ends it.
@@ -78,6 +78,18 @@ describe('CompositionGuard', () => {
     guard.compositionUpdate(COMPOSITION);
     expect(guard.shouldForward(COMPOSITION, 1_000)).toBe(true);
     expect(guard.shouldForward('\r', 1_001)).toBe(true);
+
+    guard.compositionEnd(COMPOSITION, 1_002);
+    expect(guard.shouldForward(COMPOSITION, 1_003)).toBe(false);
+  });
+
+  it('drops the repeat when the flushing key was handled before the commit', () => {
+    // The other ordering an IME produces: the Enter that submits is handled
+    // first, and what it flushed reaches the terminal after it.
+    const guard = new CompositionGuard();
+    guard.compositionUpdate(COMPOSITION);
+    expect(guard.shouldForward('\r', 1_000)).toBe(true);
+    expect(guard.shouldForward(COMPOSITION, 1_001)).toBe(true);
 
     guard.compositionEnd(COMPOSITION, 1_002);
     expect(guard.shouldForward(COMPOSITION, 1_003)).toBe(false);

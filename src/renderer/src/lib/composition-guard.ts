@@ -1,7 +1,8 @@
 /**
  * How long after `compositionend` a repeat of the same text still counts as the
- * duplicate xterm emits for one IME commit. Both copies of a commit arrive in
- * the same tick, so the window only has to survive a frame.
+ * duplicate xterm emits for one IME commit. The second copy is sent from a
+ * `setTimeout(0)` the `compositionend` handler schedules, so the window has to
+ * survive a macrotask rather than a tick - a frame is the unit it is here for.
  */
 const DEDUPE_WINDOW_MS = 250;
 
@@ -68,7 +69,13 @@ export class CompositionGuard {
       this.reset();
       return true;
     }
-    if (data !== this.text) return true;
+    if (data !== this.text) {
+      // Whatever the user's own text turns out to be, a paste's claim on it is
+      // spent: keeping the claim would let the next identical chunk through as
+      // if it were theirs.
+      this.pasted = false;
+      return true;
+    }
     if (this.forwarded && !this.pasted) return false;
     this.forwarded = true;
     this.pasted = false;
