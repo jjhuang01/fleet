@@ -447,24 +447,15 @@ function createTerminal(
   const onCompositionEnd = (event: CompositionEvent): void => {
     compositionGuard.compositionEnd(event.data, performance.now());
   };
-  // Document capture, not the textarea: xterm's own keydown listener sits on the
-  // textarea, and where the two run relative to each other has to be certain, not
-  // left to registration order. The target check keeps it to this pane, so
-  // typing in another terminal cannot close this one's composition episode.
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.target !== compositionTextarea) return;
-    compositionGuard.userInput();
-  };
-  // Pasting is the same claim as pressing a key: what follows is the user's
-  // text. Without it, pasting the very text the composition just committed
-  // inside the dedupe window would look like the repeat and be dropped.
+  // A paste is the one thing a duplicate commit cannot be, so it ends the
+  // episode: pasting the very text the composition just committed, inside the
+  // dedupe window, would otherwise be swallowed as the repeat.
   const onPaste = (): void => {
-    compositionGuard.userInput();
+    compositionGuard.paste();
   };
   compositionTextarea?.addEventListener('compositionupdate', onCompositionUpdate);
   compositionTextarea?.addEventListener('compositionend', onCompositionEnd);
   compositionTextarea?.addEventListener('paste', onPaste, true);
-  document.addEventListener('keydown', onKeyDown, true);
 
   term.onData((data) => {
     if (!compositionGuard.shouldForward(data, performance.now())) return;
@@ -540,7 +531,7 @@ function createTerminal(
       void window.fleet.clipboard.readText().then((text) => {
         // Normalize CRLF — Windows clipboard uses \r\n, and a bare \r in
         // bash/zsh submits the line before the rest of the paste arrives.
-        compositionGuard.userInput();
+        compositionGuard.paste();
         term.paste(text.replace(/\r\n/g, '\n'));
       });
       event.preventDefault();
@@ -568,7 +559,7 @@ function createTerminal(
           break;
         case 'paste':
           void window.fleet.clipboard.readText().then((text) => {
-            compositionGuard.userInput();
+            compositionGuard.paste();
             term.paste(text.replace(/\r\n/g, '\n'));
           });
           break;
@@ -854,7 +845,6 @@ function createTerminal(
     compositionTextarea?.removeEventListener('compositionupdate', onCompositionUpdate);
     compositionTextarea?.removeEventListener('compositionend', onCompositionEnd);
     compositionTextarea?.removeEventListener('paste', onPaste, true);
-    document.removeEventListener('keydown', onKeyDown, true);
   };
 
   return {

@@ -44,29 +44,43 @@ describe('CompositionGuard', () => {
     expect(guard.shouldForward('ls\r', 1_001)).toBe(true);
   });
 
-  it('forwards the same text again once the user types it or pastes it', () => {
-    // Committing `a` and then typing or pasting `a` again produces two
-    // identical chunks. Only the first belongs to the composition, and the
-    // second is the user's: a paste arrives as input the same way a key does.
+  it('forwards the same text again when it was pasted', () => {
+    // Committing `a` and then pasting `a` produces two identical chunks. Only
+    // the first belongs to the composition; the paste says the second is the
+    // user's.
     const guard = new CompositionGuard();
     guard.compositionUpdate('a');
     guard.compositionEnd('a', 1_000);
     expect(guard.shouldForward('a', 1_001)).toBe(true);
 
-    guard.userInput();
+    guard.paste();
     expect(guard.shouldForward('a', 1_050)).toBe(true);
   });
 
-  it('still drops the repeat made by the key that flushed the composition', () => {
-    // Enter arrives before the copy it flushes, so that keystroke must not be
-    // mistaken for the user typing the commit again.
+  it('drops the repeat whichever side of it the flushing key lands on', () => {
+    // The two copies of one commit are indistinguishable from the user typing
+    // the same text again, so the guard does not try: it drops the repeat while
+    // the window is open, and only a new composition or a paste ends it.
     const guard = new CompositionGuard();
     guard.compositionUpdate(COMPOSITION);
-    guard.userInput();
     expect(guard.shouldForward(COMPOSITION, 1_000)).toBe(true);
 
     guard.compositionEnd(COMPOSITION, 1_001);
     expect(guard.shouldForward(COMPOSITION, 1_002)).toBe(false);
+  });
+
+  it('drops the repeat even when the flushing key arrives between the copies', () => {
+    // Regression: the `\r` the flushing Enter sends lands between the two copies
+    // of the text. Counting keystrokes or treating different data as the end of
+    // the episode let the second copy through, and the user saw their command
+    // twice.
+    const guard = new CompositionGuard();
+    guard.compositionUpdate(COMPOSITION);
+    expect(guard.shouldForward(COMPOSITION, 1_000)).toBe(true);
+    expect(guard.shouldForward('\r', 1_001)).toBe(true);
+
+    guard.compositionEnd(COMPOSITION, 1_002);
+    expect(guard.shouldForward(COMPOSITION, 1_003)).toBe(false);
   });
 
   it('stops suppressing once the composition episode is over', () => {

@@ -13,29 +13,36 @@ const DEDUPE_WINDOW_MS = 250;
  * after the first one has already run, so the user sees what they typed appear
  * twice.
  *
- * This trusts the first copy of a composition and drops an identical repeat that
- * arrives before the episode closes. A new composition resets the guard, so
- * typing the same text twice on purpose is unaffected.
+ * Within the window an exact repeat of the committed text is therefore dropped,
+ * and the episode ends only on something a duplicate cannot be: a new
+ * composition, a paste, or the window running out.
  *
- * Text alone cannot tell the two apart: committing `a` and then pressing `a`
- * again looks exactly like a commit that was echoed back. The key press is the
- * difference, and a key pressed *after* the first copy means the episode is
- * over - so the guard records keystrokes and only suppresses a repeat while
- * none has happened since it forwarded that copy.
+ * Both obvious shortcuts are wrong, and both have shipped here:
+ *
+ * - Counting keystrokes cannot tell the user typing the text again from the very
+ *   key that flushed the composition. Whichever side of the first copy that key
+ *   lands on, some ordering lets the duplicate through, because one Enter looks
+ *   exactly like any other.
+ * - Treating "some other data arrived" as the end of the episode is defeated by
+ *   the flush key's own `\r`, which arrives between the two copies of the text.
+ *
+ * What a duplicate cannot do is start a composition or paste, so those are the
+ * escapes. Retyping the same text is safe by construction: with an IME it is a
+ * new composition, and without one it arrives as single characters rather than
+ * as one chunk equal to the whole commit.
  */
 export class CompositionGuard {
   private text: string | null = null;
   private composing = false;
   private forwarded = false;
+  private pasted = false;
   private windowClosesAt = 0;
-  private keystrokes = 0;
-  private forwardedAtKeystroke = -1;
 
   compositionUpdate(text: string | null): void {
     this.text = text;
     this.composing = true;
     this.forwarded = false;
-    this.forwardedAtKeystroke = -1;
+    this.pasted = false;
     this.windowClosesAt = 0;
   }
 
@@ -46,13 +53,12 @@ export class CompositionGuard {
   }
 
   /**
-   * Something the user did that produces terminal input: a key they pressed, or
-   * a paste. Counted rather than acted on immediately: the key that flushes a
-   * composition arrives before the copy it produces, so only input that comes
-   * after that copy may end the episode.
+   * The user pasted, so the text that follows is theirs however it compares to
+   * the commit. Without this, pasting the very text a composition just committed
+   * inside the window would be swallowed as the duplicate.
    */
-  userInput(): void {
-    this.keystrokes++;
+  paste(): void {
+    this.pasted = true;
   }
 
   /** Whether this chunk of terminal input should be written to the PTY. */
@@ -63,15 +69,9 @@ export class CompositionGuard {
       return true;
     }
     if (data !== this.text) return true;
-    if (this.forwarded) {
-      if (this.keystrokes === this.forwardedAtKeystroke) return false;
-      // The user typed since the first copy went out, so this is their input,
-      // not xterm's echo of the composition.
-      this.reset();
-      return true;
-    }
+    if (this.forwarded && !this.pasted) return false;
     this.forwarded = true;
-    this.forwardedAtKeystroke = this.keystrokes;
+    this.pasted = false;
     return true;
   }
 
@@ -79,7 +79,7 @@ export class CompositionGuard {
     this.text = null;
     this.composing = false;
     this.forwarded = false;
-    this.forwardedAtKeystroke = -1;
+    this.pasted = false;
     this.windowClosesAt = 0;
   }
 }
