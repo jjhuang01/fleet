@@ -176,6 +176,19 @@ export class CopilotSocketServer {
     return success;
   }
 
+  /**
+   * Is this socket being held so a permission answer can be written to it?
+   *
+   * A held socket is registered in `pendingSockets` until the answer is sent or
+   * the 310s timeout fires, so it must not be closed by the `end` handler.
+   */
+  private isHeldForPermission(client: Socket): boolean {
+    for (const pending of this.pendingSockets.values()) {
+      if (pending.socket === client) return true;
+    }
+    return false;
+  }
+
   private handleConnection(client: Socket): void {
     let buffer = '';
 
@@ -184,50 +197,57 @@ export class CopilotSocketServer {
     });
 
     client.on('end', () => {
-      if (!buffer.trim()) return;
-
-      let event: HookEvent;
       try {
-        const parsed = parseHookEvent(buffer);
-        if (!parsed) {
-          log.warn('invalid hook event', { data: buffer.substring(0, 200) });
+        if (!buffer.trim()) return;
+
+        let event: HookEvent;
+        try {
+          const parsed = parseHookEvent(buffer);
+          if (!parsed) {
+            log.warn('invalid hook event', { data: buffer.substring(0, 200) });
+            return;
+          }
+          event = parsed;
+        } catch {
+          log.warn('invalid JSON from hook', { data: buffer.substring(0, 200) });
           return;
         }
-        event = parsed;
-      } catch {
-        log.warn('invalid JSON from hook', { data: buffer.substring(0, 200) });
-        return;
-      }
 
-      log.debug('hook event received', {
-        sessionId: event.session_id,
-        event: event.event,
-        status: event.status
-      });
+        log.debug('hook event received', {
+          sessionId: event.session_id,
+          event: event.event,
+          status: event.status
+        });
 
-      const workspaceInfo =
-        event.pid && this.resolveWorkspace ? this.resolveWorkspace(event.pid) : null;
-      this.sessionStore.processHookEvent(event, workspaceInfo ?? undefined);
+        const workspaceInfo =
+          event.pid && this.resolveWorkspace ? this.resolveWorkspace(event.pid) : null;
+        this.sessionStore.processHookEvent(event, workspaceInfo ?? undefined);
 
-      if (event.status === 'waiting_for_approval' && event.tool !== 'AskUserQuestion') {
-        const session = this.sessionStore.getSession(event.session_id);
-        const lastPermission = session?.pendingPermissions.at(-1);
-        if (lastPermission) {
-          this.pendingSockets.set(lastPermission.toolUseId, {
-            sessionId: event.session_id,
-            toolUseId: lastPermission.toolUseId,
-            socket: client
-          });
-          // The Go hook binary waits up to 300s for a response.
-          // With allowHalfOpen, the 'close' event may never fire when
-          // the binary exits. Set a timeout to force-destroy the socket
-          // so the 'close' handler can clean up stale permissions.
-          client.setTimeout(310_000);
-          log.debug('holding socket for permission', {
-            toolUseId: lastPermission.toolUseId
-          });
-          return;
+        if (event.status === 'waiting_for_approval' && event.tool !== 'AskUserQuestion') {
+          const session = this.sessionStore.getSession(event.session_id);
+          const lastPermission = session?.pendingPermissions.at(-1);
+          if (lastPermission) {
+            this.pendingSockets.set(lastPermission.toolUseId, {
+              sessionId: event.session_id,
+              toolUseId: lastPermission.toolUseId,
+              socket: client
+            });
+            // The Go hook binary waits up to 300s for a response.
+            // With allowHalfOpen, the 'close' event may never fire when
+            // the binary exits. Set a timeout to force-destroy the socket
+            // so the 'close' handler can clean up stale permissions.
+            client.setTimeout(310_000);
+            log.debug('holding socket for permission', {
+              toolUseId: lastPermission.toolUseId
+            });
+            return;
+          }
         }
+      } finally {
+        // `allowHalfOpen` keeps this socket open after the peer's FIN, so an
+        // event that is not being held for a permission answer has to close it
+        // here. Without this the fd survives until the process exits.
+        if (!this.isHeldForPermission(client)) client.end();
       }
     });
 

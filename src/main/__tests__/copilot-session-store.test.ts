@@ -178,3 +178,94 @@ describe('CopilotSessionStore', () => {
     });
   });
 });
+
+/**
+ * The PreToolUse -> permission pairing.
+ *
+ * A permission event often arrives without a tool_use_id, so the store keeps the
+ * id from the PreToolUse that caused it. That cache is keyed by tool plus its
+ * full input, which means the keys - not the ids inside them - are what grows.
+ */
+describe('CopilotSessionStore tool_use_id cache', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('pairs a permission with the PreToolUse id it came from, then forgets the pair', () => {
+    const store = new CopilotSessionStore();
+    store.processHookEvent(
+      makeEvent({
+        event: 'PreToolUse',
+        status: 'processing',
+        tool: 'Bash',
+        tool_input: { command: 'ls' },
+        tool_use_id: 'tu-1'
+      })
+    );
+
+    // No tool_use_id here: this is the case the cache exists for.
+    store.processHookEvent(
+      makeEvent({
+        event: 'Notification',
+        status: 'waiting_for_approval',
+        tool: 'Bash',
+        tool_input: { command: 'ls' }
+      })
+    );
+    expect(store.getSession('sess-1')!.pendingPermissions.at(-1)!.toolUseId).toBe('tu-1');
+
+    // The pairing was consumed, so an identical second request has nothing left.
+    store.processHookEvent(
+      makeEvent({
+        event: 'Notification',
+        status: 'waiting_for_approval',
+        tool: 'Bash',
+        tool_input: { command: 'ls' }
+      })
+    );
+    expect(store.getSession('sess-1')!.pendingPermissions.at(-1)!.toolUseId).toMatch(/^unknown-/);
+  });
+
+  it('drops the oldest pairing once the cache is full', () => {
+    const store = new CopilotSessionStore();
+    const pushPre = (index: number): void => {
+      store.processHookEvent(
+        makeEvent({
+          event: 'PreToolUse',
+          status: 'processing',
+          tool: 'Bash',
+          tool_input: { command: `cmd-${index}` },
+          tool_use_id: `tu-${index}`
+        })
+      );
+    };
+
+    // The cap is 500. One more distinct key has to push the oldest one out.
+    pushPre(0);
+    for (let index = 1; index <= 500; index += 1) pushPre(index);
+
+    store.processHookEvent(
+      makeEvent({
+        event: 'Notification',
+        status: 'waiting_for_approval',
+        tool: 'Bash',
+        tool_input: { command: 'cmd-0' }
+      })
+    );
+    expect(store.getSession('sess-1')!.pendingPermissions.at(-1)!.toolUseId).toMatch(/^unknown-/);
+
+    store.processHookEvent(
+      makeEvent({
+        event: 'Notification',
+        status: 'waiting_for_approval',
+        tool: 'Bash',
+        tool_input: { command: 'cmd-500' }
+      })
+    );
+    expect(store.getSession('sess-1')!.pendingPermissions.at(-1)!.toolUseId).toBe('tu-500');
+  });
+});

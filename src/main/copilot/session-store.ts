@@ -45,6 +45,17 @@ function projectNameFromCwd(cwd: string): string {
   return parts[parts.length - 1] || cwd;
 }
 
+/**
+ * Distinct PreToolUse keys kept per store.
+ *
+ * The queue exists only to pair a permission request with the tool_use_id of the
+ * PreToolUse that asked for it. An entry survives for every PreToolUse whose
+ * permission event never came - and most tools never ask - so a session that
+ * runs for hours would grow this map for its whole life. Anything this far
+ * behind a newer call is not a match that is still on its way.
+ */
+const MAX_TOOL_USE_CACHE = 500;
+
 export class CopilotSessionStore {
   private sessions = new Map<string, CopilotSession>();
   private toolUseIdCache = new Map<string, string[]>();
@@ -100,6 +111,10 @@ export class CopilotSessionStore {
     // Cache tool_use_id from PreToolUse
     if (event.event === 'PreToolUse' && tool_use_id && tool) {
       const cacheKey = `${session_id}:${tool}:${JSON.stringify(tool_input ?? {})}`;
+      if (!this.toolUseIdCache.has(cacheKey) && this.toolUseIdCache.size >= MAX_TOOL_USE_CACHE) {
+        const oldest = this.toolUseIdCache.keys().next().value;
+        if (oldest !== undefined) this.toolUseIdCache.delete(oldest);
+      }
       const queue = this.toolUseIdCache.get(cacheKey) ?? [];
       queue.push(tool_use_id);
       this.toolUseIdCache.set(cacheKey, queue);

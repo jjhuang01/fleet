@@ -67,6 +67,18 @@ const serializeRegistry = new Map<string, SerializeAddon>();
 // Registry of live xterm Terminal instances (for clearing buffers on restart)
 const terminalRegistry = new Map<string, Terminal>();
 
+/**
+ * What a hidden pane has buffered but not yet written to its terminal.
+ *
+ * A background pane defers its xterm writes to a 250 ms timer, so at any moment
+ * its newest output may exist only in that buffer. Anything that reads the
+ * terminal has to let the buffer land first, or it reports a pane that is
+ * missing its last lines exactly when it stopped: a command that printed and
+ * exited while its tab was in the background lost its tail to the undo-close
+ * snapshot, which is the wrong moment to lose it.
+ */
+const hiddenFlushRegistry = new Map<string, () => void>();
+
 /** Panes currently being restarted — onExit handler should skip tab close for these. */
 export const restartingPanes = new Set<string>();
 
@@ -176,12 +188,28 @@ export async function restartPane(
   // when the kill's async IPC event arrives (may be after this point).
 }
 
+/**
+ * Register the buffer a hidden pane writes from.
+ *
+ * Returns the unregister, matching the other per-pane registries in this file.
+ */
+export function registerHiddenFlush(paneId: string, flush: () => void): () => void {
+  hiddenFlushRegistry.set(paneId, flush);
+  return () => {
+    if (hiddenFlushRegistry.get(paneId) === flush) hiddenFlushRegistry.delete(paneId);
+  };
+}
+
 export function serializePane(paneId: string, scrollback?: number): string | undefined {
+  // Whatever is still deferred lands first: a snapshot taken a moment before the
+  // buffer flushes is a snapshot missing the end of the output.
+  hiddenFlushRegistry.get(paneId)?.();
   return serializeRegistry.get(paneId)?.serialize(scrollback != null ? { scrollback } : undefined);
 }
 
 /** Plain-text (no ANSI) tail of a pane's terminal buffer, for read-only glance UI. */
 export function getPaneTailText(paneId: string, lines = 40): string | undefined {
+  hiddenFlushRegistry.get(paneId)?.();
   const term = terminalRegistry.get(paneId);
   if (!term) return undefined;
   const buf = term.buffer.active;
@@ -387,8 +415,11 @@ function createTerminal(
   });
   visibilityObserver.observe(container);
 
+  const unregisterHiddenFlush = registerHiddenFlush(options.paneId, flushHiddenBuffer);
+
   const ipcCleanup = (): void => {
     visibilityObserver.disconnect();
+    unregisterHiddenFlush();
     if (hiddenFlushTimer !== null) clearTimeout(hiddenFlushTimer);
     ipcUnsubscribe();
   };
