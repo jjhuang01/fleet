@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { useToastStore } from './toast-store';
 import { createLogger } from '../logger';
+import { translateNow } from '../lib/i18n';
+import type { MessageKey } from '../../../shared/i18n';
 
 const log = createLogger('store:hook-status');
 
@@ -89,15 +91,18 @@ export const useHookStatusStore = create<HookStatusState>((set, get) => {
   const mutate = async (
     folder: string,
     run: (folder: string) => Promise<boolean>,
-    failureMessage: string
+    failureMessage: string,
+    failureToast: MessageKey
   ): Promise<void> => {
     if (!folder || get().byFolder[folder]?.busy) return;
     setBusy(folder, true);
     try {
       await run(folder);
     } catch (err) {
+      // English in the log, the reader's language on screen: a log line is
+      // read by whoever is debugging, and they are not the one being told.
       log.error(failureMessage, { folder, error: String(err) });
-      useToastStore.getState().show(failureMessage);
+      useToastStore.getState().show(translateNow(failureToast));
     } finally {
       setBusy(folder, false);
       check(folder);
@@ -108,8 +113,18 @@ export const useHookStatusStore = create<HookStatusState>((set, get) => {
     byFolder: {},
     check,
     install: async (folder) =>
-      mutate(folder, window.fleet.copilot.installHooksTo, 'Could not install Fleet hooks'),
+      mutate(
+        folder,
+        window.fleet.copilot.installHooksTo,
+        'Could not install Fleet hooks',
+        'toasts.copilot.hooksInstallFailed'
+      ),
     remove: async (folder) =>
-      mutate(folder, window.fleet.copilot.uninstallHooksFrom, 'Could not remove Fleet hooks')
+      mutate(
+        folder,
+        window.fleet.copilot.uninstallHooksFrom,
+        'Could not remove Fleet hooks',
+        'toasts.copilot.hooksRemoveFailed'
+      )
   };
 });

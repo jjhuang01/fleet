@@ -21,6 +21,7 @@ import * as remotehosts from './parts/remote-hosts';
 import * as workspaces from './parts/workspaces';
 import * as envsync from './parts/env-sync';
 import * as claudeconfig from './parts/claude-config';
+import * as toasts from './parts/toasts';
 
 export const zhCN: Record<MessageKey, string> = {
   ...agentpane.zh,
@@ -34,6 +35,7 @@ export const zhCN: Record<MessageKey, string> = {
   ...workspaces.zh,
   ...envsync.zh,
   ...claudeconfig.zh,
+  ...toasts.zh,
   // 通用
   'common.cancel': '取消',
   'common.close': '关闭',

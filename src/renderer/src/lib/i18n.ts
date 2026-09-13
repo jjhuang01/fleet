@@ -42,11 +42,23 @@ export function useDocumentLanguage(): Locale {
 }
 
 /**
+ * Translate outside a render, for the modules that are not components.
+ *
+ * A toast is raised wherever the work finished, which is often a plain function
+ * with no hook in reach. Reading the same store the hook reads keeps one answer
+ * to "which language is this" instead of a second one kept in step by hand.
+ */
+/**
  * The renderer's translation entry point.
  *
  * `t` is rebuilt only when the locale changes, so it is safe to use as a
  * dependency of a `useMemo` that formats text.
  */
+export function translateNow(key: MessageKey, params?: TranslateParams): string {
+  const preference = useSettingsStore.getState().settings?.general.language;
+  return translate(resolveLocale(preference, navigator.language), key, params);
+}
+
 export function useTranslation(): { t: Translator; locale: Locale } {
   const locale = useLocale();
   const t = useCallback<Translator>((key, params) => translate(locale, key, params), [locale]);

@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { quotePathForShell } from '../lib/shell-utils';
+import { translateNow } from '../lib/i18n';
 import { remoteChildPath } from '../lib/remote-names';
 import { getPaneContextById } from '../store/workspace-store';
 import { useRemoteStore } from '../store/remote-store';
@@ -51,7 +52,7 @@ async function dropOntoRemote(paneId: string, winPaths: string[]): Promise<void>
 
   const detected = await window.fleet.remoteSsh.detectHost(paneId);
   if (!detected.success || !detected.data) {
-    toast.show('Could not work out which host this pane is connected to.');
+    toast.show(translateNow('toasts.remoteDrop.unknownHost'));
     return;
   }
 
@@ -59,9 +60,7 @@ async function dropOntoRemote(paneId: string, winPaths: string[]): Promise<void>
   if (!cwd) {
     // Guessing the login home would put the file somewhere the user is not
     // looking, which is worse than saying so.
-    toast.show(
-      "Fleet does not know this shell's folder yet. Install Fleet's shell setup for this host."
-    );
+    toast.show(translateNow('toasts.remoteDrop.unknownFolder'));
     return;
   }
 

@@ -24,6 +24,7 @@ import * as remotehosts from './parts/remote-hosts';
 import * as workspaces from './parts/workspaces';
 import * as envsync from './parts/env-sync';
 import * as claudeconfig from './parts/claude-config';
+import * as toasts from './parts/toasts';
 export const en = {
   ...agentpane.en,
   ...agentsettings.en,
@@ -36,6 +37,7 @@ export const en = {
   ...workspaces.en,
   ...envsync.en,
   ...claudeconfig.en,
+  ...toasts.en,
   // Shared vocabulary. Anything a second surface needs belongs here.
   'common.cancel': 'Cancel',
   'common.close': 'Close',

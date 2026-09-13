@@ -5,6 +5,7 @@ import type {
 } from '../../../shared/types';
 import { useSettingsStore } from '../store/settings-store';
 import { useToastStore } from '../store/toast-store';
+import { translateNow } from './i18n';
 
 /**
  * Turning a picture into the window's background, from wherever it is shown.
@@ -101,7 +102,7 @@ export async function setAsBackground(path: string): Promise<void> {
   await useSettingsStore
     .getState()
     .updateSettings({ general: { terminalBackground: backgroundImagePatch(adopted) } });
-  useToastStore.getState().show('Set as background');
+  useToastStore.getState().show(translateNow('toasts.background.set'));
 }
 
 /**
@@ -147,5 +148,7 @@ async function addToSlideshowNow(path: string): Promise<void> {
     general: { terminalBackground: { slideshow: { ...next, enabled: true } } }
   });
 
-  useToastStore.getState().show(`Added to slideshow (${next.filePaths.length} images)`);
+  useToastStore
+    .getState()
+    .show(translateNow('toasts.background.slideshowAdded', { count: next.filePaths.length }));
 }

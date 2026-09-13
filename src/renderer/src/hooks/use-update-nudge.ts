@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useToastStore } from '../store/toast-store';
 import { useUpdateStore } from '../store/update-store';
+import { translateNow } from '../lib/i18n';
 
 const LAST_TOAST_KEY = 'fleet:update-last-toast';
 
@@ -89,15 +90,17 @@ export function useUpdateNudge(): void {
       const now = Date.now();
       if (!shouldToast(now, update.version, readLastToast())) return;
       writeLastToast({ version: update.version, at: now });
-      useToastStore.getState().show(`Fleet ${update.version} is ready to install`, {
-        // Longer than the 4s default: this one is worth reading, and its action
-        // restarts the app, which is not a button to put under a racing clock.
-        duration: 10_000,
-        action: {
-          label: 'Restart to Update',
-          onClick: () => window.fleet.updates.installUpdate()
-        }
-      });
+      useToastStore
+        .getState()
+        .show(translateNow('panes.updatePill.title', { version: update.version }), {
+          // Longer than the 4s default: this one is worth reading, and its action
+          // restarts the app, which is not a button to put under a racing clock.
+          duration: 10_000,
+          action: {
+            label: translateNow('panes.whatsNew.restart'),
+            onClick: () => window.fleet.updates.installUpdate()
+          }
+        });
     }
 
     const unsubscribe = useUpdateStore.subscribe(nudge);
