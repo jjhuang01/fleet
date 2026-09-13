@@ -142,6 +142,18 @@ where a maintainer would re-add it.
 [docs/learnings/2026-09-14-xterm-smooth-scroll-dies-when-the-buffer-moves.md](learnings/2026-09-14-xterm-smooth-scroll-dies-when-the-buffer-moves.md)
 holds the mechanism.
 
+**The other half of the scrolling problem was Fleet's own.** Otty's scroll option is about *how* a
+pane moves; whether a pane should follow its output at all is the AI-chat problem, and the rule the
+ecosystem settled on there is that only a user gesture changes it (`stackblitz/use-stick-to-bottom`,
+"allows the user to cancel the stickiness at any time by scrolling up", which the Vercel AI SDK and
+shadcn's chat UI build on). Fleet inferred it from the position instead, with two rows of tolerance,
+so output arriving put a reader who had scrolled one notch up back at the bottom - the "scrolled up"
+strip appeared and the next chunk took it away. That is fixed (`a11c2913`): an upward gesture escapes,
+a downward one re-locks once the view has reached the bottom, and output may only re-lock at the exact
+bottom.
+[docs/learnings/2026-09-14-follow-intent-is-a-user-gesture.md](learnings/2026-09-14-follow-intent-is-a-user-gesture.md)
+carries the measurement and the rule.
+
 **What is left.** Pixel granularity itself. It needs a renderer that can offset
 the whole grid by a fraction of a row, which the DOM renderer cannot, so this is
 the same class of project as the inline images below rather than a setting.

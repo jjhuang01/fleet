@@ -34,6 +34,14 @@ and drops an identical repeat that arrives before the episode closes (250 ms aft
 `compositionend`). A new composition resets the guard, so committing the same text twice on purpose
 still works, and Enter keeps its existing meaning: the flush still happens and still submits.
 
+The text the guard compares against comes from the textarea, not from the event. `CompositionEvent.data`
+is empty for some IMEs on Chromium - `null` or `''`, depending on which one - and `compositionUpdate`
+used to erase what it knew when it saw that, which left the repeat unrecognisable and shipped
+`codexcodex` again on 2026-09-14, five commits after the first fix. The guard now records where the
+composition began - `compositionstart` on the same textarea, which is where xterm records it too - and
+takes the committed text from `textarea.value.slice(compositionStart)`: literally the string xterm
+re-reads and re-sends for the delayed second copy.
+
 Text alone cannot tell the duplicate from the user typing the same thing again, so the guard first
 counted keystrokes: the first copy went out, and an identical chunk after it was dropped unless a key
 had arrived since. That counter is not a signal, and on 2026-09-14 it shipped the duplicate again
@@ -63,6 +71,12 @@ after:  ["/tmp echo FDUP1", "FDUP1", "/tmp"]
 The commit-only path (`compose -> insertText`, no Enter) and plain keyboard typing both still reach
 the shell exactly once, and `composition-guard.test.ts` covers the repeat, the new-composition case
 and the episode timeout.
+
+Re-checked against the packaged build on 2026-09-14, over CDP: the same sequence leaves one command
+line and one output line in the pane (`echo IMECOMTFP` then `IMECOMTFP`), and the control command
+typed with no composition at all does the same. Reverting the guard's `if (text) this.text = text;`
+to `this.text = text;` fails `keeps the text an update reports no data for`, which is the case that
+holds the IME's empty updates.
 
 ## Guardrail
 
