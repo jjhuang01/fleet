@@ -404,6 +404,7 @@ const fleetApi = {
     getHistory: async (): Promise<ClipboardHistoryResponse> =>
       typedInvoke(IPC_CHANNELS.CLIPBOARD_HISTORY),
     readText: async (): Promise<string> => typedInvoke(IPC_CHANNELS.CLIPBOARD_READ_TEXT),
+    readImage: async (): Promise<string | null> => typedInvoke(IPC_CHANNELS.CLIPBOARD_READ_IMAGE),
     onChanged: (callback: (payload: ClipboardHistoryResponse) => void): Unsubscribe =>
       onChannel(IPC_CHANNELS.CLIPBOARD_CHANGED, callback)
   },

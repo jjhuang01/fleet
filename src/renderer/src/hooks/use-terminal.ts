@@ -462,6 +462,30 @@ function createTerminal(
     window.fleet.pty.input({ paneId: options.paneId, data });
   });
 
+  /**
+   * Paste. A pane can only be handed text, so a clipboard picture becomes a
+   * file and its path — what the agent CLIs accept, and what Otty does (it
+   * writes the clipboard to `$TMPDIR/otty-paste/image-<ms>.png` and pastes that
+   * path). Text wins when the clipboard holds both, which is what copying a
+   * picture out of a browser or a design tool looks like.
+   */
+  const pasteFromClipboard = (): void => {
+    void (async () => {
+      const text = await window.fleet.clipboard.readText();
+      if (text !== '') {
+        // Normalize CRLF — Windows clipboard uses \r\n, and a bare \r in
+        // bash/zsh submits the line before the rest of the paste arrives.
+        compositionGuard.paste();
+        term.paste(text.replace(/\r\n/g, '\n'));
+        return;
+      }
+      const path = await window.fleet.clipboard.readImage();
+      if (path === null) return;
+      compositionGuard.paste();
+      term.paste(path);
+    })();
+  };
+
   // Every key the terminal must reinterpret lives in this one handler: xterm's
   // `attachCustomKeyEventHandler` **replaces** any handler attached earlier, so
   // a second call would silently discard the ones above it.
@@ -521,19 +545,17 @@ function createTerminal(
       }
     }
 
-    if (
-      event.ctrlKey &&
-      event.shiftKey &&
-      !event.metaKey &&
+    // Cmd+V on macOS, Ctrl+Shift+V elsewhere. Taken over rather than left to the
+    // browser because the clipboard may hold a picture: the browser's paste
+    // event carries no text then, so xterm has nothing to insert and the
+    // screenshot is silently dropped.
+    const isPasteChord =
+      event.key.toLowerCase() === 'v' &&
       !event.altKey &&
-      event.key.toLowerCase() === 'v'
-    ) {
-      void window.fleet.clipboard.readText().then((text) => {
-        // Normalize CRLF — Windows clipboard uses \r\n, and a bare \r in
-        // bash/zsh submits the line before the rest of the paste arrives.
-        compositionGuard.paste();
-        term.paste(text.replace(/\r\n/g, '\n'));
-      });
+      ((event.metaKey && !event.ctrlKey && !event.shiftKey) ||
+        (event.ctrlKey && event.shiftKey && !event.metaKey));
+    if (isPasteChord) {
+      pasteFromClipboard();
       event.preventDefault();
       event.stopPropagation();
       return false;
@@ -558,10 +580,7 @@ function createTerminal(
           }
           break;
         case 'paste':
-          void window.fleet.clipboard.readText().then((text) => {
-            compositionGuard.paste();
-            term.paste(text.replace(/\r\n/g, '\n'));
-          });
+          pasteFromClipboard();
           break;
         case 'selectAll':
           term.selectAll();
