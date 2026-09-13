@@ -373,6 +373,7 @@ export function FileSearchOverlay({
     <Overlay
       open={isOpen}
       onClose={onClose}
+      label={t('shortcut.file-search')}
       containerClassName="justify-center"
       backdropClassName="bg-fleet-bg/60"
       panelClassName="mt-[15vh] w-[560px] max-h-[60vh] flex flex-col bg-fleet-surface border border-fleet-border-strong rounded-lg shadow-xl overflow-hidden"

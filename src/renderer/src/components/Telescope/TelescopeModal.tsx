@@ -374,6 +374,7 @@ export function TelescopeModal({
     <Overlay
       open={isOpen}
       onClose={onClose}
+      label={t('shortcut.telescope')}
       containerClassName="justify-center"
       panelClassName="mt-[10vh] w-[800px] h-[70vh] flex flex-col bg-fleet-surface border border-fleet-border-strong rounded-lg shadow-xl overflow-hidden self-start"
     >

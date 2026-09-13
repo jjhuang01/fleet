@@ -63,6 +63,7 @@ export function PeekPanel({ paneId, onClose }: PeekPanelProps): React.JSX.Elemen
     <Overlay
       open={isOpen}
       onClose={onClose}
+      label={label || t('agent.peek.pane')}
       containerClassName="justify-center"
       panelClassName="mt-[12vh] w-[560px] max-h-[70vh] flex flex-col bg-fleet-surface-2 border border-fleet-border-strong rounded-lg shadow-xl overflow-hidden"
     >

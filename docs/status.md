@@ -36,12 +36,11 @@ Upstream features — vertical tabs and workspaces, split panes, per-pane titles
 
 Everything here is understood, has a location, and is listed rather than silently absorbed. Nothing in this table blocks normal use.
 
-| Issue                                                                             | Location                                            | Status                                                                                                            |
-| --------------------------------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `McpManager.closeAll()` does not wait for a connection that is still handshaking. | `src/main/agent/mcp/manager.ts`                     | Deliberate. Process exit closes the pipe, and the stdio server goes with it; the quit path bounds the wait at 2s. |
-| Overlays have no `role="dialog"`, `aria-modal`, or focus containment.             | `src/renderer/src/components/Overlay.tsx`           | Deliberate. Adding the ARIA without the focus trap would be worse than neither, so both belong in one change.     |
-| Long agent transcripts are not virtualized.                                       | `src/renderer/src/components/agent/AgentThread.tsx` | Observed, not measured.                                                                                           |
-| Background workspaces stay mounted.                                               | `src/renderer/src/App.tsx`                          | Deliberate: unmounting would drop PTYs that are meant to stay warm.                                               |
+| Issue                                                                             | Location                                            | Status                                                                                                                                                                                            |
+| --------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `McpManager.closeAll()` does not wait for a connection that is still handshaking. | `src/main/agent/mcp/manager.ts`                     | Deliberate. Process exit closes the pipe, and the stdio server goes with it; the quit path bounds the wait at 2s.                                                                                 |
+| Long agent transcripts are neither virtualized nor windowed.                      | `src/renderer/src/components/agent/AgentThread.tsx` | Not measured. The transcript has hand-tuned scroll anchoring, so a node-count and frame measurement on a real long conversation comes first; a virtualizer or a window cap without it is a guess. |
+| Background workspaces stay mounted.                                               | `src/renderer/src/App.tsx`                          | Deliberate: unmounting would drop PTYs that are meant to stay warm.                                                                                                                               |
 
 [docs/performance-and-issues-audit.md](performance-and-issues-audit.md) is the earlier, upstream-era audit; its statuses are only current as of its own date.
 
@@ -62,8 +61,7 @@ Longer proposals live next to the code they would change rather than in an issue
 
 1. **Command blocks** — Otty's signature capability, scoped but not started. [docs/blocks-plan.md](blocks-plan.md) states the model, the first slice, and the one design question (alternate-screen programs) it must answer first.
 2. **PTY backpressure** — the ACK protocol change described above.
-3. **Overlay accessibility** — ARIA roles together with focus containment, in one change.
-4. **Windows and Linux builds** — the fork has only been built and launched on macOS; `build:win` and `build:linux` are unverified here.
+3. **Windows and Linux builds** — the fork has only been built and launched on macOS; `build:win` and `build:linux` are unverified here.
 
 ## Reproducing the verification
 

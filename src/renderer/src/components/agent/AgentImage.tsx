@@ -144,7 +144,7 @@ export function AgentImageOverlay({
   onClose: () => void;
 }): React.JSX.Element {
   return (
-    <Overlay open={open} onClose={onClose} panelClassName="relative">
+    <Overlay open={open} onClose={onClose} label={alt} panelClassName="relative">
       <TransformWrapper maxScale={MAX_SCALE} doubleClick={{ mode: 'toggle', step: 1 }}>
         <Viewer
           src={src}

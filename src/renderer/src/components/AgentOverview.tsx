@@ -177,6 +177,7 @@ export function AgentOverview({
       open={isOpen}
       onClose={onClose}
       closeOnEscape={false}
+      label={t('shortcut.agent-overview')}
       containerClassName="justify-center"
       panelClassName="mt-[12vh] w-[480px] max-h-[65vh] flex flex-col bg-fleet-surface-2 border border-fleet-border-strong rounded-lg shadow-xl overflow-hidden"
     >

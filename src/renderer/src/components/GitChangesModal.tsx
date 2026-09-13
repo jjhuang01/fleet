@@ -343,7 +343,7 @@ function ModalShell({
   }, [open, modalRef]);
 
   return (
-    <Overlay open={open} onClose={onClose}>
+    <Overlay open={open} onClose={onClose} label={t('shortcut.git-changes')}>
       <div
         ref={modalRef}
         tabIndex={-1}
