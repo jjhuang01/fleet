@@ -36,7 +36,7 @@ describe('neighbourInDirection', () => {
     expect(neighbourInDirection(GRID, 'br', 'right')).toBeNull();
   });
 
-  it('prefers the narrow neighbour that shares the most edge', () => {
+  it('prefers the neighbour sharing the most edge when both are as far away', () => {
     // Left column: a tall pane over two short ones. Moving left from the middle
     // of the right pane hits the tall one; from the bottom, the bottom-left one.
     const stack = [
@@ -48,6 +48,20 @@ describe('neighbourInDirection', () => {
     expect(
       neighbourInDirection([stack[0], { id: 'low', box: box(0, 150, 100, 150) }], 'right', 'left')
     ).toBe('low');
+  });
+
+  it('steps into the next column instead of jumping over it', () => {
+    // Three columns with the middle one split top to bottom. Moving left from
+    // the full-height right column reaches the middle column first; the
+    // leftmost column merely happens to share more edge with the source.
+    const row = [
+      { id: 'right', box: box(212, 0, 100, 300) },
+      { id: 'midTop', box: box(106, 0, 100, 147) },
+      { id: 'midBottom', box: box(106, 153, 100, 147) },
+      { id: 'left', box: box(0, 0, 100, 300) }
+    ];
+    expect(['midTop', 'midBottom']).toContain(neighbourInDirection(row, 'right', 'left'));
+    expect(neighbourInDirection(row, 'midTop', 'left')).toBe('left');
   });
 
   it('takes the closest pane when two share the same edge overlap', () => {
