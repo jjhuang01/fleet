@@ -96,7 +96,7 @@ export function ShikiPreview({ content, filePath }: Props): React.JSX.Element {
 
   // Fallback: plain text (shown immediately, or when language is unknown)
   return (
-    <pre className="text-[11px] text-neutral-300 font-mono leading-relaxed whitespace-pre-wrap break-all">
+    <pre className="text-[11px] text-fleet-text-secondary font-mono leading-relaxed whitespace-pre-wrap break-all">
       {content}
     </pre>
   );

@@ -221,7 +221,7 @@ export function PdfViewerPane({
           </div>
         )}
         {!error && (
-          <div className="relative my-4 h-fit shadow-lg shadow-black/40">
+          <div className="relative my-4 h-fit shadow-lg shadow-black/10 dark:shadow-black/40">
             <canvas ref={canvasRef} className="block" />
             <div ref={textLayerRef} className="textLayer" />
           </div>

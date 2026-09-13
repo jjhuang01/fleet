@@ -93,7 +93,9 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
       view === 'grid' ? (
         <button
           className={`flex flex-col items-center gap-1.5 p-2 rounded w-full text-center transition-colors ${
-            isFocused ? 'bg-teal-500/15 ring-1 ring-teal-500/40' : 'hover:bg-white/5'
+            isFocused
+              ? 'fleet-accent-bg-soft ring-1 ring-[color:var(--fleet-accent)]'
+              : 'hover:bg-fleet-surface-2'
           }`}
           data-focused={isFocused}
           onClick={() => onFocus(entry.path)}
@@ -107,7 +109,9 @@ export const RemoteEntryList = forwardRef<HTMLDivElement, Props>(function Remote
       ) : (
         <button
           className={`flex items-center gap-2 w-full px-3 h-7 text-left transition-colors ${
-            isFocused ? 'bg-teal-500/15' : 'hover:bg-white/5'
+            isFocused
+              ? 'fleet-accent-bg-soft shadow-[inset_2px_0_0_0_var(--fleet-accent)]'
+              : 'hover:bg-fleet-surface-2'
           }`}
           data-focused={isFocused}
           onClick={() => onFocus(entry.path)}

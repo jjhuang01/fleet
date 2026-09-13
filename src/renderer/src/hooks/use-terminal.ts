@@ -907,16 +907,10 @@ export function useTerminal(
   // Update terminal colors without re-creating the xterm instance or PTY.
   useEffect(() => {
     const theme = resolveXtermTheme(options.terminalTheme, options.backgroundImageActive);
-    // As of xterm 6 nothing in the library paints the theme's background: that
-    // was the Viewport component's job through 5.5, and v6 replaced it with a
-    // scrollable element that leaves the property alone. All that is left is
-    // xterm.css's hardcoded opaque #000, which would bury both the theme colour
-    // and anything behind the pane. So the colour is published here and picked
-    // up by the `.xterm-viewport` rule in index.css.
-    //
-    // Set before the term guard: on mount this effect can run before the one
-    // that creates the terminal, and the deps would not fire again to correct it.
-    containerRef.current?.style.setProperty('--fleet-term-bg', theme.background ?? 'transparent');
+    // xterm 6 paints a background of its own - the theme's, written inline onto
+    // the scrollable element it added in place of the old Viewport component.
+    // index.css clears that so this pane's ground (active or inactive, as
+    // TerminalPane chose it) is what shows through instead.
     const term = termRef.current;
     if (!term) return;
     term.options.theme = theme;

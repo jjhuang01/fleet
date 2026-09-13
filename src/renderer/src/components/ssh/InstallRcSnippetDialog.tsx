@@ -64,8 +64,8 @@ export function InstallRcSnippetDialog({
             </h3>
             <p className="mt-1 text-xs text-fleet-text-muted">
               Drag a file onto this pane to upload it to the folder you are in, and run{' '}
-              <span className="font-mono text-fleet-text-secondary">fleet get &lt;path&gt;</span> to pull one
-              back down.
+              <span className="font-mono text-fleet-text-secondary">fleet get &lt;path&gt;</span> to
+              pull one back down.
             </p>
             <p className="mt-1.5 text-xs text-fleet-text-subtle">
               Fleet {shownUpdate ? 'rewrites' : 'writes'}{' '}
@@ -81,7 +81,7 @@ export function InstallRcSnippetDialog({
         <div className="mt-4 flex justify-end gap-2">
           <button
             ref={declineRef}
-            className="text-xs px-3 py-1 rounded bg-fleet-surface-2 transition hover:bg-fleet-surface-3 active:scale-[0.97] outline-none focus:ring-1 focus:ring-neutral-500"
+            className="text-xs px-3 py-1 rounded bg-fleet-surface-2 transition hover:bg-fleet-surface-3 active:scale-[0.97] outline-none focus:ring-1 focus:ring-[color:var(--fleet-accent)]"
             onClick={onDecline}
             disabled={busy}
           >

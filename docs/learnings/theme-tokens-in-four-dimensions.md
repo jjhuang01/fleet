@@ -50,3 +50,28 @@ reading the pixel - that handles `oklch`, `color-mix` and alpha correctly.
 - A renderer that must choose a palette React cannot express as a class (the diff
   viewer's Shiki theme) has to receive the resolved kind as a prop. Reading the root
   `.dark` class during render lags one render behind the layout effect that sets it.
+- CodeMirror is the same shape of problem, one layer lower. `oneDark` ships its own
+  `.cm-editor { background: #282c34 }`, and it is imported *after* `index.css`, so a
+  `bg-fleet-*` class on the container never reaches the editor the user sees - the
+  pane is light and the writing surface is a dark slab. `.fleet-editor` in `index.css`
+  is unlayered, which is what it takes to win, and `FileEditorPane` swaps the syntax
+  palette through a `Compartment` so the swap does not cost undo history.
+  Where the two disagree, CodeMirror decides by style-module mount order, and the
+  *earlier* extension is the one that wins - so the editor's own `EditorView.theme()`
+  has to sit before the `Compartment`, not after it. Measured: with it after, a dark
+  theme left the text in `oneDark`'s `#abb2bf`; with it before, the same pane reports
+  `--fleet-text` and `--fleet-text-subtle` in both modes (17.2:1 and 4.6:1 on the dark
+  surface). Deleting the `index.css` rule entirely, for the same reason, put
+  `rgb(40, 44, 52)` back as the surface, so that half stays as the two-class guarantee.
+  `EditorView.baseTheme` also outlines the focused editor with `1px dotted #212121`,
+  invisible on the old dark slab and loud on a light one; the editor theme turns it off.
+- xterm 6 moved the terminal background off `.xterm-viewport` and onto the
+  `.xterm-scrollable-element` it added, as an *inline* style carrying the active
+  theme colour. `--fleet-term-bg` was still only reaching the viewport, so the pane's
+  16px of padding kept `inactiveBackground` while the interior stayed in the active
+  colour: a 1.05:1 seam, invisible on dark presets and obvious on light ones. Both
+  elements are cleared in `index.css` now, and the pane's own ground shows through.
+- A grep for dark surfaces only finds `bg-*` classes. Two light-mode leftovers were
+  style objects instead: the image viewer's checkerboard (`#111` / `#1c1c1c`) and the
+  PDF page's `shadow-black/40`. Both are tokenised / mode-split now, but the audit
+  needs a pass over inline `style` and `shadow-*` too, not just class names.

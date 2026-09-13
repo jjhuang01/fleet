@@ -88,7 +88,7 @@ function FontFamilyPicker({
               >
                 {font.label}
               </span>
-              <span className="text-xs text-fleet-text-subtle ml-auto">bundled</span>
+              <span className="text-xs text-fleet-text-muted ml-auto">bundled</span>
             </label>
           );
         })}

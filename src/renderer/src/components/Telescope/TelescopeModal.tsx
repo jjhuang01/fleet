@@ -442,6 +442,9 @@ export function TelescopeModal({
           ) : (
             results.map((item, i) => {
               const isSelected = i === selectedIndex;
+              // The selected row sits on surface-3, where the tertiary token
+              // drops under 4.5:1; its supporting text steps up to secondary.
+              const rowMuted = isSelected ? 'text-fleet-text-secondary' : 'text-fleet-text-subtle';
               return (
                 <button
                   key={item.id}
@@ -467,19 +470,15 @@ export function TelescopeModal({
                     }
                   }}
                 >
-                  <span className="text-fleet-text-subtle shrink-0 flex items-center">
-                    {item.icon}
-                  </span>
+                  <span className={`${rowMuted} shrink-0 flex items-center`}>{item.icon}</span>
                   <div className="flex flex-col min-w-0 flex-1">
                     <span className="truncate text-sm font-medium">{item.title}</span>
                     {item.subtitle && (
-                      <span className="truncate text-xs text-fleet-text-subtle">
-                        {item.subtitle}
-                      </span>
+                      <span className={`truncate text-xs ${rowMuted}`}>{item.subtitle}</span>
                     )}
                   </div>
                   {item.meta && (
-                    <span className="text-[10px] text-fleet-text-subtle shrink-0">{item.meta}</span>
+                    <span className={`text-[10px] ${rowMuted} shrink-0`}>{item.meta}</span>
                   )}
                 </button>
               );

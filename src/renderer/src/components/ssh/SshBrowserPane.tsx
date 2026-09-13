@@ -339,7 +339,7 @@ export function SshBrowserPane({ paneId, host, initialPath }: Props): React.JSX.
         </div>
       ) : pane.entries.length === 0 ? (
         <div className="flex-1 min-h-0 flex flex-col items-center justify-center gap-2 text-sm">
-          <FolderOpen size={28} className="text-neutral-700" />
+          <FolderOpen size={28} className="text-fleet-text-subtle" />
           <div className="text-fleet-text-muted">This folder is empty</div>
         </div>
       ) : (

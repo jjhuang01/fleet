@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { EditorState, StateEffect } from '@codemirror/state';
+import { Compartment, EditorState, StateEffect, type Extension } from '@codemirror/state';
 import {
   EditorView,
   keymap,
@@ -17,11 +17,24 @@ import { getLanguageForPath } from '../../../shared/languages';
 import { useWorkspaceStore } from '../store/workspace-store';
 import { registerFileSave, unregisterFileSave } from '../lib/file-save-registry';
 import { useDelayedFlag } from '../hooks/use-delayed-flag';
+import { useAppThemeKind } from '../hooks/use-app-theme';
 import { Skeleton } from './Skeleton';
 import { PathChromeHeader } from './PathChromeHeader';
 import { useToastStore } from '../store/toast-store';
 import type { PathContext } from '../../../shared/shell-profiles';
 import type { RemoteFileRef } from '../../../shared/remote-ssh-types';
+
+/**
+ * The editor's syntax palette follows the app theme: CodeMirror ships a light
+ * default highlight style and a dark one, and a light app theme painting a dark
+ * code surface was the last dark island in the window. The pane surface itself
+ * comes from the fleet tokens (see `.fleet-editor` in index.css), so the editor
+ * matches the loading state and the pane it sits in rather than the syntax
+ * theme's own background.
+ */
+function editorSyntaxTheme(kind: 'dark' | 'light'): Extension {
+  return kind === 'dark' ? oneDark : [];
+}
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const AUTO_SAVE_DELAY = 3000; // 3 seconds
@@ -173,6 +186,12 @@ export function FileEditorPane({
 }: Props): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const showLoadingSkeleton = useDelayedFlag(loading);
+  const appThemeKind = useAppThemeKind();
+  const themeKindRef = useRef(appThemeKind);
+  themeKindRef.current = appThemeKind;
+  // One Compartment per pane: reconfiguring it swaps the syntax palette without
+  // rebuilding the EditorState, so undo history survives a theme switch.
+  const [themeCompartment] = useState(() => new Compartment());
   const [error, setError] = useState<string | null>(null);
   const [tooLarge, setTooLarge] = useState(false);
   const [fileSize, setFileSize] = useState(0);
@@ -267,6 +286,39 @@ export function FileEditorPane({
           highlightActiveLine(),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           search(),
+          // A theme extension placed *after* the compartment loses every tie it
+          // has with oneDark: CodeMirror mounts the earlier extension's style
+          // module on top. So the palette swap stays at the end of the list and
+          // this block sits ahead of it.
+          EditorView.theme({
+            '&': {
+              height: '100%',
+              backgroundColor: 'var(--fleet-surface)',
+              color: 'var(--fleet-text)'
+            },
+            // CodeMirror's base theme outlines the focused editor with a dotted
+            // #212121 border. That was invisible on the dark slab this pane used
+            // to be, and it is loud on a light one where the pane frame already
+            // says which pane has focus.
+            '&.cm-focused': { outline: 'none' },
+            '.cm-scroller': { overflow: 'auto' },
+            '.cm-gutters': {
+              backgroundColor: 'var(--fleet-surface)',
+              color: 'var(--fleet-text-subtle)',
+              border: 'none'
+            },
+            '.cm-activeLine': { backgroundColor: 'var(--fleet-surface-2)' },
+            '.cm-activeLineGutter': { backgroundColor: 'var(--fleet-surface-2)' },
+            '.cm-cursor': { borderLeftColor: 'var(--fleet-text)' },
+            // The base theme paints a focused selection with five classes and a
+            // fixed #d7d4f0, so a plain `.cm-selectionBackground` rule never
+            // applied. Accent tint rather than a surface step: the active line
+            // already owns surface-2, and a selection is the stronger signal.
+            '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
+              {
+                backgroundColor: 'color-mix(in srgb, var(--fleet-accent) 22%, transparent)'
+              }
+          }),
           keymap.of([
             {
               key: 'Mod-s',
@@ -280,7 +332,7 @@ export function FileEditorPane({
             ...historyKeymap,
             ...searchKeymap
           ]),
-          oneDark,
+          themeCompartment.of(editorSyntaxTheme(themeKindRef.current)),
           EditorView.updateListener.of((update) => {
             if (!update.docChanged) return;
             const current = update.state.doc.toString();
@@ -301,10 +353,6 @@ export function FileEditorPane({
               const line = update.state.doc.lineAt(head);
               setCursorPos({ line: line.number, col: head - line.from + 1 });
             }
-          }),
-          EditorView.theme({
-            '&': { height: '100%' },
-            '.cm-scroller': { overflow: 'auto' }
           })
         ]
       }),
@@ -332,6 +380,13 @@ export function FileEditorPane({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, tooLarge, error]);
 
+  // Swap the syntax palette on a theme change without rebuilding the editor.
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({ effects: themeCompartment.reconfigure(editorSyntaxTheme(appThemeKind)) });
+  }, [appThemeKind, themeCompartment]);
+
   // Register save function so the close dialog can trigger it
   useEffect(() => {
     registerFileSave(paneId, async () => saveRef.current());
@@ -348,7 +403,7 @@ export function FileEditorPane({
 
   if (loading) {
     return (
-      <div className="h-full w-full bg-[#282c34]">
+      <div className="h-full w-full bg-fleet-surface">
         <span className="sr-only" role="status" aria-live="polite">
           Loading file…
         </span>
@@ -365,7 +420,7 @@ export function FileEditorPane({
 
   if (error) {
     return (
-      <div className="h-full w-full flex items-center justify-center bg-[#282c34] text-red-400 text-sm">
+      <div className="h-full w-full flex items-center justify-center bg-fleet-surface text-red-600 dark:text-red-400 text-sm">
         Error: {error}
       </div>
     );
@@ -373,7 +428,7 @@ export function FileEditorPane({
 
   if (tooLarge) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-[#282c34] text-fleet-text-muted text-sm gap-2">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-fleet-surface text-fleet-text-muted text-sm gap-2">
         <div className="text-3xl text-fleet-text-subtle">⚠</div>
         <div className="font-medium text-fleet-text">File too large to edit</div>
         <div className="text-fleet-text-subtle">
@@ -395,14 +450,17 @@ export function FileEditorPane({
   return (
     <div ref={wrapperRef} className="relative h-full w-full flex flex-col overflow-hidden">
       {showPathChrome && <PathChromeHeader filePath={displayPath} />}
-      <div ref={containerRef} className="flex-1 min-h-0" />
+      <div ref={containerRef} className="fleet-editor flex-1 min-h-0" />
       <div className="flex-shrink-0 flex items-center gap-3 px-3 h-7 bg-fleet-bg/80 border-t border-fleet-border text-xs text-fleet-text-muted">
         <span className="text-fleet-text-secondary shrink-0">{langLabel}</span>
         <span className="text-fleet-text-subtle shrink-0">
           Ln {cursorPos.line}, Col {cursorPos.col}
         </span>
         {showPathChrome && (
-          <span className="text-fleet-text-subtle font-mono truncate min-w-0 flex-1" title={displayPath}>
+          <span
+            className="text-fleet-text-subtle font-mono truncate min-w-0 flex-1"
+            title={displayPath}
+          >
             {displayPath}
           </span>
         )}

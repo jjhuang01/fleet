@@ -308,7 +308,7 @@ export function EnvEditorModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 duration-150 animate-in fade-in-0"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 dark:bg-black/60 duration-150 animate-in fade-in-0"
       onClick={requestClose}
     >
       <div
