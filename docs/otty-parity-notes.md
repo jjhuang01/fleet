@@ -148,9 +148,9 @@ ecosystem settled on there is that only a user gesture changes it (`stackblitz/u
 "allows the user to cancel the stickiness at any time by scrolling up", which the Vercel AI SDK and
 shadcn's chat UI build on). Fleet inferred it from the position instead, with two rows of tolerance,
 so output arriving put a reader who had scrolled one notch up back at the bottom - the "scrolled up"
-strip appeared and the next chunk took it away. That is fixed (`a11c2913`): an upward gesture escapes,
-a downward one re-locks once the view has reached the bottom, and output may only re-lock at the exact
-bottom.
+strip appeared and the next chunk took it away. That is fixed (`a11c2913`, `7c653f9f`):
+an upward gesture escapes, a downward one re-locks once the view is back within a couple of rows of the
+bottom, and output may only re-lock at the exact bottom.
 [docs/learnings/2026-09-14-follow-intent-is-a-user-gesture.md](learnings/2026-09-14-follow-intent-is-a-user-gesture.md)
 carries the measurement and the rule.
 

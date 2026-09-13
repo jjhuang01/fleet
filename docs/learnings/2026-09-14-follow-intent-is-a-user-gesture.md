@@ -75,8 +75,8 @@ same shape: follow is a state that only user intent changes.
   require `overflow-anchor` browser-level CSS support which Safari does not
   support").
 
-`docs/otty-parity-notes.md` carries the comparison with Otty, which scrolls
-through iced and has no equivalent of this state machine to copy.
+`docs/otty-parity-notes.md` carries the comparison with Otty, whose scrolling
+option is about how a pane moves rather than about whether it follows.
 
 ## The fix
 
@@ -92,33 +92,53 @@ without a terminal:
   `scrollToBottom`, and a resize may only ever _re-lock_, and only at the exact
   bottom. This is the one that stops the yank.
 
-`use-terminal.ts` wires both: the wheel, Page keys and the modified arrows all
-call one `userScrolled(upward)`, `term.onScroll` calls the content rule, and
+`use-terminal.ts` wires both: the wheel and `Shift+PageUp/PageDown` - the one
+keyboard gesture xterm itself scrolls on, since a bare Page key is `ESC[5~` for
+the program in the pane and Cmd+Arrow is dropped outright - call one
+`userScrolled(upward)`, `term.onScroll` calls the content rule, and
 `fitPreservingScroll` reconciles with the same exact-bottom test. The tolerant
-`isAtBottom` and the `updatePinnedState` that only the keyboard path still used
-are gone with it, so there is no second opinion about what "at the bottom" means
-in the content path.
+`isAtBottom`, and the `updatePinnedState` that the wheel handler and the keyboard
+path had both been calling, are gone with it, so there is no second opinion about
+what "at the bottom" means.
 
 ## How it was measured
-
-In a live pane streaming a line every 50ms, with the "scrolled up" strip as the
-observable:
 
 In the packaged build, with a pane printing a line every 50ms, one upward wheel
 notch over the middle of the pane turned the "scrolled up" strip on and the pane
 stayed there: the stream markers in view held at `1..32` across eight samples over
-1.7 s while the stream kept writing. The previous round had the same script and
-the same gesture catch the strip going out again within 220 ms
+1.7 s while the stream kept writing. The previous round had the same gesture catch
+the strip going out again within 220 ms
 ([2026-09-14-xterm-smooth-scroll-dies-when-the-buffer-moves.md](2026-09-14-xterm-smooth-scroll-dies-when-the-buffer-moves.md)),
-which is the yank from the other side. The script is `/tmp/fleet-qa/qa-unpin3.mjs`
-
-- it drives the packaged app over CDP and sends the gesture through
-  `Input.synthesizeScrollGesture` with `gestureSourceType: mouse`.
+which is the yank from the other side. The probe drives the packaged app over CDP
+and sends the gesture through `Input.synthesizeScrollGesture` with
+`gestureSourceType: mouse`; a mouse notch is a whole delta, and a real trackpad
+sends sub-row deltas that xterm's `_sync` drops when the buffer moves, so a slow
+two-finger drag through fast output is not what this number covers.
 
 Both halves of the rule are locked by a test that fails when the fix is reverted:
 putting the two-row tolerance back into `followAfterContentScroll` fails `never
 takes the view away from where the user put it`, and 6 cases in
 `src/renderer/src/lib/__tests__/scroll-follow.test.ts` cover the rest.
+
+What the rule still does not catch is a scroll that arrives without a wheel or a
+key: dragging the pane's own scrollbar, dragging a selection past the edge, or
+jumping to an earlier match with search moves the viewport while the flag still
+says "following", so the next chunk of output puts the view back. The rule for
+them is the one assistant-ui uses - the viewport moved up while the buffer did not
+grow - and it is deliberately not in this round, because it needs its own trackpad
+measurement first.
+
+## The boundary this leaves
+
+The string the IME guard compares against is read in order: the textarea range at
+`compositionend`, the text of the last non-empty `compositionupdate`, and only
+then `event.data`. So a composition whose updates and whose textarea both say
+nothing usable is one the guard cannot recognise - and it is also a composition
+whose first copy xterm read from the same empty textarea, so there was nothing to
+duplicate. That reasoning is from xterm 6.0.0's source (`_finalizeComposition`
+reads `textarea.value` at both moments) and from CDP probes; a real RIME or
+Squirrel session is the only thing that closes it, and `docs/status.md` records
+that as an unverified boundary rather than a passing check.
 
 ## Guardrail
 
