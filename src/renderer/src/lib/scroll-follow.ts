@@ -17,7 +17,7 @@
  */
 
 /** Rows of lag that fast output produces, allowed when *the user* asks. */
-export const AT_BOTTOM_TOLERANCE_ROWS = 2;
+const AT_BOTTOM_TOLERANCE_ROWS = 2;
 
 /**
  * A wheel notch. The direction is the intent: up means "let me read", down means

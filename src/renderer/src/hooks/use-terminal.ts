@@ -455,6 +455,7 @@ function createTerminal(
   let compositionStart = 0;
   const onCompositionStart = (): void => {
     compositionStart = compositionTextarea?.value.length ?? 0;
+    compositionGuard.compositionStart();
   };
   const onCompositionUpdate = (event: CompositionEvent): void => {
     compositionGuard.compositionUpdate(event.data);
@@ -719,15 +720,17 @@ function createTerminal(
     // Skip while hidden — viewportY is stale and fit() can't measure correctly
     if (container.offsetParent === null) return false;
 
-    // Reconcile: if flag says unpinned but viewport is actually at bottom,
-    // correct it before acting. Same rule as the content path - only the exact
-    // bottom re-locks, because a view a row or two up is where the user put it.
-    if (!pinnedToBottom) {
-      const buf = term.buffer.active;
-      if (followAfterContentScroll({ follow: false, viewportY: buf.viewportY, baseY: buf.baseY })) {
-        applyFollow(true);
-      }
-    }
+    // Reconcile with the same rule the content path uses: only a view that is
+    // exactly at the bottom re-locks, because a row or two up is where the user
+    // put it.
+    const buf = term.buffer.active;
+    applyFollow(
+      followAfterContentScroll({
+        follow: pinnedToBottom,
+        viewportY: buf.viewportY,
+        baseY: buf.baseY
+      })
+    );
 
     const savedPinned = pinnedToBottom;
     const savedViewportY = term.buffer.active.viewportY;
@@ -813,16 +816,14 @@ function createTerminal(
   };
   container.addEventListener('wheel', wheelHandler, { passive: true, capture: true });
 
+  // Shift+Page is the only keyboard gesture xterm scrolls on: a bare Page key
+  // becomes `ESC[5~` for the program in the pane, and Cmd+Arrow becomes nothing
+  // at all (`evaluateKeyboardEvent`). Neither moves the viewport, so neither may
+  // change the intent to follow - unpinning on them left the "scrolled up" strip
+  // lit, and the pane following nothing, until output happened to scroll again.
   const keyScrollHandler = (e: KeyboardEvent): void => {
-    // Page keys and the modified arrows are the same gesture as a wheel notch,
-    // and they had the same failure: a tolerant at-the-bottom test deferred by a
-    // frame, which output streaming in can satisfy by the time it runs.
-    if (e.key === 'PageUp' || e.key === 'PageDown') {
+    if (e.shiftKey && (e.key === 'PageUp' || e.key === 'PageDown')) {
       userScrolled(e.key === 'PageUp');
-      return;
-    }
-    if ((e.metaKey || e.ctrlKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-      userScrolled(e.key === 'ArrowUp');
     }
   };
   container.addEventListener('keydown', keyScrollHandler, true);
@@ -915,8 +916,7 @@ function createTerminal(
 
   const scrollToBottom = (): void => {
     term.scrollToBottom();
-    pinnedToBottom = true;
-    options.onScrollStateChange?.(false);
+    applyFollow(true);
   };
 
   const cleanupResizeTimer = (): void => {

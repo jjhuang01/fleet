@@ -27,13 +27,29 @@ describe('CompositionGuard', () => {
 
   it('lets the same text through again as a new composition', () => {
     const guard = new CompositionGuard();
+    guard.compositionStart();
     guard.compositionUpdate(COMPOSITION);
     guard.compositionEnd(COMPOSITION, 1_000);
     expect(guard.shouldForward(COMPOSITION, 1_001)).toBe(true);
 
+    guard.compositionStart();
     guard.compositionUpdate(COMPOSITION);
     guard.compositionEnd(COMPOSITION, 2_000);
     expect(guard.shouldForward(COMPOSITION, 2_001)).toBe(true);
+  });
+
+  it('is not reopened by an update that lands between the two copies', () => {
+    // Some IMEs report one more `compositionupdate` after the key that flushed
+    // the composition. Only a new composition is a new episode, so this update
+    // may not re-open the one the duplicate is arriving in.
+    const guard = new CompositionGuard();
+    guard.compositionStart();
+    guard.compositionUpdate(COMPOSITION);
+    expect(guard.shouldForward(COMPOSITION, 1_000)).toBe(true);
+
+    guard.compositionUpdate(COMPOSITION);
+    guard.compositionEnd(COMPOSITION, 1_001);
+    expect(guard.shouldForward(COMPOSITION, 1_002)).toBe(false);
   });
 
   it('passes input that is not the composition text', () => {

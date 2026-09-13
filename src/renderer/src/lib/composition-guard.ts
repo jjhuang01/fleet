@@ -39,6 +39,20 @@ export class CompositionGuard {
   private pasted = false;
   private windowClosesAt = 0;
 
+  /**
+   * The episode starts here, at `compositionstart`, and nowhere else. An update
+   * is not a boundary: some IMEs report one more of them after the key that
+   * flushed the composition, and a guard that treated that as a new episode
+   * would be open again in the one moment the duplicate arrives.
+   */
+  compositionStart(): void {
+    this.text = null;
+    this.composing = false;
+    this.forwarded = false;
+    this.pasted = false;
+    this.windowClosesAt = 0;
+  }
+
   compositionUpdate(text: string | null): void {
     // An update that reports no text is not news about the text: Chromium leaves
     // `CompositionEvent.data` empty - `null` or `''`, depending on the IME - and
@@ -46,8 +60,6 @@ export class CompositionGuard {
     // unrecognisable. That is exactly how the duplicate came back after shipping.
     if (text) this.text = text;
     this.composing = true;
-    this.forwarded = false;
-    this.pasted = false;
     this.windowClosesAt = 0;
   }
 
