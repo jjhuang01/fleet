@@ -201,14 +201,17 @@ export function ImageViewerPane({
         ref={containerRef}
         className="flex-1 overflow-hidden relative"
         style={{
+          // The checkerboard behind a transparent image. Token-driven rather
+          // than hardcoded so it follows the app theme: a dark plate is what a
+          // transparent PNG needs on dark chrome, and a light one on light.
           backgroundImage:
-            'linear-gradient(45deg, #1c1c1c 25%, transparent 25%), ' +
-            'linear-gradient(-45deg, #1c1c1c 25%, transparent 25%), ' +
-            'linear-gradient(45deg, transparent 75%, #1c1c1c 75%), ' +
-            'linear-gradient(-45deg, transparent 75%, #1c1c1c 75%)',
+            'linear-gradient(45deg, var(--fleet-surface-3) 25%, transparent 25%), ' +
+            'linear-gradient(-45deg, var(--fleet-surface-3) 25%, transparent 25%), ' +
+            'linear-gradient(45deg, transparent 75%, var(--fleet-surface-3) 75%), ' +
+            'linear-gradient(-45deg, transparent 75%, var(--fleet-surface-3) 75%)',
           backgroundSize: '20px 20px',
           backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
-          backgroundColor: '#111',
+          backgroundColor: 'var(--fleet-surface-2)',
           cursor
         }}
         onMouseDown={handleMouseDown}

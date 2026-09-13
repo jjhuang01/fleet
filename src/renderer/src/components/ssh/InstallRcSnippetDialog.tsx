@@ -78,7 +78,7 @@ export function InstallRcSnippetDialog({
         <div className="mt-4 flex justify-end gap-2">
           <button
             ref={declineRef}
-            className="text-xs px-3 py-1 rounded bg-fleet-surface-2 transition hover:bg-fleet-surface-3 active:scale-[0.97] outline-none focus:ring-1 focus:ring-neutral-500"
+            className="text-xs px-3 py-1 rounded bg-fleet-surface-2 transition hover:bg-fleet-surface-3 active:scale-[0.97] outline-none focus:ring-1 focus:ring-[color:var(--fleet-accent)]"
             onClick={onDecline}
             disabled={busy}
           >

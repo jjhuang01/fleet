@@ -91,7 +91,7 @@ function FontFamilyPicker({
               >
                 {font.label}
               </span>
-              <span className="text-xs text-fleet-text-subtle ml-auto">
+              <span className="text-xs text-fleet-text-muted ml-auto">
                 {t('settings.general.bundled')}
               </span>
             </label>

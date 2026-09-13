@@ -323,22 +323,23 @@ body,
    a reason its own comment gives as "on OS X this is required in order for the
    scroll bar to appear fully opaque". Through xterm 5.5 that never showed,
    because the Viewport component rewrote the property from the theme on every
-   refresh, alpha and all. xterm 6 replaced that component with a scrollable
-   element that does not touch the background, so the hardcoded black is what
-   paints - an opaque slab over the theme's own background and over anything
-   behind the pane.
+   refresh, alpha and all. xterm 6 dropped that component, and the background
+   moved onto the scrollable element it added - as an inline style carrying the
+   theme's *active* colour, which no selector can outrank on its own.
 
-   The reason it was there is gone with it: v6 scrolls through a DIV scrollbar,
-   so there is no native macOS scrollbar left to keep opaque. Nothing else in
-   the library paints the theme background either, so `use-terminal` publishes
-   it as --fleet-term-bg and this is where it lands. The fallback covers the
-   moment before that first runs, and a terminal background image resolves the
-   colour to transparent so the picture reads through.
+   Between the two the pane's own ground was buried. The terminal interior kept
+   the active theme background while the 16px of padding around it showed
+   `inactiveBackground`, so on a light preset an unfocused pane read as a frame
+   in a slightly different colour from its own contents - the kind of 1.05:1
+   seam dark themes hide and light ones do not.
 
-   The class is doubled to outrank xterm's own two-class rule without an
-   `!important`, since the two sheets' relative order is a build detail. */
-.xterm .xterm-viewport.xterm-viewport {
-  background-color: var(--fleet-term-bg, transparent);
+   Both are cleared here, so what shows through is the ground TerminalPane
+   already paints for the pane (and, under a background image, the picture
+   behind it). The viewport's black had a reason that v6 took away with the
+   native macOS scrollbar, and the inline style needs `!important`. */
+.xterm .xterm-viewport,
+.xterm .xterm-scrollable-element {
+  background-color: transparent !important;
 }
 
 /* xterm 6 scrolls through its own DIV scrollbar rather than a native one, so
@@ -547,6 +548,29 @@ input[type='checkbox']:active:not(:disabled) {
   to {
     background-position: -200% 0;
   }
+}
+
+/* ── CodeMirror file editor ─────────────────────────────────────────── */
+
+/* The editor paints the pane's surface, not the syntax theme's. oneDark carries
+   its own #282c34, which would be the one dark slab left in a light window and
+   would disagree with the loading placeholder in front of it.
+
+   The matching values in `EditorView.theme()` are not enough on their own: it
+   and `oneDark` emit the same single-class selectors, and CodeMirror decides
+   that tie by style-module mount order rather than by anything either side can
+   state. Measured in the dev window with this rule removed, switching to dark
+   put `rgb(40, 44, 52)` back as the editor surface. Two classes here do not
+   care which module mounted first. */
+.fleet-editor .cm-editor,
+.fleet-editor .cm-gutters {
+  background-color: var(--fleet-surface);
+  border: none;
+}
+
+.fleet-editor .cm-activeLine,
+.fleet-editor .cm-activeLineGutter {
+  background-color: var(--fleet-surface-2);
 }
 
 /* ── Markdown Preview Prose Styles ──────────────────────────────────── */

@@ -24,7 +24,7 @@ export function ToolPaneFrame({
 }): React.JSX.Element {
   return (
     <div className="h-full w-full p-2">
-      <div className="h-full rounded-lg shadow-md shadow-black/20">
+      <div className="h-full rounded-lg shadow-md shadow-black/5 dark:shadow-black/20">
         <div
           className="relative flex h-full flex-col overflow-hidden rounded-lg border border-fleet-border"
           style={{ backgroundColor: paneGround('var(--fleet-bg)', overCanvas) }}

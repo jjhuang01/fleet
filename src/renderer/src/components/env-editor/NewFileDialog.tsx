@@ -15,7 +15,7 @@ export function NewFileDialog({ groups, onCancel, onCreate, error }: Props): Rea
 
   return (
     <div
-      className="absolute inset-0 z-10 flex items-center justify-center bg-black/50"
+      className="absolute inset-0 z-10 flex items-center justify-center bg-black/25 dark:bg-black/60"
       onClick={onCancel}
     >
       <div

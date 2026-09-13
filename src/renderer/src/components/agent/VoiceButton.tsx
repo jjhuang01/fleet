@@ -145,7 +145,7 @@ function buttonClass(phase: VoicePhase): string {
     case 'requesting':
       return `${base} pointer-events-none text-fleet-text-subtle opacity-40`;
     case 'recording':
-      return `${base} relative bg-fleet-accent text-white`;
+      return `${base} relative fleet-accent-bg text-white`;
     case 'transcribing':
       return `${base} pointer-events-none cursor-default text-fleet-text-subtle`;
     case 'denied':
