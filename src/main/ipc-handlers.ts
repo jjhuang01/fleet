@@ -12,6 +12,7 @@ import { homedir } from 'node:os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { execInContext } from './run-in-context';
+import { enrichProcessEnv } from './shell-env';
 import { resolveLocale, translate, type MessageKey } from '../shared/i18n';
 
 const execAsync = promisify(exec);
@@ -234,6 +235,10 @@ export function registerIpcHandlers(
 
   // PTY handlers
   ipcMain.handle(IPC_CHANNELS.PTY_CREATE, async (_event, req: PtyCreateRequest) => {
+    // A pane is given a copy of this process's environment, so it has to wait
+    // for the login shell's to have been merged into it: creating one while
+    // that resolution is still in flight hands it the half-built one.
+    await enrichProcessEnv();
     log.debug('ipc:pty:create', {
       paneId: req.paneId,
       cwd: req.cwd,

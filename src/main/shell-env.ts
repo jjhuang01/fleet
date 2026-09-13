@@ -54,7 +54,16 @@ export function isLauncherTerminalEnv(key: string): boolean {
   );
 }
 
-/** Env namespaces a terminal emulator brands its children with. */
+/**
+ * Env namespaces a terminal emulator brands its children with.
+ *
+ * `VSCODE_` is deliberately absent. VS Code's terminal identity is
+ * `TERM_PROGRAM=vscode`, which the rule above already catches, while the rest
+ * of that namespace is credentials plumbing: `GIT_ASKPASS` is pointed at a
+ * script that needs `VSCODE_GIT_ASKPASS_NODE` and `VSCODE_GIT_ASKPASS_MAIN` to
+ * run, so dropping them by prefix leaves a Fleet started from a VS Code
+ * terminal with an askpass it cannot execute and git auth that fails.
+ */
 const LAUNCHER_TERMINAL_PREFIXES = [
   'OTTY_',
   'ITERM_',
@@ -62,7 +71,6 @@ const LAUNCHER_TERMINAL_PREFIXES = [
   'WEZTERM_',
   'GHOSTTY_',
   'ALACRITTY_',
-  'VSCODE_',
   'WT_'
 ];
 
@@ -92,6 +100,10 @@ async function run(): Promise<void> {
   if (process.platform === 'win32') return;
 
   takeLauncherTerminalEnv();
+  // Stamped before the await as well as after it: a pane can be created while
+  // the login shell is still being asked, and without this it would inherit an
+  // environment with the launcher's identity removed and nothing in its place.
+  stampOwnTerminalEnv();
 
   try {
     const env = await withTimeout(resolveShellEnv(), 5000);

@@ -33,7 +33,15 @@ Measured, in a Fleet pane:
 before the login shell is asked for the user's environment, so a `NO_COLOR` the
 user sets in their own rc still comes back and is still honoured, and panes are
 stamped with Fleet's own `TERM_PROGRAM=Fleet` / `COLORTERM=truecolor`. `TERM` comes
-from node-pty's pty name and is already Fleet's.
+from node-pty's pty name and is already Fleet's. A pane also waits for the login
+shell's answer before it copies the environment, rather than copying the
+half-built one while the answer is still in flight.
+
+`VSCODE_` is deliberately *not* stripped by prefix. A Fleet started from a VS Code
+terminal inherits `GIT_ASKPASS` pointing at a script that needs
+`VSCODE_GIT_ASKPASS_NODE` / `VSCODE_GIT_ASKPASS_MAIN` to run, so dropping that
+namespace by prefix would take git authentication with it; VS Code's identity is
+`TERM_PROGRAM=vscode`, and that is what is dropped.
 
 ## 2. Pasting an image
 
