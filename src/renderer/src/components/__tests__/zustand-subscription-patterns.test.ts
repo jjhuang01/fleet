@@ -52,8 +52,16 @@ describe('Sidebar.tsx Zustand subscription pattern', () => {
   });
 
   it('subscribes to useCwdStore with a selector (for git repo detection)', () => {
-    // Sidebar uses useCwdStore to check live CWDs for worktree context menu
-    expect(source).toMatch(/useCwdStore\(\s*\(s\)\s*=>/);
+    // Sidebar uses useCwdStore to check live CWDs for worktree context menu.
+    // useShallow is what keeps the derived per-tab map stable between renders.
+    expect(source).toMatch(/useCwdStore\(\s*useShallow\(\(\s*s\s*\)\s*=>/);
+  });
+
+  it('does not subscribe to the entire cwds Map', () => {
+    // The map is replaced wholesale on every pane's cwd report, so selecting it
+    // re-rendered the sidebar for panes it never reads. It selects the first
+    // pane of each tab instead; TabItem does the same for its own pane.
+    expect(source).not.toMatch(/useCwdStore\(\s*\(s\)\s*=>\s*s\.cwds\s*\)/);
   });
 });
 

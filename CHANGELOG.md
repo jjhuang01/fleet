@@ -21,6 +21,8 @@ What stays English is listed in [docs/i18n.md](docs/i18n.md): third-party and ru
 - **One Escape per dialog, no drag that outlives its tab, no bitmap left behind** - three unrelated leaks from the same review: Escape closed every stacked dialog instead of the topmost one, a divider drag kept its body styles and document listeners after the tab underneath it changed, and `createImageBitmap` results were never closed after the image was exported.
 - **A failed native-dependency install no longer reports success** - `|| true` covered the whole `postinstall` chain, so a failing `electron-builder install-app-deps` produced an install that looked fine, packaged fine, and then would not open. The two genuinely optional steps kept their tolerance; the one that must succeed no longer has it.
 
+- **The sidebar stops re-rendering for panes it never reads** - it selected the whole cwd map, and that map's identity is replaced every time any pane reports a directory, so a busy split or a background workspace re-rendered the sidebar on a timer. It now selects the first pane of each tab, which is every cwd any of its five reads actually uses, compared with `useShallow` so the derived map stays stable between renders. Worktree detection and the active tab's path are unchanged.
+
 ## v2.119.0
 
 - **Claude Code's settings, in Fleet** - Settings > Claude Config edits `.claude/settings.json` and `CLAUDE.md` without leaving Fleet, so a permission rule or an env var no longer means hunting for a dotfile.

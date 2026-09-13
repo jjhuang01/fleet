@@ -104,13 +104,13 @@ const setActiveTab = useWorkspaceStore((s) => s.setActiveTab);
 
 ---
 
-### 3. CWD Store Broad Subscription (High Impact) — ⚠️ Partly Fixed
+### 3. ~~CWD Store Broad Subscription (High Impact)~~ ✅ Fixed
 
-**Files:** `src/renderer/src/store/cwd-store.ts:15-20`, `src/renderer/src/components/Sidebar.tsx:875`
+**Files:** `src/renderer/src/store/cwd-store.ts:15-20`, `src/renderer/src/components/Sidebar.tsx`
 
-`setCwd` creates `new Map(state.cwds)` on every update (every 5s per pane from the CWD poller), so the Map's identity changes on every pane's tick. The broad destructuring this audit originally found is gone, but the sidebar still subscribes to the whole Map — `useCwdStore((s) => s.cwds)` — in order to read one pane's directory out of it, so it still re-renders whenever an unrelated pane reports a new cwd.
+`setCwd` creates `new Map(state.cwds)` on every update (every 5s per pane from the CWD poller), so the Map's identity changes on every pane's tick, and selecting that Map re-rendered the sidebar for panes it never reads.
 
-**Remaining fix:** select the single value the sidebar reads, derived from the pane id it already computes, rather than the Map that value comes out of. Carried as a known issue in [docs/status.md](status.md).
+The sidebar's five live-CWD reads all want the first pane of some tab, so it now selects exactly that set through `useShallow` and rebuilds its lookup map from the result. A cwd report from a second pane in a split tab, or from any pane in a background workspace, no longer re-renders the sidebar; the rows it feeds (worktree detection, the active tab's path, the create-worktree menu) are unchanged. `components/__tests__/zustand-subscription-patterns.test.ts` asserts the selector.
 
 ---
 

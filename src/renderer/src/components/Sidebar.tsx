@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -871,8 +871,32 @@ export function Sidebar({
   );
 
   // Track which tabs are in git repos (for showing "Create Worktree" in context menu)
-  // Uses live CWD so the option appears even if the user cd'd into a repo after opening the tab
-  const liveCwds = useCwdStore((s) => s.cwds);
+  // Uses live CWD so the option appears even if the user cd'd into a repo after opening the tab.
+  //
+  // Every live-CWD read in this component is the *first* pane of some tab, so the
+  // sidebar subscribes to exactly those values rather than to the whole map. Taking
+  // the map itself re-rendered the sidebar on every cwd report from every pane,
+  // including the ones it never reads: the second pane of a split tab, and every
+  // pane in a background workspace (#541 follow-up).
+  const sidebarPaneIds = useMemo(
+    () =>
+      workspace.tabs.flatMap((tab) => {
+        const firstPaneId = collectPaneIds(tab.splitRoot)[0];
+        return firstPaneId ? [firstPaneId] : [];
+      }),
+    [workspace.tabs]
+  );
+  const liveCwdValues = useCwdStore(
+    useShallow((s) => sidebarPaneIds.map((paneId) => s.cwds.get(paneId) ?? null))
+  );
+  const liveCwds = useMemo(() => {
+    const map = new Map<string, string>();
+    sidebarPaneIds.forEach((paneId, index) => {
+      const cwd = liveCwdValues[index];
+      if (cwd != null) map.set(paneId, cwd);
+    });
+    return map;
+  }, [sidebarPaneIds, liveCwdValues]);
 
   // Derive live cwd of the active tab (mirrors the same pattern used below for group tabs)
   const activeTab = workspace.tabs.find((t) => t.id === activeTabId) ?? null;
