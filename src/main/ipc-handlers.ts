@@ -312,6 +312,10 @@ export function registerIpcHandlers(
           } satisfies PtyExitPayload);
         }
         eventBus.emit('pty-exit', { type: 'pty-exit', paneId: req.paneId, exitCode });
+        // The shell is gone even though its tab stays on screen waiting to be
+        // dismissed, so everything the pane was being tracked for - activity,
+        // notification state, its cached summary - has nothing left to track.
+        eventBus.emit('pane-closed', { type: 'pane-closed', paneId: req.paneId });
       });
 
       // Start CWD polling fallback. For WSL panes the poller no-ops — Phase 3's

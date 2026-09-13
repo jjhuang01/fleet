@@ -377,12 +377,12 @@ function createWindow(): void {
   mainWindow.on('close', (event) => {
     // Already confirmed - this is the close `confirmClose` asked for.
     if (quitConfirmed) {
-      ptyManager.killAll();
+      closeAllPanes();
       return;
     }
     const endsProcess = closeEndsProcess();
     if (!hasRunningWork(endsProcess)) {
-      ptyManager.killAll();
+      closeAllPanes();
       return;
     }
     // Preventing this aborts a quit as well as a window close, which is the
@@ -494,9 +494,9 @@ function whenWindowReady(fn: () => void): void {
 app.setName('Fleet');
 
 // Windows shows a toast only for an app it can identify, and says nothing at
-// all - no error, no toast - for one it cannot. Matches `appId` in
+// all - no error, no toast - for one it cannot. This has to be the `appId` in
 // electron-builder.yml, which is what the installed shortcut is stamped with.
-if (process.platform === 'win32') app.setAppUserModelId('com.fleet.app');
+if (process.platform === 'win32') app.setAppUserModelId('com.jjhuang01.fleet');
 
 // fleet-drive: enable CDP so `npm run drive` can attach to this dev window.
 // Dev-only, loopback-only, per-checkout port. Never present in packaged builds.
@@ -1556,7 +1556,10 @@ void app.whenReady().then(async () => {
   const paneSummaryCache = new Map<string, { summary: string; at: number }>();
   // Guards against a slow model response overlapping the next poll tick for the
   // same pane (renderer interval fires again before the first call resolves).
-  const paneSummaryInFlight = new Map<string, Promise<string>>();
+  // The entry carries a `stale` flag as well as the promise because the request
+  // can outlive the pane: `pane-closed` has to be able to tell a summary that is
+  // still wanted apart from one whose pane is already gone.
+  const paneSummaryInFlight = new Map<string, { promise: Promise<string>; stale: boolean }>();
   const PANE_SUMMARY_MIN_INTERVAL_MS = 15_000;
 
   ipcMain.handle(
@@ -1567,33 +1570,46 @@ void app.whenReady().then(async () => {
         return cached.summary;
       }
       const inFlight = paneSummaryInFlight.get(req.paneId);
-      if (inFlight) return inFlight;
+      if (inFlight) return inFlight.promise;
 
       const a = settingsStore.get().ai.agent;
       // The cheap model a session's title comes from, falling back to the model
       // that writes the code when no separate one is set.
       const resolved = resolveTarget(a.titleModel ?? a.coding.model);
       if (!resolved.ok) return '';
-      const request = (async (): Promise<string> => {
+      const pending = { promise: Promise.resolve(''), stale: false };
+      pending.promise = (async (): Promise<string> => {
         const summary = await resolveSummary(completeOnce, {
           target: resolved.target,
           model: resolved.wireModelId,
           tailText: req.tailText
         });
-        if (summary) paneSummaryCache.set(req.paneId, { summary, at: Date.now() });
+        // Closing the pane deletes the cache entry, so a summary that arrives
+        // afterwards would put back one that nothing would ever remove again.
+        if (summary && !pending.stale) {
+          paneSummaryCache.set(req.paneId, { summary, at: Date.now() });
+        }
         return summary || cached?.summary || '';
       })();
-      paneSummaryInFlight.set(req.paneId, request);
+      paneSummaryInFlight.set(req.paneId, pending);
       try {
-        return await request;
+        return await pending.promise;
       } finally {
-        paneSummaryInFlight.delete(req.paneId);
+        // Only drop this entry: closing the pane may already have dropped it and
+        // let a fresh request take its place, and that one is not ours to clear.
+        if (paneSummaryInFlight.get(req.paneId) === pending) {
+          paneSummaryInFlight.delete(req.paneId);
+        }
       }
     }
   );
   eventBus.on('pane-closed', (event) => {
     paneSummaryCache.delete(event.paneId);
-    paneSummaryInFlight.delete(event.paneId);
+    const pending = paneSummaryInFlight.get(event.paneId);
+    if (pending !== undefined) {
+      pending.stale = true;
+      paneSummaryInFlight.delete(event.paneId);
+    }
   });
 
   sessionsService = new SessionsService();
@@ -1647,15 +1663,58 @@ void app.whenReady().then(async () => {
   });
 });
 
-function shutdownAll(): void {
-  void stopCopilot();
+/**
+ * Close every pane the way the IPC handler does.
+ *
+ * `killAll` only removes the PTYs. Closing the window on macOS leaves the app
+ * in the dock, and the cwd poller, the activity tracker, the notification
+ * state and the pane-summary cache all key off `pane-closed` - without that
+ * event they would keep working for panes that no longer exist.
+ */
+function closeAllPanes(): void {
+  for (const paneId of ptyManager.paneIds()) {
+    eventBus.emit('pane-closed', { type: 'pane-closed', paneId });
+  }
   ptyManager.killAll();
+}
+
+/**
+ * How long the quit path waits for the services that own child processes.
+ *
+ * Bounded because a quit that waits on an unresponsive server is worse than a
+ * quit that leaves it behind: the user asked to leave and a stale MCP server is
+ * recoverable, an app that will not exit is not.
+ */
+const SHUTDOWN_GRACE_MS = 2_000;
+
+let shutdownStarted: Promise<void> | null = null;
+
+/**
+ * Tear the app down. Returns a promise the quit path waits on.
+ *
+ * Everything that does not own a process is still done synchronously and in the
+ * same order as before. Only the closers that can leave a child process or a
+ * socket behind are awaited, and they are awaited last, so the parts that were
+ * already ordered synchronously keep their ordering.
+ */
+async function shutdownAll(): Promise<void> {
+  shutdownStarted ??= runShutdown();
+  await shutdownStarted;
+}
+
+async function runShutdown(): Promise<void> {
+  void stopCopilot();
+  closeAllPanes();
   cwdPoller.stopAll();
-  socketSupervisor?.stop().catch((err: unknown) =>
-    log.error('socket-supervisor stop error', {
-      error: err instanceof Error ? err.message : String(err)
-    })
-  );
+  // Stopped once, and the promise is kept for the wait at the end: a second
+  // `stop()` would return immediately against handles the first one has already
+  // taken, so the wait would not actually be waiting.
+  const socketStopped =
+    socketSupervisor?.stop().catch((err: unknown) => {
+      log.error('socket-supervisor stop error', {
+        error: err instanceof Error ? err.message : String(err)
+      });
+    }) ?? Promise.resolve();
   // Kills the running command and settles any permission question still on
   // screen as a refusal, so nothing starts on the way out.
   agentService?.cancelAll();
@@ -1673,22 +1732,40 @@ function shutdownAll(): void {
     clearInterval(updateCheckTimer);
     updateCheckTimer = null;
   }
-  // Spawned servers are child processes of this one, so a quit that skipped
-  // this would leave them running with nothing to talk to.
-  void agentMcp?.closeAll();
   // A skill checkout the user never installed from or closed the dialog on.
   // Synchronous on purpose - see the note on it; this path ends in `exit`.
   discardAllFetches();
   sessionsService?.dispose();
   annotateService.destroy();
-  void learningsMcp?.stop();
-  void learningsEmbedder?.close();
+
+  // These own a spawned child process or a listening socket. Closing them is
+  // not instantaneous, and the quit used to walk off the end of this function
+  // while the first close was still in flight, so the rest never ran and their
+  // children were reparented instead of shut down. The MCP clients are the ones
+  // that matter most: each one is a server process Fleet started.
+  await Promise.allSettled([
+    socketStopped,
+    agentMcp?.closeAll() ?? Promise.resolve(),
+    learningsMcp?.stop() ?? Promise.resolve(),
+    learningsEmbedder?.close() ?? Promise.resolve()
+  ]);
+  // Last, so nothing above can write to a store that is already closed.
   learningsStore?.close();
+}
+
+/** Wait for the shutdown, but never longer than the grace period. */
+async function shutdownWithGrace(): Promise<void> {
+  await Promise.race([
+    shutdownAll().catch(() => {}),
+    new Promise<void>((resolve) => {
+      setTimeout(resolve, SHUTDOWN_GRACE_MS).unref();
+    })
+  ]);
 }
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    shutdownAll();
+    void shutdownAll();
     app.quit();
   }
   // On macOS: app stays running in the dock — keep services alive so the
@@ -1706,18 +1783,25 @@ app.on('before-quit', () => {
   quitRequested = true;
 });
 
-app.on('will-quit', () => {
-  shutdownAll();
+app.on('will-quit', (event) => {
+  // Electron does not wait for promises here, and by now every window is
+  // already closed, so the quit is held open for the closers and the process is
+  // ended directly once they settle.
+  //
+  // Not `app.quit()`: re-issuing a quit from inside the handler that just
+  // cancelled one leaves Electron waiting for a sequence it has already torn
+  // down, and the app stays in the dock running a main process with no windows.
+  // `process.exit` is what would have happened next anyway.
+  event.preventDefault();
+  void shutdownWithGrace().then(() => process.exit(0));
 });
 
 // Ensure child processes are cleaned up on unexpected termination
 process.on('SIGTERM', () => {
-  shutdownAll();
-  process.exit(0);
+  void shutdownWithGrace().then(() => process.exit(0));
 });
 process.on('SIGINT', () => {
-  shutdownAll();
-  process.exit(0);
+  void shutdownWithGrace().then(() => process.exit(0));
 });
 
 // Last-resort capture for errors that escape every try/catch so they land in
