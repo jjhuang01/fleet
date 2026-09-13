@@ -34,19 +34,21 @@ and drops an identical repeat that arrives before the episode closes (250 ms aft
 `compositionend`). A new composition resets the guard, so committing the same text twice on purpose
 still works, and Enter keeps its existing meaning: the flush still happens and still submits.
 
-Text alone cannot tell a repeat from the user typing the same thing again. Committing `a` and then
-pressing `a` produced two identical chunks within the window, and the second - the user's - was
-dropped. The missing signal is the key press: a key pressed _after_ the first copy cannot be xterm
-echoing the composition, so the guard counts keystrokes and only suppresses a repeat while none has
-arrived since it forwarded that copy. The key that _flushes_ a composition lands before the copy it
-produces, so it must not end the episode - which is why the guard compares a counter instead of
-reacting to the key itself. `use-terminal.ts` listens on `document` in the capture phase, not on the
-textarea: xterm's own keydown listener sits on the textarea, and the order between them has to be
-certain rather than left to registration order.
+Text alone cannot tell the duplicate from the user typing the same thing again, so the guard first
+counted keystrokes: the first copy went out, and an identical chunk after it was dropped unless a key
+had arrived since. That counter is not a signal, and on 2026-09-14 it shipped the duplicate again
+(`codexcodex`). The key that flushes a composition can arrive _after_ the first copy - RIME and
+Squirrel do exactly that - so the guard saw "a key arrived since the forward" and let the second copy
+through. Ordering the count the other way is no better: one Enter looks exactly like any other, so
+whichever side of the first copy it lands on, some IME timing ends up wrong.
 
-Without that key signal the guard is lossy. Pressing `a` twice inside the 250 ms window gave the
-shell one `a`, and only the composition path was affected because the guard stays empty until the
-first `compositionend`.
+What a duplicate cannot do is start a composition or paste. The guard now drops an exact repeat
+inside its window and ends the episode only on those two things, or on the window expiring
+(`d955a0b7`). Retyping the same text is safe by construction when it is a whole commit's worth of
+text: with an IME that is a new composition, and without one it arrives as single characters rather
+than as one chunk equal to the commit. The narrow case given up is a single-character commit whose
+character is typed again within 250 ms - the guard cannot tell that keystroke from the duplicate, and
+dropping the duplicate is the behaviour the duplication report asked for.
 
 ## How it was verified
 

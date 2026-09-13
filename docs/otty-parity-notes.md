@@ -50,15 +50,15 @@ bundle (`Otty.app/Contents/Resources/settings-ui.html`, `key:"edit"`):
 
 | Otty action | Label | Fleet terminal |
 | --- | --- | --- |
-| `insert_screenshot` | Insert Screenshot | absent |
+| `insert_screenshot` | Insert Screenshot | `Cmd+V` below |
 | `insert_file_path` | Insert from File Path... | absent |
 | `paste_file_base64` | Paste File Base64-Encoded… | absent |
 | `paste_continue_composer` | Paste and continue in Composer | absent |
 
-That is why an image can be pasted into an agent CLI under Otty and not under
+That is why an image could be pasted into an agent CLI under Otty and not under
 Fleet: the terminal captures the clipboard image, writes it somewhere, and inserts
-its path (or its bytes) into the pane. Fleet's terminal has no paste handler at all
-beyond xterm's own text paste, so the clipboard image is simply dropped.
+its path (or its bytes) into the pane. Fleet's terminal had no paste handler at all
+beyond xterm's own text paste, so the clipboard image was simply dropped.
 
 Fleet's **agent composer** is a different story — it already attaches a pasted
 image (`AgentThread.tsx` `onPaste` → `attachFiles`, with `main/agent/attachments.ts`
@@ -88,32 +88,39 @@ here. Otty's other three Edit actions (`insert_file_path`, `paste_file_base64`,
 The text branch is unchanged code (`readText` → `term.paste`), so it was not
 re-driven: the machine's clipboard held the screenshot and was left alone.
 
+Three things a review of the first version turned up, all fixed in
+`87c658d2`:
+
+| Problem | What the paste does now |
+| --- | --- |
+| A pane on the far side of ssh cannot open a path in this machine's temp directory | The picture goes through the same upload the drag-and-drop path uses - into the remote shell's own directory - and the prompt gets the remote path |
+| Text and picture were read by two IPC calls, so a copy landing between them lost the paste | One call answers text-or-picture from a single read, in `main` |
+| The file was world-readable in a shared `/tmp` and never removed | `0700` directory, `0600` file, swept a week after the paste |
+
+The console paste that does not carry a file - `insert_file_path`,
+`paste_file_base64`, `paste_continue_composer` - is still absent.
+
 ## 3. Scrolling
 
-**Symptom.** Scrolling a pane reads as a series of jumps rather than as movement.
+**Symptom.** Scrolling a pane reads as a series of jumps rather than as movement,
+and Otty's is smooth.
 
-**Cause.** The two terminals disagree about what a scroll is. Otty ships
-`terminal-scroll-smooth` (label "Smooth Scroll (Terminal)", `defaultValue: true`,
-category `controls`): "Scroll the viewport at pixel granularity instead of
-snapping row by row; the offset snaps back to a row boundary when the gesture ends
-so glyphs stay pixel-aligned. Default on for macOS-native scroll feel." Fleet's
-panes are xterm.js 6.0.0 with the **DOM renderer**, and that renderer has no
-sub-row offset at all: the visible band is a fixed list of row elements whose
-*text* is replaced, so `viewportY` is the only position that exists and every step
-is a whole row. Measured in a live pane: the row elements carry
-`transform: none` with `scrollTop: 0`, the viewport reports
+**Why they differ.** Otty ships `terminal-scroll-smooth` (label "Smooth Scroll
+(Terminal)", `defaultValue: true`, category `controls`): "Scroll the viewport at
+pixel granularity instead of snapping row by row; the offset snaps back to a row
+boundary when the gesture ends so glyphs stay pixel-aligned. Default on for
+macOS-native scroll feel." Fleet's panes are xterm.js 6.0.0 with the **DOM
+renderer**, and that renderer has no sub-row offset at all: the visible band is a
+fixed list of row elements whose *text* is replaced, so `viewportY` is the only
+position that exists and every step is a whole row. Measured in a live pane: the
+row elements carry `transform: none` with `scrollTop: 0`, the viewport reports
 `scrollHeight === clientHeight`, and scrolling swaps row contents
-(`first row 1964 → 1936`). Nothing can be animated below one row.
+(`first row 1964 → 1936`).
 
-**Fixed as far as this renderer goes** in `src/renderer/src/hooks/use-terminal.ts`:
-`Terminal` now takes `smoothScrollDuration: 125`. xterm animates its virtual
-scroll offset over that duration and commits rows as the offset crosses them, so
-the same rows arrive spread over the animation instead of in one frame. This is
-the value VS Code's terminal uses for `terminal.integrated.smoothScrolling`
-(`RenderConstants.SmoothScrollDuration = 125` in `xtermTerminal.ts`).
-
-Measured against the same xterm 6.0.0 build, in Chromium, on the path a wheel
-notch takes (`Viewport.scrollLines` → `setScrollPosition({reuseAnimation: true})`):
+**What was tried, and why it is not in the build.** The one option that reads
+like Otty's is xterm's `smoothScrollDuration`, which VS Code's terminal sets to
+125 for `terminal.integrated.smoothScrolling`. It eases the viewport between
+positions, row by row, and it works on a quiet terminal:
 
 | `smoothScrollDuration` | `viewportY` after one notch | Time to settle |
 | --- | --- | --- |
@@ -121,13 +128,19 @@ notch takes (`Viewport.scrollLines` → `setScrollPosition({reuseAnimation: true
 | `125` | `376 → 375 → 374 → 373` | 57ms |
 | `125`, seven rows | `376 → 374 → 372 → 371 → 370` | 81ms |
 
-Frame pacing during a burst of 20 notches 30ms apart: median 16.7ms, p95 17.7ms,
-max 17.8ms, no frame over 33ms - the extra row repaints do not cost a frame.
+...and it fails on a busy one. xterm's viewport resyncs to the buffer whenever the
+buffer moves on its own - every chunk of output - and that resync sets the
+position immediately, cancelling the animation. So in a pane that is printing, an
+upward notch is swallowed: with a line arriving every 30ms, three rows up moved
+`viewportY` `386 → 383` at `0`, and at `125` the viewport stayed at `386` and then
+followed the stream to `406`. A live pane showed the same from the other side: a
+wheel-up turned the "scrolled up" affordance on and xterm re-pinned it 220ms
+later.
 
-One consequence worth knowing: a smooth animation is cancelled by the content
-itself. xterm stops animating and snaps when the buffer's `y` position changes for
-any other reason - output arriving, a resize - which is what keeps a pane that is
-following its output pinned to the bottom.
+The option was therefore removed again (`987714f6`), with the measurement written
+where a maintainer would re-add it.
+[docs/learnings/2026-09-14-xterm-smooth-scroll-dies-when-the-buffer-moves.md](learnings/2026-09-14-xterm-smooth-scroll-dies-when-the-buffer-moves.md)
+holds the mechanism.
 
 **What is left.** Pixel granularity itself. It needs a renderer that can offset
 the whole grid by a fraction of a row, which the DOM renderer cannot, so this is
