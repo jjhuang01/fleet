@@ -29,9 +29,69 @@ export async function enrichProcessEnv(): Promise<void> {
   return resolution;
 }
 
+/**
+ * Keys that belong to the terminal Fleet was started from, not to the user.
+ *
+ * Fleet is routinely started from a shell that is itself inside another
+ * terminal, or from an agent CLI. Either way it inherits that terminal's
+ * identity: its `TERM_PROGRAM`, its `COLORTERM`, the `OTTY_*` / `WEZTERM_*`
+ * bookkeeping it exports into every child. `NO_COLOR` is the one that bites -
+ * every colour-aware CLI honours it, so panes come up in a single colour that
+ * no theme in Settings can undo, and the agent running in one looks broken.
+ *
+ * Only keys the launcher supplied are removed, and they are removed *before*
+ * the login shell is asked for the user's environment, so a `NO_COLOR` set in
+ * the user's own rc comes back and is still honoured. What goes away is the
+ * accident of where Fleet was started.
+ */
+export function isLauncherTerminalEnv(key: string): boolean {
+  return (
+    key === 'NO_COLOR' ||
+    key === 'FORCE_COLOR' ||
+    key === 'COLORTERM' ||
+    key.startsWith('TERM_PROGRAM') ||
+    LAUNCHER_TERMINAL_PREFIXES.some((prefix) => key.startsWith(prefix))
+  );
+}
+
+/** Env namespaces a terminal emulator brands its children with. */
+const LAUNCHER_TERMINAL_PREFIXES = [
+  'OTTY_',
+  'ITERM_',
+  'KITTY_',
+  'WEZTERM_',
+  'GHOSTTY_',
+  'ALACRITTY_',
+  'VSCODE_',
+  'WT_'
+];
+
+/** Drop the launcher's terminal identity from `process.env`. */
+function takeLauncherTerminalEnv(): void {
+  const dropped: string[] = [];
+  for (const key of Object.keys(process.env)) {
+    if (isLauncherTerminalEnv(key)) {
+      delete process.env[key];
+      dropped.push(key);
+    }
+  }
+  if (dropped.length > 0) log.debug('dropped launcher terminal env', { keys: dropped.sort() });
+}
+
+/** What Fleet's own panes are told about the terminal they run in. */
+function stampOwnTerminalEnv(): void {
+  // xterm.js draws 24-bit colour, so the panes can say so and a CLI can pick
+  // its richest palette. TERM is set by node-pty from the pty's own `name`.
+  process.env.COLORTERM = 'truecolor';
+  process.env.TERM_PROGRAM = 'Fleet';
+  delete process.env.TERM_PROGRAM_VERSION;
+}
+
 async function run(): Promise<void> {
   // Windows inherits PATH correctly from the desktop — nothing to do
   if (process.platform === 'win32') return;
+
+  takeLauncherTerminalEnv();
 
   try {
     const env = await withTimeout(resolveShellEnv(), 5000);
@@ -47,6 +107,8 @@ async function run(): Promise<void> {
     });
     applyFallbackPaths();
   }
+
+  stampOwnTerminalEnv();
 }
 
 async function resolveShellEnv(): Promise<Record<string, string>> {
