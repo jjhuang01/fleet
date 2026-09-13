@@ -251,6 +251,15 @@ function createTerminal(
     cursorStyle: 'bar',
     cursorInactiveStyle: 'outline',
     allowProposedApi: true,
+    // Ease the viewport between positions instead of landing the whole distance
+    // in a single frame. xterm's DOM renderer draws whole rows and has no
+    // sub-row offset, so the steps stay row-sized: what changes is that a wheel
+    // notch becomes a short, continuous move instead of one instant jump, which
+    // is what a trackpad gesture reads as. Otty ships the equivalent as
+    // `terminal-scroll-smooth` - "scroll the viewport at pixel granularity
+    // instead of snapping row by row", on by default on macOS - and VS Code's
+    // terminal uses this same 125ms for `terminal.integrated.smoothScrolling`.
+    smoothScrollDuration: 125,
     // Always allow transparency (negligible cost on the DOM renderer) so a
     // background image can be toggled on/off live without recreating the term.
     allowTransparency: true,
