@@ -16,6 +16,7 @@ import { resolveXtermTheme } from '../lib/theme';
 import { CompositionGuard } from '../lib/composition-guard';
 import { terminalKeyInput } from '../lib/terminal-keybindings';
 import { ALL_SHORTCUTS, matchesShortcut } from '../lib/shortcuts';
+import { followAfterContentScroll, followAfterWheel } from '../lib/scroll-follow';
 import { useRemoteStore } from '../store/remote-store';
 import { uploadLocalFilesToRemotePane } from './use-terminal-drop';
 
@@ -704,17 +705,11 @@ function createTerminal(
   // (e.g. during tab switches), causing the instantaneous check to be wrong.
   let pinnedToBottom = true;
 
-  const isAtBottom = (): boolean => {
-    const buf = term.buffer.active;
-    return buf.viewportY >= buf.baseY - 2;
-  };
-
-  const updatePinnedState = (): void => {
-    // Don't read buffer state while hidden (display:none) — viewportY is stale
-    // and would incorrectly flip pinnedToBottom to false.
-    if (container.offsetParent === null) return;
-    pinnedToBottom = isAtBottom();
-    options.onScrollStateChange?.(!pinnedToBottom);
+  /** Only the transitions matter; the pane's "scrolled up" strip is a boolean. */
+  const applyFollow = (follow: boolean): void => {
+    if (follow === pinnedToBottom) return;
+    pinnedToBottom = follow;
+    options.onScrollStateChange?.(!follow);
   };
 
   // Helper: fit the terminal while preserving viewport scroll position.
@@ -725,10 +720,13 @@ function createTerminal(
     if (container.offsetParent === null) return false;
 
     // Reconcile: if flag says unpinned but viewport is actually at bottom,
-    // correct it before acting. Catches any edge case that falsely unpinned.
-    if (!pinnedToBottom && isAtBottom()) {
-      pinnedToBottom = true;
-      options.onScrollStateChange?.(false);
+    // correct it before acting. Same rule as the content path - only the exact
+    // bottom re-locks, because a view a row or two up is where the user put it.
+    if (!pinnedToBottom) {
+      const buf = term.buffer.active;
+      if (followAfterContentScroll({ follow: false, viewportY: buf.viewportY, baseY: buf.baseY })) {
+        applyFollow(true);
+      }
     }
 
     const savedPinned = pinnedToBottom;
@@ -757,10 +755,18 @@ function createTerminal(
   // keyboard handlers below, which only fire on real user input.
   term.onScroll(() => {
     if (container.offsetParent === null) return;
-    if (isAtBottom()) {
-      pinnedToBottom = true;
-      options.onScrollStateChange?.(false);
-    }
+    const buf = term.buffer.active;
+    // Content arriving, our own `scrollToBottom`, a resize: none of them are the
+    // user, and none may take the view away from where the user put it. This is
+    // the shudder - output pulling a reader back to the bottom - and it is why the
+    // tolerant at-the-bottom test has no place in this path.
+    applyFollow(
+      followAfterContentScroll({
+        follow: pinnedToBottom,
+        viewportY: buf.viewportY,
+        baseY: buf.baseY
+      })
+    );
   });
 
   // User-initiated scroll detection: wheel (trackpad/mouse) and keyboard
@@ -775,18 +781,48 @@ function createTerminal(
   // pinnedToBottom stuck at true while the user is reading scrollback - and
   // writeToTerm then yanks the view back down on every chunk of new output,
   // making scrollback unreadable in any pane that is still producing output.
-  const wheelHandler = (): void => {
-    requestAnimationFrame(() => updatePinnedState());
+  // One user gesture, whichever device it came from. Upward is decided in the
+  // gesture and not in a frame: xterm's own listener runs after this one, and by
+  // the time a frame has passed the next chunk of output can have moved the
+  // viewport back under the bottom. The gesture is the intent; the position is
+  // only consulted for the way back down, and only once xterm has applied it.
+  const userScrolled = (upward: boolean): void => {
+    const apply = (): void => {
+      const buf = term.buffer.active;
+      applyFollow(
+        followAfterWheel({
+          follow: pinnedToBottom,
+          upward,
+          viewportY: buf.viewportY,
+          baseY: buf.baseY
+        })
+      );
+    };
+    if (upward) {
+      apply();
+      return;
+    }
+    requestAnimationFrame(() => {
+      if (container.offsetParent === null) return;
+      apply();
+    });
+  };
+
+  const wheelHandler = (event: WheelEvent): void => {
+    userScrolled(event.deltaY < 0);
   };
   container.addEventListener('wheel', wheelHandler, { passive: true, capture: true });
 
   const keyScrollHandler = (e: KeyboardEvent): void => {
-    if (
-      e.key === 'PageUp' ||
-      e.key === 'PageDown' ||
-      ((e.metaKey || e.ctrlKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown'))
-    ) {
-      requestAnimationFrame(() => updatePinnedState());
+    // Page keys and the modified arrows are the same gesture as a wheel notch,
+    // and they had the same failure: a tolerant at-the-bottom test deferred by a
+    // frame, which output streaming in can satisfy by the time it runs.
+    if (e.key === 'PageUp' || e.key === 'PageDown') {
+      userScrolled(e.key === 'PageUp');
+      return;
+    }
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      userScrolled(e.key === 'ArrowUp');
     }
   };
   container.addEventListener('keydown', keyScrollHandler, true);
