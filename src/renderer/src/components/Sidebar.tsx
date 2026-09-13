@@ -1757,7 +1757,10 @@ export function Sidebar({
           )}
         </div>
         {isPaneDetachOver && (
-          <div className="pointer-events-none absolute inset-x-2 bottom-2 z-20 rounded-md border-2 border-dashed fleet-accent-border fleet-accent-bg-soft px-2 py-1.5 text-center text-xs fleet-accent-text">
+          <div
+            data-drop-hint="new-tab"
+            className="pointer-events-none absolute inset-x-2 bottom-2 z-20 rounded-md border-2 border-dashed fleet-accent-border fleet-accent-bg-soft px-2 py-1.5 text-center text-xs fleet-accent-text"
+          >
             {t('sidebar.movePaneToNewTab')}
           </div>
         )}

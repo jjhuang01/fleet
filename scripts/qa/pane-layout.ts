@@ -166,11 +166,9 @@ async function pass(page: Page): Promise<void> {
     // attached but zero height - can never satisfy it.
     await page.waitForFunction(
       () =>
-        [
-          ...document.querySelectorAll<HTMLElement>(
-            'div[role="separator"][aria-label="Resize panes"]'
-          )
-        ].some((element) => element.getBoundingClientRect().height > 0),
+        [...document.querySelectorAll<HTMLElement>('[data-grid-handle]')].some(
+          (element) => element.getBoundingClientRect().height > 0
+        ),
       undefined,
       { timeout: 15000 }
     );
@@ -260,6 +258,7 @@ async function pass(page: Page): Promise<void> {
       );
       await page.waitForTimeout(90);
     }
+    await page.mouse.up();
     throw new Error(`${label} never appeared`);
   };
 
@@ -273,9 +272,7 @@ async function pass(page: Page): Promise<void> {
       // Side-by-side split, so the divider we want runs vertically. Asking for
       // it by orientation also keeps the arrow-key step below meaningful.
       const handles = [
-        ...document.querySelectorAll<HTMLElement>(
-          'div[role="separator"][aria-label="Resize panes"][aria-orientation="vertical"]'
-        )
+        ...document.querySelectorAll<HTMLElement>('[data-grid-handle][aria-orientation="vertical"]')
       ].filter((element) => element.getBoundingClientRect().height > 0);
       const handle = handles.at(0);
       if (!handle) {
@@ -300,11 +297,9 @@ async function pass(page: Page): Promise<void> {
     );
 
     await page.evaluate(() => {
-      const handle = [
-        ...document.querySelectorAll<HTMLElement>(
-          'div[role="separator"][aria-label="Resize panes"]'
-        )
-      ].find((element) => element.getBoundingClientRect().height > 0);
+      const handle = [...document.querySelectorAll<HTMLElement>('[data-grid-handle]')].find(
+        (element) => element.getBoundingClientRect().height > 0
+      );
       handle?.focus();
     });
     const before = ratios(await tabRoot(tab.id));
@@ -537,10 +532,8 @@ async function pass(page: Page): Promise<void> {
       ground,
       async () =>
         (await page.evaluate(() =>
-          [...document.querySelectorAll('div')].some(
-            (element) =>
-              element.textContent === 'Move pane to a new tab' &&
-              element.getBoundingClientRect().height > 0
+          [...document.querySelectorAll('[data-drop-hint="new-tab"]')].some(
+            (element) => element.getBoundingClientRect().height > 0
           )
         ))
           ? true
@@ -619,6 +612,77 @@ async function pass(page: Page): Promise<void> {
     );
     await closeTab(tab.id);
     return `all three column dividers moved together to ${round(after[0])}`;
+  });
+
+  await scenario('a grip sits only where one divider runs into another', async () => {
+    const tab = await openTab('QA-CORNER-CROSS');
+    await page.evaluate((id): void => {
+      // A plain object, not a helper arrow: esbuild's keep-names transform rewrites
+      // named arrows into `__name(...)` calls, and that helper does not exist
+      // inside the page Playwright serialises this into.
+      const store = window.__FLEET__.stores.workspace;
+      const tab = store.getState().workspace.tabs.find((candidate) => candidate.id === id);
+      if (tab?.splitRoot.type !== 'leaf') throw new Error('expected a single-pane tab to split');
+      // Three columns with a top/bottom split nested in the rightmost one. That
+      // divider stops inside its own column, so the only crossing in the layout
+      // is the one inside the right half.
+      const root = tab.splitRoot;
+      const second = store.getState().splitPane(root.id, 'horizontal');
+      const third = store.getState().splitPane(second, 'horizontal');
+      store.getState().splitPane(third, 'vertical');
+    }, tab.id);
+    await page.waitForTimeout(900);
+
+    const { corners, crossings } = await page.evaluate(() => {
+      // No named helpers in here: esbuild's keep-names transform wraps an arrow
+      // bound to a name in a `__name(...)` call that does not exist in the page.
+      const separators = [...document.querySelectorAll<HTMLElement>('[data-grid-handle]')]
+        .map((element) => ({
+          rect: element.getBoundingClientRect(),
+          orientation: element.getAttribute('aria-orientation')
+        }))
+        .filter((entry) => entry.rect.width > 0 && entry.rect.height > 0);
+      const cornerRects = [...document.querySelectorAll<HTMLElement>('[data-grid-corner]')]
+        .map((element) => element.getBoundingClientRect())
+        .filter((rect) => rect.width > 0 && rect.height > 0);
+      // A grip is real when it lands on a divider of each orientation. The grip
+      // is 14px and a divider's hit strip is 12px, so the two overlap rather
+      // than nest: the grip is centred on the seam, which is where the divider
+      // crossing it begins. One that only touches the divider it is anchored to
+      // floats on bare seam.
+      const crossed = cornerRects.filter(
+        (corner) =>
+          separators.some(
+            (s) =>
+              s.orientation === 'vertical' &&
+              corner.x < s.rect.x + s.rect.width &&
+              s.rect.x < corner.x + corner.width &&
+              corner.y < s.rect.y + s.rect.height &&
+              s.rect.y < corner.y + corner.height
+          ) &&
+          separators.some(
+            (s) =>
+              s.orientation === 'horizontal' &&
+              corner.x < s.rect.x + s.rect.width &&
+              s.rect.x < corner.x + corner.width &&
+              corner.y < s.rect.y + s.rect.height &&
+              s.rect.y < corner.y + corner.height
+          )
+      );
+      return { corners: cornerRects.length, crossings: crossed.length };
+    });
+
+    assert(corners > 0, 'the nested split produced no corner grip at all');
+    assert(
+      corners === crossings,
+      `${corners - crossings} of ${corners} corner grips sit where no divider crosses`
+    );
+    assert(
+      corners === 1,
+      `expected the single real crossing to be the only grip, found ${corners}`
+    );
+    await closeTab(tab.id);
+    return `${corners} grip, sitting on the crossing inside the split column`;
   });
 
   await scenario('the workspace is left exactly as it was found', async () => {
