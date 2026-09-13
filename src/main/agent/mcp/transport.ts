@@ -69,10 +69,11 @@ async function stdioTransport(cfg: McpServerConfig, auth?: TransportAuth): Promi
       ...stringOnly(process.env),
       ...resolved(expandRecord(cfg.env, env), auth?.env)
     },
-    // Captured rather than inherited: a server that chatters on stderr would
-    // otherwise write over Fleet's own log, and a server that dies has its
-    // reason there. The manager reads it to explain a failure.
-    stderr: 'pipe'
+    // Dropped rather than piped: nothing here reads a child's stderr, and an
+    // unread pipe fills at ~64KB, after which a chatty server blocks on write
+    // and its tool calls hang. A server that dies is still reported through the
+    // connection error, which is what the manager shows.
+    stderr: 'ignore'
   });
 }
 

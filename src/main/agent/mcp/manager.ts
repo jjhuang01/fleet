@@ -76,6 +76,18 @@ export type ManagerDeps = {
 export class McpManager {
   private readonly servers = new Map<string, ServerEntry>();
   private readonly routes = new Map<string, Route>();
+  /**
+   * The newest connect attempt started for each server.
+   *
+   * `reload`/`reconnect`/`signIn` can overlap - the settings pane fires one per
+   * edit and the IPC layer does not serialise them - and a connect that is
+   * still in flight when the next one starts would otherwise write its entry
+   * over the newer one. The losing client would then have no owner left to
+   * close it, so its child process would outlive the config it came from.
+   * Comparing the generation before publishing makes the loser close itself.
+   */
+  private readonly attempts = new Map<string, number>();
+  private attemptSeq = 0;
 
   constructor(private readonly deps: ManagerDeps) {}
 
@@ -95,6 +107,8 @@ export class McpManager {
   }
 
   private async connectOne(name: string, cfg: McpServerConfig): Promise<void> {
+    const attempt = (this.attemptSeq += 1);
+    this.attempts.set(name, attempt);
     if (!cfg.enabled) {
       this.servers.set(name, { config: cfg, client: null, tools: [], state: 'disabled' });
       return;
@@ -106,7 +120,7 @@ export class McpManager {
 
     const client = new Client(
       { name: 'Fleet', version: '1.0.0' },
-      { listChanged: { tools: { onChanged: this.onToolsChanged(name) } } }
+      { listChanged: { tools: { onChanged: this.onToolsChanged(name, attempt) } } }
     );
     try {
       const auth = await this.deps.getAuth?.(name, cfg);
@@ -116,10 +130,19 @@ export class McpManager {
       await withTimeout(client.connect(transport), CONNECT_TIMEOUT_MS, 'connect');
       const { tools } = await withTimeout(client.listTools(), CONNECT_TIMEOUT_MS, 'list tools');
 
+      // Superseded while connecting: this connection is not the one the config
+      // now describes, so it is closed rather than published.
+      if (this.attempts.get(name) !== attempt) {
+        await client.close().catch(() => {});
+        return;
+      }
       this.servers.set(name, { config: cfg, client, tools, state: 'connected' });
       this.mapRoutes(name, tools);
     } catch (err) {
       await client.close().catch(() => {});
+      // Superseded: reporting this attempt's failure would overwrite the state
+      // the newer attempt is about to publish.
+      if (this.attempts.get(name) !== attempt) return;
       // A server asking to be signed in has nothing wrong with it, so it is not
       // reported as broken. The pane offers a button instead of an error.
       if (err instanceof UnauthorizedError || wantsAuth(cfg, err)) {
@@ -160,12 +183,19 @@ export class McpManager {
    * unsolicited notification where it does not, debounces, and re-lists, so
    * what arrives here is the new list either way.
    */
-  private onToolsChanged(name: string): (error: Error | null, tools: Tool[] | null) => void {
+  private onToolsChanged(
+    name: string,
+    attempt: number
+  ): (error: Error | null, tools: Tool[] | null) => void {
     return (error, tools) => {
       if (error !== null || tools === null) {
         log.warn('failed to refresh tools', { server: name, error: error?.message });
         return;
       }
+      // A superseded connection keeps its subscription open until it is closed,
+      // and a list it pushes late would overwrite the live one's tool list with
+      // the tools of the config that was already replaced.
+      if (this.attempts.get(name) !== attempt) return;
       const entry = this.servers.get(name);
       if (entry === undefined) return; // superseded by a reload
       entry.tools = tools;
@@ -290,7 +320,11 @@ export class McpManager {
     // old credentials, and reconnecting over it would use them again.
     await this.disconnect(name);
     await this.deps.signIn(name, cfg, signal);
-    await this.connectOne(name, cfg);
+    // Re-read: signing in can take a while, and the config may have been edited
+    // or the server switched off while the browser was open. Connecting with
+    // the copy read before that would bring back what the user just removed.
+    const current = this.deps.getConfig()[name];
+    if (current !== undefined) await this.connectOne(name, current);
     this.announce();
   }
 
@@ -303,10 +337,18 @@ export class McpManager {
   }
 
   private async disconnect(name: string): Promise<void> {
+    // Invalidates any connect still in flight for this server, so it cannot
+    // republish itself after this disconnect said it was gone.
+    const attempt = (this.attemptSeq += 1);
+    this.attempts.set(name, attempt);
     await this.servers
       .get(name)
       ?.client?.close()
       .catch(() => {});
+    // Closing is asynchronous, and a connect that started meanwhile may have
+    // published in the gap. Deleting then would leave that client with no one
+    // holding it - no `reconnect`, no `closeAll`, no way to close it.
+    if (this.attempts.get(name) !== attempt) return;
     this.servers.delete(name);
     this.clearRoutesFor(name);
   }
@@ -337,6 +379,11 @@ export class McpManager {
   }
 
   async closeAll(): Promise<void> {
+    // Registered attempts are included, not just connected entries: a connect
+    // still in flight has to learn it was superseded too.
+    for (const name of this.attempts.keys()) {
+      this.attempts.set(name, (this.attemptSeq += 1));
+    }
     for (const entry of this.servers.values()) {
       await entry.client?.close().catch(() => {});
     }

@@ -256,6 +256,54 @@ describe('McpManager', () => {
     expect(manager.hasTool('mcp__docs__search')).toBe(false);
   });
 
+  /*
+   * Two connects for the same server, the first one slower than the second.
+   *
+   * The settings pane fires a reload per edit and nothing serialises them, so
+   * this happens by itself: the older connect finishes last and would put its
+   * own client in the map, leaving the newer one unreachable and uncloseable.
+   */
+  it('keeps the newest connect when an older one finishes after it', async () => {
+    const slow = fakeServer({ tools: [SEARCH] });
+    const fast = fakeServer({ tools: [READER] });
+    let gate = (): void => {};
+    const held = new Promise<void>((resolve) => {
+      gate = resolve;
+    });
+    let call = 0;
+
+    const manager = new McpManager({
+      getConfig: () => ({ docs: enabled('https://docs.test') }),
+      createTransport: async () => {
+        call += 1;
+        if (call === 1) {
+          await held;
+          return slow.transport;
+        }
+        return fast.transport;
+      }
+    });
+
+    // What the superseded connect owns has to be let go of, not just dropped
+    // on the floor: its transport is a child process in a real build.
+    const closed = vi.spyOn(slow.transport, 'close');
+
+    const superseded = manager.reload();
+    const winner = manager.reconnect('docs');
+    // The newer connect has to be the one already in the map when the older one
+    // finally comes back, which is what makes this a race rather than a race in
+    // name.
+    await winner;
+    gate();
+    await superseded;
+
+    // The older connect exposed `search`; letting it publish would leave the
+    // pane offering a tool list from a config that has already been replaced.
+    expect(manager.getToolSpecs().map((s) => s.function.name)).toEqual(['mcp__docs__read_page']);
+    expect(closed).toHaveBeenCalled();
+    await manager.closeAll();
+  });
+
   it('describes a tool the server left undescribed', async () => {
     const bare: Tool = { name: 'go', inputSchema: { type: 'object' } };
     const docs = fakeServer({ tools: [bare] });
