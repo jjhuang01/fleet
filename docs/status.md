@@ -3,7 +3,7 @@
 One file that answers "where does this fork stand, what is broken, and what is next?" Round-by-round detail stays in the documents each row links to; this is the index and the current state, not another review.
 
 - **Upstream:** [khang859/fleet](https://github.com/khang859/fleet) by Khang Nguyen, MIT. The product, its architecture and most of this code are his.
-- **Last verified:** 2026-09-13, on macOS arm64, at version `2.119.0`.
+- **Last verified:** 2026-09-14, on macOS arm64, at version `2.119.0`.
 - **Shape of the fork:** upstream Fleet, plus the pane layout Otty users keep asking for, plus a Simplified Chinese interface. Everything else tracks upstream, and bug fixes that are not fork-specific are worth offering upstream too (see [CONTRIBUTING.md](../CONTRIBUTING.md)).
 
 ## What this fork adds over upstream
@@ -31,6 +31,7 @@ Upstream features — vertical tabs and workspaces, split panes, per-pane titles
 | Simplified Chinese interface | `87ef20b1`, `64a40a14`, `e666a928`, `4211861a`, `cc30c92c`, `f8eedb0c` | Typed catalogue, locale-following dates and document language, AA contrast in all four light themes, the last hardcoded toasts moved into the catalogue.                                                                                       | `npm run typecheck` fails on a missing translation by construction; [docs/i18n.md](i18n.md)                                                                                                |
 | Standing on its own          | `2fd4117a`, `82479cf9`                                                 | Update feed, issue links, OpenRouter referer, Linux maintainer and pricing feed point at this fork; upstream stays credited.                                                                                                                   | `package.json`, `electron-builder.yml`                                                                                                                                                     |
 | Audit and QA round           | `1b003648`, `7f74cdc4`, `85fabf80`, `b18814bf`, `36e46e19`, `6bd887bc` | Tail-flush before a natural PTY exit; MCP connect races and the unread stderr pipe; quit waiting for children and releasing per-pane state; one Escape per dialog; stale drags; `ImageBitmap` release; native-dep install no longer swallowed. | 251 test files / 3226 cases, `--maxWorkers=4`; `git diff --check`; `npm run build:mac` exit 0; installed app launched under an isolated `--user-data-dir` and exited within 1s of SIGTERM. |
+| Dialog accessibility         | `7ee42446`                                                             | Overlays are labelled modals with focus containment: each is named after the heading it draws or by an explicit `label`, focus moves in on open and returns to the control that opened it, and Tab wraps rather than walking out. A control taken out of the Tab order is not counted as a stop, and a dialog whose every control is disabled holds Tab on the panel. | 254 test files / 3247 cases, `--maxWorkers=4`; a real window on an isolated `--user-data-dir` driven over CDP: wrap both ways, 20 Tabs that never left the dialog, Escape returning focus to the trigger, and an injected `tabindex="-1"` control that Tab steps over; installed `.app` re-signed, hash-matched against the build and smoke-tested. |
 
 ## Known issues
 
