@@ -44,15 +44,16 @@ describe('CompositionGuard', () => {
     expect(guard.shouldForward('ls\r', 1_001)).toBe(true);
   });
 
-  it('forwards the same text again once the user presses a key', () => {
-    // Committing `a` and then pressing `a` again produces two identical chunks.
-    // Only the first belongs to the composition, and the second is the user's.
+  it('forwards the same text again once the user types it or pastes it', () => {
+    // Committing `a` and then typing or pasting `a` again produces two
+    // identical chunks. Only the first belongs to the composition, and the
+    // second is the user's: a paste arrives as input the same way a key does.
     const guard = new CompositionGuard();
     guard.compositionUpdate('a');
     guard.compositionEnd('a', 1_000);
     expect(guard.shouldForward('a', 1_001)).toBe(true);
 
-    guard.userKeystroke();
+    guard.userInput();
     expect(guard.shouldForward('a', 1_050)).toBe(true);
   });
 
@@ -61,7 +62,7 @@ describe('CompositionGuard', () => {
     // mistaken for the user typing the commit again.
     const guard = new CompositionGuard();
     guard.compositionUpdate(COMPOSITION);
-    guard.userKeystroke();
+    guard.userInput();
     expect(guard.shouldForward(COMPOSITION, 1_000)).toBe(true);
 
     guard.compositionEnd(COMPOSITION, 1_001);

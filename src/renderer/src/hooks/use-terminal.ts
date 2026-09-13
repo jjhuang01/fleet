@@ -15,6 +15,18 @@ import { DEFAULT_SCROLLBACK } from '../../../shared/types';
 import { resolveXtermTheme } from '../lib/theme';
 import { CompositionGuard } from '../lib/composition-guard';
 import { terminalKeyInput } from '../lib/terminal-keybindings';
+import { ALL_SHORTCUTS, matchesShortcut } from '../lib/shortcuts';
+
+/**
+ * The pane-move shortcuts, read from the one table that defines them.
+ *
+ * A focused xterm encodes an arrow into a control sequence, sends it to the PTY
+ * and stops the event, so the window listener that owns these keys would never
+ * see them and the shell would get input the user meant for the app.
+ */
+const MOVE_PANE_SHORTCUTS = ALL_SHORTCUTS.filter((shortcut) =>
+  shortcut.id.startsWith('move-pane-')
+);
 
 export type UseTerminalOptions = {
   paneId: string;
@@ -397,10 +409,17 @@ function createTerminal(
   // typing in another terminal cannot close this one's composition episode.
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.target !== compositionTextarea) return;
-    compositionGuard.userKeystroke();
+    compositionGuard.userInput();
+  };
+  // Pasting is the same claim as pressing a key: what follows is the user's
+  // text. Without it, pasting the very text the composition just committed
+  // inside the dedupe window would look like the repeat and be dropped.
+  const onPaste = (): void => {
+    compositionGuard.userInput();
   };
   compositionTextarea?.addEventListener('compositionupdate', onCompositionUpdate);
   compositionTextarea?.addEventListener('compositionend', onCompositionEnd);
+  compositionTextarea?.addEventListener('paste', onPaste, true);
   document.addEventListener('keydown', onKeyDown, true);
 
   term.onData((data) => {
@@ -418,6 +437,11 @@ function createTerminal(
   // "submit". Mirror the behavior users get from Opt+Enter on macOS.
   term.attachCustomKeyEventHandler((event) => {
     if (event.type !== 'keydown') return true;
+
+    // Hand the pane-move keys back to the app instead of letting xterm consume
+    // them: on Windows and Linux they are Ctrl+Shift+Arrow, which xterm would
+    // otherwise turn into a control sequence and swallow.
+    if (MOVE_PANE_SHORTCUTS.some((shortcut) => matchesShortcut(event, shortcut))) return false;
 
     // Let the app-level Cmd/Ctrl+K command-palette shortcut win even when a
     // terminal is focused. Returning false keeps Ctrl+K from reaching readline.
@@ -472,6 +496,7 @@ function createTerminal(
       void window.fleet.clipboard.readText().then((text) => {
         // Normalize CRLF — Windows clipboard uses \r\n, and a bare \r in
         // bash/zsh submits the line before the rest of the paste arrives.
+        compositionGuard.userInput();
         term.paste(text.replace(/\r\n/g, '\n'));
       });
       event.preventDefault();
@@ -499,6 +524,7 @@ function createTerminal(
           break;
         case 'paste':
           void window.fleet.clipboard.readText().then((text) => {
+            compositionGuard.userInput();
             term.paste(text.replace(/\r\n/g, '\n'));
           });
           break;
@@ -783,6 +809,7 @@ function createTerminal(
   const compositionCleanup = (): void => {
     compositionTextarea?.removeEventListener('compositionupdate', onCompositionUpdate);
     compositionTextarea?.removeEventListener('compositionend', onCompositionEnd);
+    compositionTextarea?.removeEventListener('paste', onPaste, true);
     document.removeEventListener('keydown', onKeyDown, true);
   };
 

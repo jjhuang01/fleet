@@ -46,11 +46,12 @@ export class CompositionGuard {
   }
 
   /**
-   * A key the user pressed. Counted rather than acted on immediately: the key
-   * that flushes a composition arrives before the copy it produces, so only a
-   * key that comes after that copy may end the episode.
+   * Something the user did that produces terminal input: a key they pressed, or
+   * a paste. Counted rather than acted on immediately: the key that flushes a
+   * composition arrives before the copy it produces, so only input that comes
+   * after that copy may end the episode.
    */
-  userKeystroke(): void {
+  userInput(): void {
     this.keystrokes++;
   }
 
